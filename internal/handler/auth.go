@@ -14,7 +14,7 @@ func Register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterRequest
 	err := json.NewDecoder(r.Body).Decode(&request)
 
-	if err == nil {
+	if err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
 		return
 	}
