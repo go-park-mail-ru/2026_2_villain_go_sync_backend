@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
 )
 
 const (
@@ -18,13 +20,48 @@ const (
 
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
+var (
+	reUpper = regexp.MustCompile(`[A-Z]`)
+	reLower = regexp.MustCompile(`[a-z]`)
+	reDigit = regexp.MustCompile(`[0-9]`)
+	reChars = regexp.MustCompile("^[A-Za-z0-9!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~]+$")
+)
+
+var (
+	ErrInvalidEmail    = errors.New("invalid email")
+	ErrInvalidPassword = errors.New("invalid password")
+)
+
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
+func (r RegisterRequest) IsValid() error {
+	if !isValidEmail(r.Email) {
+		return ErrInvalidEmail
+	}
+
+	if !isValidPassword(r.Password) {
+		return ErrInvalidPassword
+	}
+
+	return nil
+}
+
+type UserRepository interface {
+	Create(user models.User) (models.User, error)
+	GetByEmail(email string) (models.User, error)
+}
+
+type RegisterResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+}
+
 type Handler struct {
-	Storage storage.UserRepository
+	Storage UserRepository
+	Tokens  *auth.TokenManager
 }
 
 func isValidEmail(email string) bool {
@@ -36,9 +73,24 @@ func isValidEmail(email string) bool {
 }
 
 func isValidPassword(password string) bool {
-	passwordLength := len(password)
+	if len(password) < minPasswordLength || len(password) > maxPasswordLength {
+		return false
+	}
 
-	return minPasswordLength <= passwordLength && passwordLength <= maxPasswordLength
+	if !reUpper.MatchString(password) {
+		return false
+	}
+	if !reLower.MatchString(password) {
+		return false
+	}
+	if !reDigit.MatchString(password) {
+		return false
+	}
+	if !reChars.MatchString(password) {
+		return false
+	}
+
+	return true
 }
 
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -49,13 +101,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !isValidEmail(request.Email) {
-		http.Error(w, "invalid email", http.StatusBadRequest)
-		return
-	}
-
-	if !isValidPassword(request.Password) {
-		http.Error(w, "invalid password", http.StatusBadRequest)
+	if err := request.IsValid(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -65,11 +112,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = h.Storage.Create(storage.User{
+	user, err := h.Storage.Create(models.User{
 		Email:        request.Email,
 		PasswordHash: hash,
 	})
-	if errors.Is(err, storage.ErrEmailTaken) {
+	if errors.Is(err, apperrors.ErrEmailTaken) {
 		http.Error(w, "email already taken", http.StatusBadRequest)
 		return
 	}
@@ -78,5 +125,28 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	accessToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeAccess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeRefresh)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	response := RegisterResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 }

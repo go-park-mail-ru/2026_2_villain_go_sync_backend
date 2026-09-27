@@ -1,47 +1,32 @@
 package storage
 
 import (
-	"errors"
 	"sync"
 	"time"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
-
-var (
-	ErrEmailTaken = errors.New("email already taken")
-	ErrNotFound   = errors.New("user not found")
-)
-
-type User struct {
-	ID           int       `json:"id"`
-	Email        string    `json:"email"`
-	PasswordHash string    `json:"-"`
-	CreatedAt    time.Time `json:"created_at"`
-}
-
-type UserRepository interface {
-	Create(user User) (User, error)
-	GetByEmail(email string) (User, error)
-}
 
 type MemoryRepository struct {
 	mu     sync.RWMutex
-	users  map[string]User
+	users  map[string]models.User
 	nextID int
 }
 
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
-		users:  make(map[string]User),
+		users:  make(map[string]models.User),
 		nextID: 1,
 	}
 }
 
-func (m *MemoryRepository) Create(user User) (User, error) {
+func (m *MemoryRepository) Create(user models.User) (models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if _, exists := m.users[user.Email]; exists {
-		return User{}, ErrEmailTaken
+		return models.User{}, apperrors.ErrEmailTaken
 	}
 
 	user.ID = m.nextID
@@ -53,13 +38,13 @@ func (m *MemoryRepository) Create(user User) (User, error) {
 	return user, nil
 }
 
-func (m *MemoryRepository) GetByEmail(email string) (User, error) {
+func (m *MemoryRepository) GetByEmail(email string) (models.User, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	user, ok := m.users[email]
 	if !ok {
-		return User{}, ErrNotFound
+		return models.User{}, apperrors.ErrNotFound
 	}
 
 	return user, nil
