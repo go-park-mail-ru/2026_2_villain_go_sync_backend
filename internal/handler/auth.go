@@ -70,7 +70,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		PasswordHash: hash,
 	})
 	if errors.Is(err, storage.ErrEmailTaken) {
-		http.Error(w, "email already taken", http.StatusConflict)
+		http.Error(w, "email already taken", http.StatusBadRequest)
 		return
 	}
 	if err != nil {
