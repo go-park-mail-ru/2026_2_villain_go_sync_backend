@@ -2,8 +2,12 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"regexp"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
 )
 
 const (
@@ -17,6 +21,10 @@ var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+type Handler struct {
+	Storage storage.UserRepository
 }
 
 func isValidEmail(email string) bool {
@@ -33,7 +41,7 @@ func isValidPassword(password string) bool {
 	return minPasswordLength <= passwordLength && passwordLength <= maxPasswordLength
 }
 
-func Register(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
@@ -48,6 +56,25 @@ func Register(w http.ResponseWriter, r *http.Request) {
 
 	if !isValidPassword(request.Password) {
 		http.Error(w, "invalid password", http.StatusBadRequest)
+		return
+	}
+
+	hash, err := password.Hash(request.Password)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	_, err = h.Storage.Create(storage.User{
+		Email:        request.Email,
+		PasswordHash: hash,
+	})
+	if errors.Is(err, storage.ErrEmailTaken) {
+		http.Error(w, "email already taken", http.StatusConflict)
+		return
+	}
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
