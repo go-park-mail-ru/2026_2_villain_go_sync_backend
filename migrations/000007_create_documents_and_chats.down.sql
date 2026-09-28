@@ -1,0 +1,3 @@
+DROP TABLE IF EXISTS message;
+DROP TABLE IF EXISTS chat;
+DROP TABLE IF EXISTS pdf_document;
