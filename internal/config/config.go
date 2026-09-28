@@ -19,7 +19,7 @@ func Load() (*Config, error) {
 		return nil, errors.New("JWT_SECRET is not set")
 	}
 
-	accessTTL := 15 * time.Minute
+	accessTTL := time.Duration(0)
 	if s := os.Getenv("ACCESS_TOKEN_TTL"); s != "" {
 		d, err := time.ParseDuration(s)
 		if err != nil {
@@ -28,7 +28,7 @@ func Load() (*Config, error) {
 		accessTTL = d
 	}
 
-	refreshTTL := 168 * time.Hour
+	refreshTTL := time.Duration(0)
 	if s := os.Getenv("REFRESH_TOKEN_TTL"); s != "" {
 		d, err := time.ParseDuration(s)
 		if err != nil {

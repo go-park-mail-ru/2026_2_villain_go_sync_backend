@@ -12,8 +12,10 @@ import (
 type TokenType string
 
 const (
-	TokenTypeAccess  TokenType = "access"
-	TokenTypeRefresh TokenType = "refresh"
+	TokenTypeAccess   TokenType = "access"
+	TokenTypeRefresh  TokenType = "refresh"
+	defaultAccessTTL            = 15 * time.Minute
+	defaultRefreshTTL           = 168 * time.Hour
 )
 
 var (
@@ -34,6 +36,14 @@ type TokenManager struct {
 }
 
 func NewTokenManager(secret []byte, accessTTL, refreshTTL time.Duration) *TokenManager {
+	if accessTTL <= 0 {
+		accessTTL = defaultAccessTTL
+	}
+
+	if refreshTTL <= 0 {
+		refreshTTL = defaultRefreshTTL
+	}
+
 	return &TokenManager{
 		secret:     secret,
 		accessTTL:  accessTTL,
