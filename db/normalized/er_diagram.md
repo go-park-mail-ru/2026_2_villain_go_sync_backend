@@ -43,7 +43,6 @@ erDiagram
 
     EMPLOYER_PROFILE {
         bigint user_id PK, FK
-        text role FK
         text company_name
         text description
         text website
@@ -53,7 +52,6 @@ erDiagram
 
     SEEKER_PROFILE {
         bigint user_id PK, FK
-        text role FK
         text first_name
         text last_name
         text phone

@@ -6,6 +6,5 @@ CREATE TABLE app_user
     role          TEXT        NOT NULL
         CHECK (role IN ('employer', 'seeker')),
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (user_id, role)
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

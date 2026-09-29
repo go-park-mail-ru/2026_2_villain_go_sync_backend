@@ -42,3 +42,40 @@ CREATE TABLE message
         FOREIGN KEY (sender_id)
             REFERENCES app_user (user_id)
 );
+
+CREATE FUNCTION check_message_sender()
+    RETURNS TRIGGER AS $$
+BEGIN
+    IF
+NOT EXISTS (
+        SELECT 1
+        FROM chat c
+        JOIN application a
+            ON a.application_id = c.application_id
+        JOIN vacancy v
+            ON v.vacancy_id = a.vacancy_id
+        JOIN resume r
+            ON r.resume_id = a.resume_id
+        WHERE c.chat_id = NEW.chat_id
+          AND (
+              NEW.sender_id = v.employer_id
+              OR NEW.sender_id = r.seeker_id
+          )
+    ) THEN
+        RAISE EXCEPTION
+            'user % is not a participant of chat %',
+            NEW.sender_id,
+            NEW.chat_id;
+END IF;
+
+RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+CREATE TRIGGER message_sender_check
+    BEFORE INSERT OR
+UPDATE OF chat_id, sender_id
+ON message
+    FOR EACH ROW
+    EXECUTE FUNCTION check_message_sender();
