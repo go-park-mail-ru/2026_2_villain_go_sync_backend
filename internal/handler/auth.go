@@ -37,6 +37,11 @@ type RegisterRequest struct {
 	Password string `json:"password"`
 }
 
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func (r RegisterRequest) IsValid() error {
 	if !isValidEmail(r.Email) {
 		return ErrInvalidEmail
@@ -54,7 +59,7 @@ type UserRepository interface {
 	GetByEmail(email string) (models.User, error)
 }
 
-type RegisterResponse struct {
+type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
@@ -137,13 +142,58 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := RegisterResponse{
+	response := TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var request LoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	user, err := h.Storage.GetByEmail(request.Email)
+	if err != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	if err := password.Check(request.Password, user.PasswordHash); err != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeAccess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeRefresh)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	response := TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
