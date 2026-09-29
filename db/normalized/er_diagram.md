@@ -2,11 +2,11 @@
 
 ```mermaid
 erDiagram
-    USERS ||--o| EMPLOYER_PROFILE : "has employer profile"
-    USERS ||--o| SEEKER_PROFILE : "has seeker profile"
-    USERS ||--o{ NOTIFICATION : receives
-    USERS ||--o{ FAVORITE_VACANCY : adds
-    USERS ||--o{ MESSAGE : sends
+    APP_USER ||--o| EMPLOYER_PROFILE : "has employer profile"
+    APP_USER ||--o| SEEKER_PROFILE : "has seeker profile"
+    APP_USER ||--o{ NOTIFICATION : receives
+    APP_USER ||--o{ FAVORITE_VACANCY : adds
+    APP_USER ||--o{ MESSAGE : sends
 
     EMPLOYER_PROFILE ||--o{ VACANCY : creates
     SEEKER_PROFILE ||--o{ RESUME : owns
@@ -32,29 +32,31 @@ erDiagram
 
     NOTIFICATION_TOPIC ||--o{ NOTIFICATION : "instantiated as"
 
-    USERS {
+    APP_USER {
         bigint user_id PK
-        varchar email UK
-        varchar password_hash
-        varchar role
+        text email UK
+        text password_hash
+        text role
         timestamp created_at
         timestamp updated_at
     }
 
     EMPLOYER_PROFILE {
         bigint user_id PK, FK
-        varchar company_name
+        text role FK
+        text company_name
         text description
-        varchar website
+        text website
         timestamp created_at
         timestamp updated_at
     }
 
     SEEKER_PROFILE {
         bigint user_id PK, FK
-        varchar first_name
-        varchar last_name
-        varchar phone
+        text role FK
+        text first_name
+        text last_name
+        text phone
         text about
         timestamp created_at
         timestamp updated_at
@@ -62,7 +64,7 @@ erDiagram
 
     CATEGORY {
         bigint category_id PK
-        varchar name UK
+        text name UK
         timestamp created_at
         timestamp updated_at
     }
@@ -81,7 +83,7 @@ erDiagram
     VACANCY_HISTORY {
         bigint vacancy_id PK, FK
         int version PK
-        varchar title
+        text title
         text description
         numeric salary_from
         numeric salary_to
@@ -91,7 +93,7 @@ erDiagram
     RESUME {
         bigint resume_id PK
         bigint seeker_id FK
-        varchar title
+        text title
         text description
         text experience
         text education
@@ -117,7 +119,7 @@ erDiagram
     APPLICATION_STATUS_HISTORY {
         bigint status_history_id PK
         bigint application_id FK
-        varchar status
+        text status
         text comment
         timestamp changed_at
     }
@@ -130,8 +132,8 @@ erDiagram
 
     NOTIFICATION_TOPIC {
         bigint topic_id PK
-        varchar code UK
-        varchar title
+        text code UK
+        text title
         text body_template
         timestamp created_at
         timestamp updated_at
@@ -144,12 +146,13 @@ erDiagram
         text rendered_text
         boolean is_read
         timestamp created_at
+        timestamp updated_at
     }
 
     PDF_DOCUMENT {
         bigint document_id PK
         bigint resume_id FK
-        varchar file_path
+        text file_path
         timestamp created_at
     }
 
@@ -166,6 +169,7 @@ erDiagram
         text body
         boolean is_read
         timestamp created_at
+        timestamp updated_at
     }
 ```
 

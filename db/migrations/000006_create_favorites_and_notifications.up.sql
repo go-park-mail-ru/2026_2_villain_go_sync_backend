@@ -8,7 +8,7 @@ CREATE TABLE favorite_vacancy
 
     CONSTRAINT favorite_vacancy_user_fk
         FOREIGN KEY (user_id)
-            REFERENCES users (user_id)
+            REFERENCES app_user (user_id)
             ON DELETE CASCADE,
 
     CONSTRAINT favorite_vacancy_vacancy_fk
@@ -20,11 +20,11 @@ CREATE TABLE favorite_vacancy
 CREATE TABLE notification_topic
 (
     topic_id      BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    code          VARCHAR(100) NOT NULL UNIQUE,
-    title         VARCHAR(255) NOT NULL,
-    body_template TEXT         NOT NULL,
-    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    code          TEXT        NOT NULL UNIQUE,
+    title         TEXT        NOT NULL,
+    body_template TEXT        NOT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE notification
@@ -35,10 +35,11 @@ CREATE TABLE notification
     rendered_text   TEXT        NOT NULL,
     is_read         BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT notification_user_fk
         FOREIGN KEY (user_id)
-            REFERENCES users (user_id)
+            REFERENCES app_user (user_id)
             ON DELETE CASCADE,
 
     CONSTRAINT notification_topic_fk

@@ -24,3 +24,15 @@ CREATE INDEX idx_notification_user_created
 
 CREATE INDEX idx_message_chat_created
     ON message (chat_id, created_at);
+
+CREATE INDEX idx_favorite_vacancy_vacancy_id
+    ON favorite_vacancy (vacancy_id);
+
+CREATE INDEX idx_notification_topic_id
+    ON notification (topic_id);
+
+CREATE INDEX idx_pdf_document_resume_id
+    ON pdf_document (resume_id);
+
+CREATE INDEX idx_message_sender_id
+    ON message (sender_id);

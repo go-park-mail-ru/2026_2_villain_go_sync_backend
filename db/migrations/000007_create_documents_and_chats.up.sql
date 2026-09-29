@@ -1,9 +1,9 @@
 CREATE TABLE pdf_document
 (
     document_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    resume_id   BIGINT       NOT NULL,
-    file_path   VARCHAR(500) NOT NULL,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    resume_id   BIGINT      NOT NULL,
+    file_path   TEXT        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT pdf_document_resume_fk
         FOREIGN KEY (resume_id)
@@ -31,6 +31,7 @@ CREATE TABLE message
     body       TEXT        NOT NULL,
     is_read    BOOLEAN     NOT NULL DEFAULT FALSE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT message_chat_fk
         FOREIGN KEY (chat_id)
@@ -39,5 +40,5 @@ CREATE TABLE message
 
     CONSTRAINT message_sender_fk
         FOREIGN KEY (sender_id)
-            REFERENCES users (user_id)
+            REFERENCES app_user (user_id)
 );

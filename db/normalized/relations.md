@@ -2,7 +2,7 @@
 
 ---
 
-## USERS
+## APP_USER
 
 **Назначение:** базовая учётная запись. Хранит данные аутентификации и роль.
 
@@ -23,12 +23,14 @@
 
 ## EMPLOYER_PROFILE
 
-**Назначение:** профиль работодателя (компании). 1:1 к `USERS` при `role = 'employer'`.
+**Назначение:** профиль работодателя (компании). 1:1 к `APP_USER` при `role = 'employer'`.
+
+**Внешний ключ:** `(user_id, role) -> APP_USER(user_id, role)`.
 
 **Функциональные зависимости:**
 
 ```
-{user_id} -> company_name, description, website, created_at, updated_at
+{user_id} -> role, company_name, description, website, created_at, updated_at
 ```
 
 **Нормальные формы:** 1НФ, 2НФ, 3НФ, НФБК.
@@ -37,12 +39,14 @@
 
 ## SEEKER_PROFILE
 
-**Назначение:** профиль соискателя. 1:1 к `USERS` при `role = 'seeker'`.
+**Назначение:** профиль соискателя. 1:1 к `APP_USER` при `role = 'seeker'`.
+
+**Внешний ключ:** `(user_id, role) -> APP_USER(user_id, role)`.
 
 **Функциональные зависимости:**
 
 ```
-{user_id} -> first_name, last_name, phone, about, created_at, updated_at
+{user_id} -> role, first_name, last_name, phone, about, created_at, updated_at
 ```
 
 **Нормальные формы:** 1НФ, 2НФ, 3НФ, НФБК.
@@ -195,7 +199,7 @@
 **Функциональные зависимости:**
 
 ```
-{notification_id} -> user_id, topic_id, rendered_text, is_read, created_at
+{notification_id} -> user_id, topic_id, rendered_text, is_read, created_at, updated_at
 ```
 
 **Нормальные формы:** 1НФ, 2НФ, 3НФ, НФБК.
@@ -238,7 +242,23 @@
 **Функциональные зависимости:**
 
 ```
-{message_id} -> chat_id, sender_id, body, is_read, created_at
+{message_id} -> chat_id, sender_id, body, is_read, created_at, updated_at
 ```
 
 **Нормальные формы:** 1НФ, 2НФ, 3НФ, НФБК.
+
+---
+
+## Обоснование временных полей
+
+Временные поля добавлены только в те таблицы, где они отражают значимое состояние сущности.
+
+- `VACANCY_CATEGORY`, `RESUME_CATEGORY` — связующие M:N-таблицы без изменяемых неключевых атрибутов, поэтому `updated_at` не требуется. `created_at` также не используется, так как момент добавления категории в текущей модели не является значимым.
+- `VACANCY_HISTORY`, `APPLICATION_STATUS_HISTORY` — исторические таблицы. Их записи не изменяются после создания, а время события уже хранится в `changed_at`, поэтому отдельные `created_at` и `updated_at` избыточны.
+- `VACANCY` — изменяемые данные вакансии хранятся в `VACANCY_HISTORY`, поэтому самой таблице достаточно `created_at`.
+- `FAVORITE_VACANCY` — запись представляет факт добавления вакансии в избранное и либо существует, либо удаляется, поэтому `updated_at` не требуется.
+- `PDF_DOCUMENT` — созданный документ не изменяется, поэтому достаточно `created_at`.
+- `CHAT` — после создания связь чата с откликом не изменяется, поэтому достаточно `created_at`.
+- `NOTIFICATION` и `MESSAGE` содержат изменяемое поле `is_read`, поэтому для них используется `updated_at` для фиксации времени последнего изменения записи.
+
+Поле `updated_at` обновляется приложением при изменении записи.

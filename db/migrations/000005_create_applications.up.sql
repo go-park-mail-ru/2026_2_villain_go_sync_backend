@@ -25,7 +25,14 @@ CREATE TABLE application_status_history
 (
     status_history_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     application_id    BIGINT      NOT NULL,
-    status            VARCHAR(50) NOT NULL,
+    status            TEXT        NOT NULL
+        CHECK (status IN (
+                          'created',
+                          'viewed',
+                          'interview',
+                          'accepted',
+                          'rejected'
+            )),
     comment           TEXT,
     changed_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 

@@ -1,13 +1,13 @@
 CREATE TABLE resume
 (
     resume_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    seeker_id   BIGINT       NOT NULL,
-    title       VARCHAR(255) NOT NULL,
+    seeker_id   BIGINT      NOT NULL,
+    title       TEXT        NOT NULL,
     description TEXT,
     experience  TEXT,
     education   TEXT,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     CONSTRAINT resume_seeker_fk
         FOREIGN KEY (seeker_id)

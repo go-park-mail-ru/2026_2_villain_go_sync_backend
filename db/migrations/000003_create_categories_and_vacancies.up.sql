@@ -1,9 +1,9 @@
 CREATE TABLE category
 (
     category_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    name        VARCHAR(255) NOT NULL UNIQUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+    name        TEXT        NOT NULL UNIQUE,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE vacancy
@@ -20,13 +20,14 @@ CREATE TABLE vacancy
 
 CREATE TABLE vacancy_history
 (
-    vacancy_id  BIGINT       NOT NULL,
-    version     INT          NOT NULL,
-    title       VARCHAR(255) NOT NULL,
+    vacancy_id  BIGINT      NOT NULL,
+    version     INT         NOT NULL
+        CHECK (version > 0),
+    title       TEXT        NOT NULL,
     description TEXT,
     salary_from NUMERIC(12, 2),
     salary_to   NUMERIC(12, 2),
-    changed_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    changed_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 
     PRIMARY KEY (vacancy_id, version),
 
@@ -35,7 +36,13 @@ CREATE TABLE vacancy_history
             REFERENCES vacancy (vacancy_id)
             ON DELETE CASCADE,
 
-    CONSTRAINT vacancy_salary_check
+    CONSTRAINT vacancy_salary_from_nonnegative
+        CHECK (salary_from IS NULL OR salary_from >= 0),
+
+    CONSTRAINT vacancy_salary_to_nonnegative
+        CHECK (salary_to IS NULL OR salary_to >= 0),
+
+    CONSTRAINT vacancy_salary_range
         CHECK (
             salary_from IS NULL
                 OR salary_to IS NULL
