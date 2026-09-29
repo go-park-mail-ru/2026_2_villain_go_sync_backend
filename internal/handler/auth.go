@@ -31,9 +31,15 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
+var allowedRoles = map[string]bool{
+	"employer": true,
+	"seeker":   true,
+}
+
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
 type LoginRequest struct {
@@ -93,6 +99,10 @@ func isValidPassword(password string) bool {
 	return true
 }
 
+func isValidRole(role string) bool {
+	return allowedRoles[role]
+}
+
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterRequest
 
@@ -106,6 +116,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if !isValidRole(request.Role) {
+		http.Error(w, "invalid role", http.StatusBadRequest)
+		return
+	}
+
 	hash, err := password.Hash(request.Password)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
@@ -115,6 +130,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	user, err := h.Storage.Create(models.User{
 		Email:        request.Email,
 		PasswordHash: hash,
+		Role:         request.Role,
 	})
 	if errors.Is(err, apperrors.ErrEmailTaken) {
 		http.Error(w, "email already taken", http.StatusBadRequest)
