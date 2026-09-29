@@ -28,8 +28,7 @@ var (
 )
 
 var (
-	ErrInvalidEmail    = errors.New("invalid email")
-	ErrInvalidPassword = errors.New("invalid password")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 type RegisterRequest struct {
@@ -42,13 +41,9 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
-func (r RegisterRequest) IsValid() error {
-	if !isValidEmail(r.Email) {
-		return ErrInvalidEmail
-	}
-
-	if !isValidPassword(r.Password) {
-		return ErrInvalidPassword
+func validateCredentials(email, password string) error {
+	if !isValidEmail(email) || !isValidPassword(password) {
+		return ErrInvalidCredentials
 	}
 
 	return nil
@@ -106,7 +101,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := request.IsValid(); err != nil {
+	if err := validateCredentials(request.Email, request.Password); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -161,6 +156,11 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
 		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if err := validateCredentials(request.Email, request.Password); err != nil {
+		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
