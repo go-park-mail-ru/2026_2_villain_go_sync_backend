@@ -5,12 +5,17 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+type Handler struct {
+	Storage   UserRepository
+	Vacancies VacancyRepository
+	Tokens    *auth.TokenManager
+}
+
 type UserRepository interface {
 	Create(user models.User) (models.User, error)
 	GetByEmail(email string) (models.User, error)
 }
 
-type Handler struct {
-	Storage UserRepository
-	Tokens  *auth.TokenManager
+type VacancyRepository interface {
+	List() ([]models.Vacancy, error)
 }
