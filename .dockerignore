@@ -1,0 +1,26 @@
+# Environment
+.env
+
+# Binaries
+*.exe
+*.test
+*.out
+bin/
+main
+
+# Test
+*.test
+*.out
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+#Git
+.git
+.gitignore

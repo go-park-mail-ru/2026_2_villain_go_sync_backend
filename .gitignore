@@ -9,6 +9,7 @@ main
 # Test
 *.test
 *.out
+coverage.out
 
 # IDE
 .idea/
