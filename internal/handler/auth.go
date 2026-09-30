@@ -55,19 +55,9 @@ func validateCredentials(email, password string) error {
 	return nil
 }
 
-type UserRepository interface {
-	Create(user models.User) (models.User, error)
-	GetByEmail(email string) (models.User, error)
-}
-
 type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-}
-
-type Handler struct {
-	Storage UserRepository
-	Tokens  *auth.TokenManager
 }
 
 func isValidEmail(email string) bool {
