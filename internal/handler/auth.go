@@ -141,13 +141,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeAccess)
+	accessToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeAccess)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeRefresh)
+	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
@@ -191,13 +191,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeAccess)
+	accessToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeAccess)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeRefresh)
+	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
