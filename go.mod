@@ -1,6 +1,6 @@
 module github.com/go-park-mail-ru/2026_2_villain_go_sync_backend
 
-go 1.26.0
+go 1.26.8
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1

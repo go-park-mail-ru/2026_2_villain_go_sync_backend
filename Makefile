@@ -1,4 +1,4 @@
-.PHONY: run build test lint fmt docker-up docker-down
+.PHONY: run build test coverage lint fmt docker-up docker-down
 
 run:
 	go run ./cmd/server
@@ -10,6 +10,9 @@ build:
 test:
 	go test ./...
 
+coverage:
+	go test ./... -coverprofile=coverage.out
+	go tool cover -func=coverage.out | grep total
 lint:
 	go vet ./...
 
