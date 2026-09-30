@@ -112,7 +112,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validateCredentials(request.Email, request.Password); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
@@ -176,7 +176,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := validateCredentials(request.Email, request.Password); err != nil {
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
