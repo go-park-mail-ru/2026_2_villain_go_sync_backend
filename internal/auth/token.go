@@ -26,6 +26,7 @@ var (
 type Claims struct {
 	UserID    int64     `json:"uid"`
 	TokenType TokenType `json:"typ"`
+	Role      string    `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -64,7 +65,7 @@ func (m *TokenManager) ttlFor(typ TokenType) (time.Duration, error) {
 	}
 }
 
-func (m *TokenManager) Generate(userID int64, typ TokenType) (string, error) {
+func (m *TokenManager) Generate(userID int64, role string, typ TokenType) (string, error) {
 	ttl, err := m.ttlFor(typ)
 	if err != nil {
 		return "", err
@@ -75,6 +76,7 @@ func (m *TokenManager) Generate(userID int64, typ TokenType) (string, error) {
 	claims := Claims{
 		UserID:    userID,
 		TokenType: typ,
+		Role:      role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   strconv.FormatInt(userID, 10),
 			IssuedAt:  jwt.NewNumericDate(now),

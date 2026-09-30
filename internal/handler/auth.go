@@ -28,22 +28,28 @@ var (
 )
 
 var (
-	ErrInvalidEmail    = errors.New("invalid email")
-	ErrInvalidPassword = errors.New("invalid password")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
+
+var allowedRoles = map[string]bool{
+	"employer": true,
+	"seeker":   true,
+}
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+	Role     string `json:"role"`
 }
 
-func (r RegisterRequest) IsValid() error {
-	if !isValidEmail(r.Email) {
-		return ErrInvalidEmail
-	}
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
 
-	if !isValidPassword(r.Password) {
-		return ErrInvalidPassword
+func validateCredentials(email, password string) error {
+	if !isValidEmail(email) || !isValidPassword(password) {
+		return ErrInvalidCredentials
 	}
 
 	return nil
@@ -54,7 +60,7 @@ type UserRepository interface {
 	GetByEmail(email string) (models.User, error)
 }
 
-type RegisterResponse struct {
+type TokenPair struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 }
@@ -93,6 +99,10 @@ func isValidPassword(password string) bool {
 	return true
 }
 
+func isValidRole(role string) bool {
+	return allowedRoles[role]
+}
+
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterRequest
 
@@ -101,8 +111,13 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := request.IsValid(); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if err := validateCredentials(request.Email, request.Password); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	if !isValidRole(request.Role) {
+		http.Error(w, "invalid role", http.StatusBadRequest)
 		return
 	}
 
@@ -115,6 +130,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	user, err := h.Storage.Create(models.User{
 		Email:        request.Email,
 		PasswordHash: hash,
+		Role:         request.Role,
 	})
 	if errors.Is(err, apperrors.ErrEmailTaken) {
 		http.Error(w, "email already taken", http.StatusBadRequest)
@@ -125,25 +141,75 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accessToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeAccess)
+	accessToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeAccess)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	refreshToken, err := h.Tokens.Generate(int64(user.ID), auth.TokenTypeRefresh)
+	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 
-	response := RegisterResponse{
+	response := TokenPair{
 		AccessToken:  accessToken,
 		RefreshToken: refreshToken,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	var request LoginRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	if err := validateCredentials(request.Email, request.Password); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	user, err := h.Storage.GetByEmail(request.Email)
+	if err != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	if err := password.Check(request.Password, user.PasswordHash); err != nil {
+		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeAccess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	response := TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
