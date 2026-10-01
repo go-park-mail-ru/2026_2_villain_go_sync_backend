@@ -11,6 +11,18 @@ type Handler struct {
 	Tokens    *auth.TokenManager
 }
 
+func NewHandler(
+	storage UserRepository,
+	vacancies VacancyRepository,
+	tokens *auth.TokenManager,
+) *Handler {
+	return &Handler{
+		Storage:   storage,
+		Vacancies: vacancies,
+		Tokens:    tokens,
+	}
+}
+
 type UserRepository interface {
 	Create(user models.User) (models.User, error)
 	GetByEmail(email string) (models.User, error)

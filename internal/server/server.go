@@ -20,10 +20,11 @@ func New() http.Handler {
 
 	mux := http.NewServeMux()
 
-	h := &handler.Handler{
-		Storage: storage.NewMemoryRepository(),
-		Tokens:  tokens,
-	}
+	h := handler.NewHandler(
+		storage.NewMemoryRepository(),
+		storage.NewMemoryVacancyRepository(),
+		tokens,
+	)
 
 	mux.HandleFunc("GET /api/health", handler.Health)
 	mux.HandleFunc("POST /api/register", h.Register)
