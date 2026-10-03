@@ -7,6 +7,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/handler"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
 )
 
@@ -29,7 +30,7 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/health", handler.Health)
 	mux.HandleFunc("POST /api/register", h.Register)
 	mux.HandleFunc("POST /api/login", h.Login)
-	mux.HandleFunc("GET /api/vacancies", h.ListVacancies)
+	mux.Handle("GET /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(h.ListVacancies)))
 
 	return mux
 }
