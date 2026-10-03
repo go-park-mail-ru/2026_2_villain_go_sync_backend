@@ -7,6 +7,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/handler"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
 )
 
@@ -31,5 +32,5 @@ func New() http.Handler {
 	mux.HandleFunc("POST /api/login", h.Login)
 	mux.HandleFunc("GET /api/vacancies", h.ListVacancies)
 
-	return mux
+	return middleware.CORS(mux)
 }
