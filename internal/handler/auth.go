@@ -60,6 +60,10 @@ type TokenPair struct {
 	RefreshToken string `json:"refresh_token"`
 }
 
+type RefreshRequest struct {
+	RefreshToken string `json:"refresh_token"`
+}
+
 func isValidEmail(email string) bool {
 	if len(email) > maxEmailLength {
 		return false
@@ -188,6 +192,46 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	response := TokenPair{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+}
+
+func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var request RefreshRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		http.Error(w, "invalid request", http.StatusBadRequest)
+		return
+	}
+
+	claims, err := h.Tokens.Parse(request.RefreshToken, auth.TokenTypeRefresh)
+	if err != nil {
+		http.Error(w, "invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	accessToken, err := h.Tokens.Generate(claims.UserID, claims.Role, auth.TokenTypeAccess)
+	if err != nil {
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
+
+	refreshToken, err := h.Tokens.Generate(claims.UserID, claims.Role, auth.TokenTypeRefresh)
 	if err != nil {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
