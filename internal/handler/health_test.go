@@ -16,15 +16,19 @@ func TestHealth(t *testing.T) {
 	if recorder.Code != http.StatusOK {
 		t.Errorf("status = %d, want %d", recorder.Code, http.StatusOK)
 	}
-	if contentType := recorder.Header().Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", contentType)
+	if ct := recorder.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", ct)
 	}
 
-	var response map[string]string
-	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+	var resp struct {
+		Data struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(recorder.Body).Decode(&resp); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if response["status"] != "ok" {
-		t.Errorf("response status = %q, want ok", response["status"])
+	if resp.Data.Status != "ok" {
+		t.Errorf("status = %q, want ok", resp.Data.Status)
 	}
 }
