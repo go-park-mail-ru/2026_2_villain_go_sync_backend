@@ -147,18 +147,9 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}
+	setAuthCookies(w, accessToken, refreshToken)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
@@ -197,18 +188,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}
+	setAuthCookies(w, accessToken, refreshToken)
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -249,4 +231,24 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
+}
+
+func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    accessToken,
+		Path:     "/",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false, // true в проде, false локально
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    refreshToken,
+		Path:     "/api/refresh",
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false,
+	})
 }
