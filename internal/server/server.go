@@ -32,5 +32,5 @@ func New() http.Handler {
 	mux.HandleFunc("POST /api/login", h.Login)
 	mux.Handle("GET /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(h.ListVacancies)))
 
-	return mux
+	return middleware.CORS(mux)
 }
