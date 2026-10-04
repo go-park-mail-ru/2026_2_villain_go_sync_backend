@@ -55,15 +55,6 @@ func validateCredentials(email, password string) error {
 	return nil
 }
 
-type TokenPair struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-}
-
-type RefreshRequest struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
 func isValidEmail(email string) bool {
 	if len(email) > maxEmailLength {
 		return false
@@ -190,20 +181,19 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 
 	setAuthCookies(w, accessToken, refreshToken)
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
-	var request RefreshRequest
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	claims, err := h.Tokens.Parse(request.RefreshToken, auth.TokenTypeRefresh)
+	claims, err := h.Tokens.Parse(cookie.Value, auth.TokenTypeRefresh)
 	if err != nil {
-		http.Error(w, "invalid token", http.StatusUnauthorized)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
@@ -219,18 +209,9 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
-	}
+	setAuthCookies(w, accessToken, refreshToken)
 
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
 }
 
 func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
