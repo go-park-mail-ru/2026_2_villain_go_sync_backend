@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 
-	"encoding/json"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
@@ -196,9 +195,6 @@ func TestRegister_Success(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body = %s",
 			recorder.Code, http.StatusCreated, recorder.Body.String())
 	}
-	if contentType := recorder.Header().Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", contentType)
-	}
 	if repo.createCalls != 1 {
 		t.Errorf("Create() called %d times, want 1", repo.createCalls)
 	}
@@ -212,34 +208,46 @@ func TestRegister_Success(t *testing.T) {
 		t.Errorf("saved password hash is invalid: %v", err)
 	}
 
-	var response TokenPair
-	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
-		t.Fatalf("decode response: %v", err)
+	cookies := make(map[string]*http.Cookie)
+	for _, cookie := range recorder.Result().Cookies() {
+		cookies[cookie.Name] = cookie
 	}
 
-	tokenTests := []struct {
-		typ   auth.TokenType
-		value string
+	tests := []struct {
+		name string
+		typ  auth.TokenType
+		path string
 	}{
-		{auth.TokenTypeAccess, response.AccessToken},
-		{auth.TokenTypeRefresh, response.RefreshToken},
+		{"access_token", auth.TokenTypeAccess, "/"},
+		{"refresh_token", auth.TokenTypeRefresh, "/api/refresh"},
 	}
 
-	for _, tt := range tokenTests {
-		claims, err := tokens.Parse(tt.value, tt.typ)
-		if err != nil {
-			t.Errorf("invalid %s token: %v", tt.typ, err)
-			continue
-		}
-		if claims == nil {
-			t.Errorf("%s token has nil claims", tt.typ)
-			continue
-		}
-		if claims.UserID != 42 {
-			t.Errorf("%s token UserID = %d, want 42", tt.typ, claims.UserID)
-		}
-		if claims.Role != "seeker" {
-			t.Errorf("%s token role = %q, want seeker", tt.typ, claims.Role)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cookie, ok := cookies[tt.name]
+			if !ok {
+				t.Fatalf("missing cookie %q", tt.name)
+			}
+			if !cookie.HttpOnly {
+				t.Error("cookie must be HttpOnly")
+			}
+			if cookie.Path != tt.path {
+				t.Errorf("Path = %q, want %q", cookie.Path, tt.path)
+			}
+			if cookie.SameSite != http.SameSiteLaxMode {
+				t.Errorf("SameSite = %v, want Lax", cookie.SameSite)
+			}
+
+			claims, err := tokens.Parse(cookie.Value, tt.typ)
+			if err != nil {
+				t.Fatalf("invalid token: %v", err)
+			}
+			if claims.UserID != 42 {
+				t.Errorf("UserID = %d, want 42", claims.UserID)
+			}
+			if claims.Role != "seeker" {
+				t.Errorf("role = %q, want seeker", claims.Role)
+			}
+		})
 	}
 }
