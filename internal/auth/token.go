@@ -117,3 +117,11 @@ func (m *TokenManager) Parse(tokenString string, expected TokenType) (*Claims, e
 
 	return claims, nil
 }
+
+func (m *TokenManager) AccessTTL() time.Duration {
+	return m.accessTTL
+}
+
+func (m *TokenManager) RefreshTTL() time.Duration {
+	return m.refreshTTL
+}
