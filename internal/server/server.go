@@ -23,7 +23,7 @@ func New() http.Handler {
 
 	h := handler.NewHandler(
 		storage.NewMemoryRepository(),
-		storage.NewMemoryVacancyRepository(),
+		storage.NewDemoVacancyRepository(),
 		tokens,
 	)
 
