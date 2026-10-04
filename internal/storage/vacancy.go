@@ -12,7 +12,9 @@ type MemoryVacancyRepository struct {
 }
 
 func NewMemoryVacancyRepository() *MemoryVacancyRepository {
-	return &MemoryVacancyRepository{}
+	return &MemoryVacancyRepository{
+		vacancies: []models.Vacancy{},
+	}
 }
 
 func (r *MemoryVacancyRepository) List() ([]models.Vacancy, error) {
