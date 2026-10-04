@@ -1,22 +1,17 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 )
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
 	vacancies, err := h.Vacancies.List()
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-
-	if err := json.NewEncoder(w).Encode(vacancies); err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
-		return
-	}
+	httputil.WriteOK(w, http.StatusOK, vacancies)
 }

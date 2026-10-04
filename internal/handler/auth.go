@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
 )
@@ -93,23 +94,23 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	if err := validateCredentials(request.Email, request.Password); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
 	if !isValidRole(request.Role) {
-		http.Error(w, "invalid role", http.StatusBadRequest)
+		httputil.WriteError(w, http.StatusBadRequest, "invalid role")
 		return
 	}
 
 	hash, err := password.Hash(request.Password)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
@@ -119,100 +120,100 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		Role:         request.Role,
 	})
 	if errors.Is(err, apperrors.ErrEmailTaken) {
-		http.Error(w, "email already taken", http.StatusBadRequest)
+		httputil.WriteError(w, http.StatusConflict, "email already taken")
 		return
 	}
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	accessToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeAccess)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	h.setAuthCookies(w, accessToken, refreshToken)
 
-	w.WriteHeader(http.StatusCreated)
+	httputil.WriteOK(w, http.StatusCreated, nil)
 }
 
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var request LoginRequest
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		http.Error(w, "invalid request", http.StatusBadRequest)
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
 
 	if err := validateCredentials(request.Email, request.Password); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
 	user, err := h.Storage.GetByEmail(request.Email)
 	if err != nil {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	if err := password.Check(request.Password, user.PasswordHash); err != nil {
-		http.Error(w, "invalid credentials", http.StatusUnauthorized)
+		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
 	accessToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeAccess)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	refreshToken, err := h.Tokens.Generate(int64(user.ID), user.Role, auth.TokenTypeRefresh)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	h.setAuthCookies(w, accessToken, refreshToken)
 
-	w.WriteHeader(http.StatusOK)
+	httputil.WriteOK(w, http.StatusOK, nil)
 }
 
 func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("refresh_token")
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	claims, err := h.Tokens.Parse(cookie.Value, auth.TokenTypeRefresh)
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
 
 	accessToken, err := h.Tokens.Generate(claims.UserID, claims.Role, auth.TokenTypeAccess)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	refreshToken, err := h.Tokens.Generate(claims.UserID, claims.Role, auth.TokenTypeRefresh)
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	h.setAuthCookies(w, accessToken, refreshToken)
 
-	w.WriteHeader(http.StatusOK)
+	httputil.WriteOK(w, http.StatusOK, nil)
 }
 
 func (h *Handler) setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
