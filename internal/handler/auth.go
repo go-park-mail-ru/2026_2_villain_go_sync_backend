@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"regexp"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
@@ -138,7 +139,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuthCookies(w, accessToken, refreshToken)
+	h.setAuthCookies(w, accessToken, refreshToken)
 
 	w.WriteHeader(http.StatusCreated)
 }
@@ -179,7 +180,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuthCookies(w, accessToken, refreshToken)
+	h.setAuthCookies(w, accessToken, refreshToken)
 
 	w.WriteHeader(http.StatusOK)
 }
@@ -209,19 +210,22 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	setAuthCookies(w, accessToken, refreshToken)
+	h.setAuthCookies(w, accessToken, refreshToken)
 
 	w.WriteHeader(http.StatusOK)
 }
 
-func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
+func (h *Handler) setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
+	now := time.Now()
+
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
-		Secure:   false, // true в проде, false локально
+		Secure:   false,
+		Expires:  now.Add(h.Tokens.AccessTTL()),
 	})
 
 	http.SetCookie(w, &http.Cookie{
@@ -231,5 +235,6 @@ func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
 		Secure:   false,
+		Expires:  now.Add(h.Tokens.RefreshTTL()),
 	})
 }
