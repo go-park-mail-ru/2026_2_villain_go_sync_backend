@@ -1,14 +1,12 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
-	"strings"
-	"testing"
-
 	"net/http"
 	"net/http/httptest"
-
-	"encoding/json"
+	"strings"
+	"testing"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
@@ -115,6 +113,27 @@ func TestValidateCredentials(t *testing.T) {
 	}
 }
 
+// --- helpers ---
+
+func newTestTokens() *auth.TokenManager {
+	return auth.NewTokenManager(
+		[]byte("test-secret"),
+		15*time.Minute,
+		168*time.Hour,
+	)
+}
+
+func findCookie(cookies []*http.Cookie, name string) *http.Cookie {
+	for _, c := range cookies {
+		if c.Name == name {
+			return c
+		}
+	}
+	return nil
+}
+
+// --- Register ---
+
 func TestRegister_InvalidRequest(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -146,7 +165,7 @@ func TestRegister_InvalidRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &mockUserRepository{}
-			h := NewHandler(repo, nil, nil)
+			h := NewHandler(repo, nil, newTestTokens())
 
 			request := httptest.NewRequest(
 				http.MethodPost,
@@ -158,10 +177,23 @@ func TestRegister_InvalidRequest(t *testing.T) {
 			h.Register(recorder, request)
 
 			if recorder.Code != tt.wantStatus {
-				t.Errorf("status = %d, want %d", recorder.Code, tt.wantStatus)
+				t.Errorf("status = %d, want %d; body = %s",
+					recorder.Code, tt.wantStatus, recorder.Body.String())
 			}
 			if repo.createCalls != 0 {
 				t.Errorf("Create() called %d times, want 0", repo.createCalls)
+			}
+			if ct := recorder.Header().Get("Content-Type"); ct != "application/json" {
+				t.Errorf("Content-Type = %q, want application/json", ct)
+			}
+
+			// Проверяем, что тело — валидный JSON с полем error
+			var resp map[string]any
+			if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
+				t.Errorf("body is not JSON: %v", err)
+			}
+			if _, ok := resp["error"]; !ok {
+				t.Errorf("body has no error field: %s", recorder.Body.String())
 			}
 		})
 	}
@@ -175,11 +207,7 @@ func TestRegister_Success(t *testing.T) {
 			Role:  "seeker",
 		},
 	}
-	tokens := auth.NewTokenManager(
-		[]byte("test-secret"),
-		15*time.Minute,
-		168*time.Hour,
-	)
+	tokens := newTestTokens()
 	h := NewHandler(repo, nil, tokens)
 
 	body := `{"email":"test@example.com","password":"Password123","role":"seeker"}`
@@ -196,8 +224,8 @@ func TestRegister_Success(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body = %s",
 			recorder.Code, http.StatusCreated, recorder.Body.String())
 	}
-	if contentType := recorder.Header().Get("Content-Type"); contentType != "application/json" {
-		t.Errorf("Content-Type = %q, want application/json", contentType)
+	if ct := recorder.Header().Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Content-Type = %q, want application/json", ct)
 	}
 	if repo.createCalls != 1 {
 		t.Errorf("Create() called %d times, want 1", repo.createCalls)
@@ -212,17 +240,33 @@ func TestRegister_Success(t *testing.T) {
 		t.Errorf("saved password hash is invalid: %v", err)
 	}
 
-	var response TokenPair
-	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
-		t.Fatalf("decode response: %v", err)
+	// Токены теперь в куках
+	cookies := recorder.Result().Cookies()
+	access := findCookie(cookies, "access_token")
+	refresh := findCookie(cookies, "refresh_token")
+
+	if access == nil {
+		t.Fatal("access_token cookie missing")
+	}
+	if refresh == nil {
+		t.Fatal("refresh_token cookie missing")
+	}
+	if !access.HttpOnly || !refresh.HttpOnly {
+		t.Error("cookies must be HttpOnly")
+	}
+	if access.Path != "/" {
+		t.Errorf("access path = %q, want /", access.Path)
+	}
+	if refresh.Path != "/api/refresh" {
+		t.Errorf("refresh path = %q, want /api/refresh", refresh.Path)
 	}
 
 	tokenTests := []struct {
 		typ   auth.TokenType
 		value string
 	}{
-		{auth.TokenTypeAccess, response.AccessToken},
-		{auth.TokenTypeRefresh, response.RefreshToken},
+		{auth.TokenTypeAccess, access.Value},
+		{auth.TokenTypeRefresh, refresh.Value},
 	}
 
 	for _, tt := range tokenTests {
@@ -241,5 +285,210 @@ func TestRegister_Success(t *testing.T) {
 		if claims.Role != "seeker" {
 			t.Errorf("%s token role = %q, want seeker", tt.typ, claims.Role)
 		}
+	}
+}
+
+// --- Login ---
+
+func TestLogin_InvalidRequest(t *testing.T) {
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+	}{
+		{
+			name:       "invalid JSON",
+			body:       `{`,
+			wantStatus: http.StatusBadRequest,
+		},
+		{
+			name:       "invalid email",
+			body:       `{"email":"invalid","password":"Password123"}`,
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "invalid password",
+			body:       `{"email":"test@example.com","password":"short"}`,
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := &mockUserRepository{}
+			h := NewHandler(repo, nil, newTestTokens())
+
+			request := httptest.NewRequest(
+				http.MethodPost,
+				"/api/login",
+				strings.NewReader(tt.body),
+			)
+			recorder := httptest.NewRecorder()
+
+			h.Login(recorder, request)
+
+			if recorder.Code != tt.wantStatus {
+				t.Errorf("status = %d, want %d; body = %s",
+					recorder.Code, tt.wantStatus, recorder.Body.String())
+			}
+		})
+	}
+}
+
+func TestLogin_UserNotFound(t *testing.T) {
+	repo := &mockUserRepository{}
+	h := NewHandler(repo, nil, newTestTokens())
+
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/login",
+		strings.NewReader(`{"email":"test@example.com","password":"Password123"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	h.Login(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+	if len(recorder.Result().Cookies()) != 0 {
+		t.Error("no cookies should be set on failed login")
+	}
+}
+
+func TestLogin_WrongPassword(t *testing.T) {
+	hash, _ := password.Hash("Password123")
+	repo := &mockUserRepository{
+		user: models.User{
+			ID:           42,
+			Email:        "test@example.com",
+			Role:         "seeker",
+			PasswordHash: hash,
+		},
+	}
+	h := NewHandler(repo, nil, newTestTokens())
+
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/login",
+		strings.NewReader(`{"email":"test@example.com","password":"WrongPass1"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	h.Login(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+	if len(recorder.Result().Cookies()) != 0 {
+		t.Error("no cookies should be set on failed login")
+	}
+}
+
+func TestLogin_Success(t *testing.T) {
+	hash, _ := password.Hash("Password123")
+	repo := &mockUserRepository{
+		user: models.User{
+			ID:           42,
+			Email:        "test@example.com",
+			Role:         "seeker",
+			PasswordHash: hash,
+		},
+	}
+	tokens := newTestTokens()
+	h := NewHandler(repo, nil, tokens)
+
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/api/login",
+		strings.NewReader(`{"email":"test@example.com","password":"Password123"}`),
+	)
+	recorder := httptest.NewRecorder()
+
+	h.Login(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s",
+			recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+
+	cookies := recorder.Result().Cookies()
+	if findCookie(cookies, "access_token") == nil {
+		t.Error("access_token cookie missing")
+	}
+	if findCookie(cookies, "refresh_token") == nil {
+		t.Error("refresh_token cookie missing")
+	}
+}
+
+// --- Refresh ---
+
+func TestRefresh_NoCookie(t *testing.T) {
+	h := NewHandler(&mockUserRepository{}, nil, newTestTokens())
+
+	request := httptest.NewRequest(http.MethodPost, "/api/refresh", nil)
+	recorder := httptest.NewRecorder()
+
+	h.Refresh(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRefresh_GarbageToken(t *testing.T) {
+	h := NewHandler(&mockUserRepository{}, nil, newTestTokens())
+
+	request := httptest.NewRequest(http.MethodPost, "/api/refresh", nil)
+	request.AddCookie(&http.Cookie{Name: "refresh_token", Value: "garbage"})
+	recorder := httptest.NewRecorder()
+
+	h.Refresh(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRefresh_WrongTokenType(t *testing.T) {
+	tokens := newTestTokens()
+	h := NewHandler(&mockUserRepository{}, nil, tokens)
+
+	access, _ := tokens.Generate(42, "seeker", auth.TokenTypeAccess)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/refresh", nil)
+	request.AddCookie(&http.Cookie{Name: "refresh_token", Value: access})
+	recorder := httptest.NewRecorder()
+
+	h.Refresh(recorder, request)
+
+	if recorder.Code != http.StatusUnauthorized {
+		t.Errorf("status = %d, want %d", recorder.Code, http.StatusUnauthorized)
+	}
+}
+
+func TestRefresh_Success(t *testing.T) {
+	tokens := newTestTokens()
+	h := NewHandler(&mockUserRepository{}, nil, tokens)
+
+	refresh, _ := tokens.Generate(42, "seeker", auth.TokenTypeRefresh)
+
+	request := httptest.NewRequest(http.MethodPost, "/api/refresh", nil)
+	request.AddCookie(&http.Cookie{Name: "refresh_token", Value: refresh})
+	recorder := httptest.NewRecorder()
+
+	h.Refresh(recorder, request)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body = %s",
+			recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+
+	cookies := recorder.Result().Cookies()
+	if findCookie(cookies, "access_token") == nil {
+		t.Error("access_token cookie missing")
+	}
+	if findCookie(cookies, "refresh_token") == nil {
+		t.Error("refresh_token cookie missing")
 	}
 }
