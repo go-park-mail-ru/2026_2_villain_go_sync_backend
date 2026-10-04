@@ -237,6 +237,11 @@ func TestRegister_Success(t *testing.T) {
 			if cookie.SameSite != http.SameSiteLaxMode {
 				t.Errorf("SameSite = %v, want Lax", cookie.SameSite)
 			}
+			if cookie.Expires.IsZero() {
+				t.Error("cookie must have an expiration date")
+			} else if !cookie.Expires.After(time.Now()) {
+				t.Error("cookie expiration must be in the future")
+			}
 
 			claims, err := tokens.Parse(cookie.Value, tt.typ)
 			if err != nil {
