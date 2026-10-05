@@ -31,6 +31,7 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/health", handler.Health)
 	mux.HandleFunc("POST /api/register", h.Register)
 	mux.HandleFunc("POST /api/login", h.Login)
+	mux.HandleFunc("POST /api/logout", h.Logout)
 	mux.HandleFunc("GET /api/vacancies", h.ListVacancies)
 
 	return middleware.CORS(mux)
