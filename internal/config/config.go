@@ -11,9 +11,15 @@ type Config struct {
 	JWTSecret       []byte
 	AccessTokenTTL  time.Duration
 	RefreshTokenTTL time.Duration
+	DatabaseURL     string
 }
 
 func Load() (*Config, error) {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return nil, errors.New("DATABASE_URL is not set")
+	}
+
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return nil, errors.New("JWT_SECRET is not set")
@@ -41,5 +47,6 @@ func Load() (*Config, error) {
 		JWTSecret:       []byte(secret),
 		AccessTokenTTL:  accessTTL,
 		RefreshTokenTTL: refreshTTL,
+		DatabaseURL:     dsn,
 	}, nil
 }
