@@ -114,7 +114,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Storage.Create(models.User{
+	user, err := h.Storage.Create(r.Context(), models.User{
 		Email:        request.Email,
 		PasswordHash: hash,
 		Role:         request.Role,
@@ -158,7 +158,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.Storage.GetByEmail(request.Email)
+	user, err := h.Storage.GetByEmail(r.Context(), request.Email)
 	if err != nil {
 		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return

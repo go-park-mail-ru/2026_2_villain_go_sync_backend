@@ -1,8 +1,10 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
@@ -17,15 +19,23 @@ func New() http.Handler {
 		log.Fatalf("load config: %v", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pool, err := storage.NewPostgresPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("connect db: %v", err)
+	}
+
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	mux := http.NewServeMux()
-
 	h := handler.NewHandler(
-		storage.NewMemoryRepository(),
+		storage.NewUserPostgresRepository(pool),
 		storage.NewDemoVacancyRepository(),
 		tokens,
 	)
+
+	mux := http.NewServeMux()
 
 	mux.HandleFunc("POST /api/refresh", h.Refresh)
 	mux.HandleFunc("GET /api/health", handler.Health)
