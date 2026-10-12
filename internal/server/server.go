@@ -22,7 +22,7 @@ func New() http.Handler {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pool, err := storage.NewPostgresPool(ctx, cfg.DatabaseURL)
+	pool, err := storage.NewPostgresPool(ctx, cfg.DSN())
 	if err != nil {
 		log.Fatalf("connect db: %v", err)
 	}

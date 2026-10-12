@@ -32,12 +32,12 @@ func (r *UserPostgresRepository) Create(ctx context.Context, user models.User) (
 	query := `
         INSERT INTO app_user (email, password_hash, role)
         VALUES ($1, $2, $3)
-        RETURNING user_id, email, password_hash, role, created_at
+        RETURNING user_id, created_at
     `
 
 	err := r.pool.QueryRow(ctx, query,
 		user.Email, user.PasswordHash, user.Role,
-	).Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
+	).Scan(&user.ID, &user.CreatedAt)
 
 	if err != nil {
 		if isUniqueViolation(err) {
