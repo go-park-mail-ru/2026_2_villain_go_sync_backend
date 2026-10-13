@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
-	vacancies, err := h.Vacancies.List()
+	vacancies, err := h.Vacancies.List(r.Context())
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return

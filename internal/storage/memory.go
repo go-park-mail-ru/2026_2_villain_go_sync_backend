@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 	"time"
 
@@ -21,7 +22,7 @@ func NewMemoryRepository() *MemoryRepository {
 	}
 }
 
-func (m *MemoryRepository) Create(user models.User) (models.User, error) {
+func (m *MemoryRepository) Create(ctx context.Context, user models.User) (models.User, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -38,7 +39,7 @@ func (m *MemoryRepository) Create(user models.User) (models.User, error) {
 	return user, nil
 }
 
-func (m *MemoryRepository) GetByEmail(email string) (models.User, error) {
+func (m *MemoryRepository) GetByEmail(ctx context.Context, email string) (models.User, error) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 

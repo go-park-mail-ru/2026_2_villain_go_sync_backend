@@ -1,11 +1,14 @@
 package storage
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestMemoryVacancyRepository_List_Empty(t *testing.T) {
 	repo := NewMemoryVacancyRepository()
 
-	vacancies, err := repo.List()
+	vacancies, err := repo.List(context.Background())
 	if err != nil {
 		t.Fatalf("List() returned an error: %v", err)
 	}

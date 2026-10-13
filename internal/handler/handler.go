@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"context"
+
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
@@ -24,10 +26,10 @@ func NewHandler(
 }
 
 type UserRepository interface {
-	Create(user models.User) (models.User, error)
-	GetByEmail(email string) (models.User, error)
+	Create(ctx context.Context, user models.User) (models.User, error)
+	GetByEmail(ctx context.Context, email string) (models.User, error)
 }
 
 type VacancyRepository interface {
-	List() ([]models.Vacancy, error)
+	List(ctx context.Context) ([]models.Vacancy, error)
 }

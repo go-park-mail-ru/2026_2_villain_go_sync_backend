@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -16,7 +17,7 @@ func TestMemoryRepository_Create(t *testing.T) {
 		Role:         "seeker",
 	}
 
-	created, err := repo.Create(user)
+	created, err := repo.Create(context.Background(), user)
 	if err != nil {
 		t.Fatalf("Create() returned an error: %v", err)
 	}
@@ -37,7 +38,7 @@ func TestMemoryRepository_Create(t *testing.T) {
 		t.Errorf("Role = %q, want %q", created.Role, user.Role)
 	}
 
-	saved, err := repo.GetByEmail(user.Email)
+	saved, err := repo.GetByEmail(context.Background(), user.Email)
 	if err != nil {
 		t.Fatalf("GetByEmail() returned an error: %v", err)
 	}
@@ -54,7 +55,7 @@ func TestMemoryRepository_Create_EmailTaken(t *testing.T) {
 		Role:         "seeker",
 	}
 
-	first, err := repo.Create(user)
+	first, err := repo.Create(context.Background(), user)
 	if err != nil {
 		t.Fatalf("first Create() returned an error: %v", err)
 	}
@@ -65,12 +66,12 @@ func TestMemoryRepository_Create_EmailTaken(t *testing.T) {
 		Role:         "employer",
 	}
 
-	_, err = repo.Create(duplicate)
+	_, err = repo.Create(context.Background(), duplicate)
 	if !errors.Is(err, apperrors.ErrEmailTaken) {
 		t.Errorf("Create() error = %v, want ErrEmailTaken", err)
 	}
 
-	saved, err := repo.GetByEmail(user.Email)
+	saved, err := repo.GetByEmail(context.Background(), user.Email)
 	if err != nil {
 		t.Fatalf("GetByEmail() returned an error: %v", err)
 	}
@@ -82,14 +83,14 @@ func TestMemoryRepository_Create_EmailTaken(t *testing.T) {
 func TestMemoryRepository_Create_IncrementsID(t *testing.T) {
 	repo := NewMemoryRepository()
 
-	first, err := repo.Create(models.User{
+	first, err := repo.Create(context.Background(), models.User{
 		Email: "first@example.com",
 	})
 	if err != nil {
 		t.Fatalf("first Create() returned an error: %v", err)
 	}
 
-	second, err := repo.Create(models.User{
+	second, err := repo.Create(context.Background(), models.User{
 		Email: "second@example.com",
 	})
 	if err != nil {
@@ -107,7 +108,7 @@ func TestMemoryRepository_Create_IncrementsID(t *testing.T) {
 func TestMemoryRepository_GetByEmail(t *testing.T) {
 	t.Run("existing user", func(t *testing.T) {
 		repo := NewMemoryRepository()
-		created, err := repo.Create(models.User{
+		created, err := repo.Create(context.Background(), models.User{
 			Email:        "test@example.com",
 			PasswordHash: "password-hash",
 			Role:         "seeker",
@@ -116,7 +117,7 @@ func TestMemoryRepository_GetByEmail(t *testing.T) {
 			t.Fatalf("Create() returned an error: %v", err)
 		}
 
-		found, err := repo.GetByEmail(created.Email)
+		found, err := repo.GetByEmail(context.Background(), created.Email)
 		if err != nil {
 			t.Fatalf("GetByEmail() returned an error: %v", err)
 		}
@@ -128,7 +129,7 @@ func TestMemoryRepository_GetByEmail(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		repo := NewMemoryRepository()
 
-		_, err := repo.GetByEmail("missing@example.com")
+		_, err := repo.GetByEmail(context.Background(), "missing@example.com")
 		if !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("GetByEmail() error = %v, want ErrNotFound", err)
 		}

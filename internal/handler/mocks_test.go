@@ -1,6 +1,10 @@
 package handler
 
-import "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+import (
+	"context"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+)
 
 type mockVacancyRepository struct {
 	vacancies []models.Vacancy
@@ -8,7 +12,7 @@ type mockVacancyRepository struct {
 	calls     int
 }
 
-func (m *mockVacancyRepository) List() ([]models.Vacancy, error) {
+func (m *mockVacancyRepository) List(ctx context.Context) ([]models.Vacancy, error) {
 	m.calls++
 	return m.vacancies, m.err
 }
@@ -23,13 +27,13 @@ type mockUserRepository struct {
 	getByEmailCalls int
 }
 
-func (m *mockUserRepository) Create(user models.User) (models.User, error) {
+func (m *mockUserRepository) Create(ctx context.Context, user models.User) (models.User, error) {
 	m.createCalls++
 	m.createdUser = user
 	return m.user, m.createErr
 }
 
-func (m *mockUserRepository) GetByEmail(email string) (models.User, error) {
+func (m *mockUserRepository) GetByEmail(ctx context.Context, email string) (models.User, error) {
 	m.getByEmailCalls++
 	m.requestedEmail = email
 	return m.user, m.getByEmailErr

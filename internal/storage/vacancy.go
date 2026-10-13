@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"sync"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -17,7 +18,7 @@ func NewMemoryVacancyRepository() *MemoryVacancyRepository {
 	}
 }
 
-func (r *MemoryVacancyRepository) List() ([]models.Vacancy, error) {
+func (r *MemoryVacancyRepository) List(ctx context.Context) ([]models.Vacancy, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
