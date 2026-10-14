@@ -10,7 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/handler"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 )
 
 func New() http.Handler {
@@ -22,7 +22,7 @@ func New() http.Handler {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pool, err := storage.NewPostgresPool(ctx, cfg.DSN())
+	pool, err := repository.NewPostgresPool(ctx, cfg.DSN())
 	if err != nil {
 		log.Fatalf("connect db: %v", err)
 	}
@@ -30,8 +30,8 @@ func New() http.Handler {
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
 	h := handler.NewHandler(
-		storage.NewUserPostgresRepository(pool),
-		storage.NewDemoVacancyRepository(),
+		repository.NewUserPostgresRepository(pool),
+		repository.NewDemoVacancyRepository(),
 		tokens,
 	)
 
