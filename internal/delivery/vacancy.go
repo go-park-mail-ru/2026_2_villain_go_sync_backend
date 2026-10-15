@@ -1,4 +1,4 @@
-package handler
+package delivery
 
 import (
 	"net/http"
@@ -7,7 +7,7 @@ import (
 )
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
-	vacancies, err := h.Vacancies.List(r.Context())
+	vacancies, err := h.Vacancy.List(r.Context())
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
