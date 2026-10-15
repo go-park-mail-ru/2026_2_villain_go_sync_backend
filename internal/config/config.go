@@ -25,11 +25,6 @@ func (c *Config) DSN() string {
 }
 
 func Load() (*Config, error) {
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		return nil, errors.New("DATABASE_URL is not set")
-	}
-
 	secret := os.Getenv("JWT_SECRET")
 	if secret == "" {
 		return nil, errors.New("JWT_SECRET is not set")
@@ -53,14 +48,39 @@ func Load() (*Config, error) {
 		refreshTTL = d
 	}
 
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		return nil, errors.New("DB_HOST is not set")
+	}
+
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		return nil, errors.New("DB_USER is not set")
+	}
+
+	dbPassword := os.Getenv("DB_PASSWORD")
+	if dbPassword == "" {
+		return nil, errors.New("DB_PASSWORD is not set")
+	}
+
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		return nil, errors.New("DB_NAME is not set")
+	}
+
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = "5432"
+	}
+
 	return &Config{
 		JWTSecret:       []byte(secret),
 		AccessTokenTTL:  accessTTL,
 		RefreshTokenTTL: refreshTTL,
-		DBHost:          os.Getenv("DB_HOST"),
-		DBPort:          os.Getenv("DB_PORT"),
-		DBUser:          os.Getenv("DB_USER"),
-		DBPassword:      os.Getenv("DB_PASSWORD"),
-		DBName:          os.Getenv("DB_NAME"),
+		DBHost:          dbHost,
+		DBPort:          dbPort,
+		DBUser:          dbUser,
+		DBPassword:      dbPassword,
+		DBName:          dbName,
 	}, nil
 }
