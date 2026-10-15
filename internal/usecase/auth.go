@@ -72,7 +72,7 @@ func (u *AuthUsecase) Register(ctx context.Context, email, pass, role string) (*
 		Role:         role,
 	})
 	if err != nil {
-		return nil, err // ErrEmailTaken пробросится наверх
+		return nil, err
 	}
 
 	return u.issueTokens(int64(user.ID), user.Role)
@@ -118,11 +118,10 @@ func (u *AuthUsecase) issueTokens(userID int64, role string) (*Tokens, error) {
 	return &Tokens{Access: access, Refresh: refresh}, nil
 }
 
-func validateCredentials(email, password string) error {
-	if !isValidEmail(email) || !isValidPassword(password) {
-		return ErrInvalidCredentials
+func validateCredentials(email, pass string) error {
+	if !isValidEmail(email) || !isValidPassword(pass) {
+		return ErrInvalidRequest
 	}
-
 	return nil
 }
 

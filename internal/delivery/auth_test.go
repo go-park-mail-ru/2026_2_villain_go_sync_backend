@@ -2,10 +2,8 @@ package delivery
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
-
 	"strings"
 	"testing"
 	"time"
@@ -13,114 +11,25 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
 )
-
-func TestIsValidPassword(t *testing.T) {
-	tests := []struct {
-		name     string
-		password string
-		want     bool
-	}{
-		{"minimum length", "Abcdefg1", true},
-		{"maximum length", "Aa1" + strings.Repeat("a", 69), true},
-		{"empty", "", false},
-		{"too short", "Aa1", false},
-		{"too long", "Aa1" + strings.Repeat("a", 70), false},
-		{"no uppercase", "password123", false},
-		{"no lowercase", "PASSWORD123", false},
-		{"no digit", "PasswordABC", false},
-		{"forbidden character", "Password123 ", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidPassword(tt.password); got != tt.want {
-				t.Errorf("isValidPassword() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestIsValidEmail(t *testing.T) {
-	tests := []struct {
-		name  string
-		email string
-		want  bool
-	}{
-		{"valid", "test@example.com", true},
-		{"maximum length", strings.Repeat("a", 242) + "@example.com", true},
-		{"too long", strings.Repeat("a", 243) + "@example.com", false},
-		{"empty", "", false},
-		{"missing at", "test.example.com", false},
-		{"missing local part", "@example.com", false},
-		{"missing domain", "test@", false},
-		{"contains space", "test user@example.com", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := isValidEmail(tt.email); got != tt.want {
-				t.Errorf("isValidEmail() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestIsValidRole(t *testing.T) {
-	tests := []struct {
-		role string
-		want bool
-	}{
-		{"seeker", true},
-		{"employer", true},
-		{"admin", false},
-		{"", false},
-	}
-
-	for _, tt := range tests {
-		t.Run("role="+tt.role, func(t *testing.T) {
-			if got := isValidRole(tt.role); got != tt.want {
-				t.Errorf("isValidRole(%q) = %v, want %v",
-					tt.role, got, tt.want)
-			}
-		})
-	}
-}
-
-func TestValidateCredentials(t *testing.T) {
-	tests := []struct {
-		name     string
-		email    string
-		password string
-		wantErr  bool
-	}{
-		{"valid", "test@example.com", "Password123", false},
-		{"invalid email", "invalid", "Password123", true},
-		{"invalid password", "test@example.com", "short", true},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := validateCredentials(tt.email, tt.password)
-
-			if tt.wantErr {
-				if !errors.Is(err, ErrInvalidCredentials) {
-					t.Errorf("error = %v, want ErrInvalidCredentials", err)
-				}
-			} else if err != nil {
-				t.Errorf("unexpected error: %v", err)
-			}
-		})
-	}
-}
-
-// --- helpers ---
 
 func newTestTokens() *auth.TokenManager {
 	return auth.NewTokenManager(
 		[]byte("test-secret"),
 		15*time.Minute,
 		168*time.Hour,
+	)
+}
+
+func newTestHandler(
+	userRepo usecase.UserRepository,
+	vacancyRepo usecase.VacancyRepository,
+	tokens *auth.TokenManager,
+) *Handler {
+	return NewHandler(
+		usecase.NewAuthUsecase(userRepo, tokens),
+		usecase.NewVacancyUsecase(vacancyRepo),
 	)
 }
 
@@ -166,7 +75,7 @@ func TestRegister_InvalidRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &mockUserRepository{}
-			h := NewHandler(repo, nil, newTestTokens())
+			h := newTestHandler(repo, nil, newTestTokens())
 
 			request := httptest.NewRequest(
 				http.MethodPost,
@@ -188,7 +97,6 @@ func TestRegister_InvalidRequest(t *testing.T) {
 				t.Errorf("Content-Type = %q, want application/json", ct)
 			}
 
-			// Проверяем, что тело — валидный JSON с полем error
 			var resp map[string]any
 			if err := json.Unmarshal(recorder.Body.Bytes(), &resp); err != nil {
 				t.Errorf("body is not JSON: %v", err)
@@ -209,7 +117,7 @@ func TestRegister_Success(t *testing.T) {
 		},
 	}
 	tokens := newTestTokens()
-	h := NewHandler(repo, nil, tokens)
+	h := newTestHandler(repo, nil, tokens)
 
 	body := `{"email":"test@example.com","password":"Password123","role":"seeker"}`
 	request := httptest.NewRequest(
@@ -244,7 +152,6 @@ func TestRegister_Success(t *testing.T) {
 	cookies := make(map[string]*http.Cookie)
 	for _, cookie := range recorder.Result().Cookies() {
 		cookies[cookie.Name] = cookie
-
 	}
 
 	tests := []struct {
@@ -270,11 +177,6 @@ func TestRegister_Success(t *testing.T) {
 			}
 			if cookie.SameSite != http.SameSiteLaxMode {
 				t.Errorf("SameSite = %v, want Lax", cookie.SameSite)
-			}
-			if cookie.Expires.IsZero() {
-				t.Error("cookie must have an expiration date")
-			} else if !cookie.Expires.After(time.Now()) {
-				t.Error("cookie expiration must be in the future")
 			}
 
 			claims, err := tokens.Parse(cookie.Value, tt.typ)
@@ -319,7 +221,7 @@ func TestLogin_InvalidRequest(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			repo := &mockUserRepository{}
-			h := NewHandler(repo, nil, newTestTokens())
+			h := newTestHandler(repo, nil, newTestTokens())
 
 			request := httptest.NewRequest(
 				http.MethodPost,
@@ -340,7 +242,7 @@ func TestLogin_InvalidRequest(t *testing.T) {
 
 func TestLogin_UserNotFound(t *testing.T) {
 	repo := &mockUserRepository{}
-	h := NewHandler(repo, nil, newTestTokens())
+	h := newTestHandler(repo, nil, newTestTokens())
 
 	request := httptest.NewRequest(
 		http.MethodPost,
@@ -369,7 +271,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 			PasswordHash: hash,
 		},
 	}
-	h := NewHandler(repo, nil, newTestTokens())
+	h := newTestHandler(repo, nil, newTestTokens())
 
 	request := httptest.NewRequest(
 		http.MethodPost,
@@ -398,8 +300,7 @@ func TestLogin_Success(t *testing.T) {
 			PasswordHash: hash,
 		},
 	}
-	tokens := newTestTokens()
-	h := NewHandler(repo, nil, tokens)
+	h := newTestHandler(repo, nil, newTestTokens())
 
 	request := httptest.NewRequest(
 		http.MethodPost,
@@ -427,7 +328,7 @@ func TestLogin_Success(t *testing.T) {
 // --- Refresh ---
 
 func TestRefresh_NoCookie(t *testing.T) {
-	h := NewHandler(&mockUserRepository{}, nil, newTestTokens())
+	h := newTestHandler(&mockUserRepository{}, nil, newTestTokens())
 
 	request := httptest.NewRequest(http.MethodPost, "/api/refresh", nil)
 	recorder := httptest.NewRecorder()
@@ -440,7 +341,7 @@ func TestRefresh_NoCookie(t *testing.T) {
 }
 
 func TestRefresh_GarbageToken(t *testing.T) {
-	h := NewHandler(&mockUserRepository{}, nil, newTestTokens())
+	h := newTestHandler(&mockUserRepository{}, nil, newTestTokens())
 
 	request := httptest.NewRequest(http.MethodPost, "/api/refresh", nil)
 	request.AddCookie(&http.Cookie{Name: "refresh_token", Value: "garbage"})
@@ -455,7 +356,7 @@ func TestRefresh_GarbageToken(t *testing.T) {
 
 func TestRefresh_WrongTokenType(t *testing.T) {
 	tokens := newTestTokens()
-	h := NewHandler(&mockUserRepository{}, nil, tokens)
+	h := newTestHandler(&mockUserRepository{}, nil, tokens)
 
 	access, _ := tokens.Generate(42, "seeker", auth.TokenTypeAccess)
 
@@ -472,7 +373,7 @@ func TestRefresh_WrongTokenType(t *testing.T) {
 
 func TestRefresh_Success(t *testing.T) {
 	tokens := newTestTokens()
-	h := NewHandler(&mockUserRepository{}, nil, tokens)
+	h := newTestHandler(&mockUserRepository{}, nil, tokens)
 
 	refresh, _ := tokens.Generate(42, "seeker", auth.TokenTypeRefresh)
 

@@ -17,7 +17,7 @@ func TestListVacancies_Success(t *testing.T) {
 		{ID: 2, EmployerID: 20, Title: "C++ developer"},
 	}
 	repo := &mockVacancyRepository{vacancies: want}
-	h := NewHandler(nil, repo, newTestTokens())
+	h := newTestHandler(nil, repo, newTestTokens())
 
 	request := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	recorder := httptest.NewRecorder()
@@ -49,7 +49,7 @@ func TestListVacancies_RepositoryError(t *testing.T) {
 	repo := &mockVacancyRepository{
 		err: errors.New("database unavailable"),
 	}
-	h := NewHandler(nil, repo, newTestTokens())
+	h := newTestHandler(nil, repo, newTestTokens())
 
 	request := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	recorder := httptest.NewRecorder()

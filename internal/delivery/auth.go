@@ -36,7 +36,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		request.Role,
 	)
 
-	if errors.Is(err, usecase.ErrInvalidCredentials) {
+	if errors.Is(err, usecase.ErrInvalidRequest) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
@@ -66,6 +66,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokens, err := h.Auth.Login(r.Context(), request.Email, request.Password)
+	if errors.Is(err, usecase.ErrInvalidRequest) {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
 	if errors.Is(err, usecase.ErrInvalidCredentials) {
 		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
