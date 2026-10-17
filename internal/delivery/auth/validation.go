@@ -1,6 +1,8 @@
 package auth
 
-import "regexp"
+import (
+	"regexp"
+)
 
 const (
 	maxEmailLength    = 254

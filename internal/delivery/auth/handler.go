@@ -44,6 +44,15 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if err := validateCredentials(request.Email, request.Password); err != nil {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+	if !isValidRole(request.Role) {
+		httputil.WriteError(w, http.StatusBadRequest, ErrInvalidRole.Error())
+		return
+	}
+
 	tokens, err := h.auth.Register(
 		r.Context(),
 		request.Email,
@@ -51,14 +60,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		request.Role,
 	)
 
-	if errors.Is(err, authUsecase.ErrInvalidRequest) {
-		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
-		return
-	}
-	if errors.Is(err, authUsecase.ErrInvalidRole) {
-		httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		return
-	}
 	if errors.Is(err, apperrors.ErrEmailTaken) {
 		httputil.WriteError(w, http.StatusConflict, "email already taken")
 		return
@@ -80,12 +81,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.auth.Login(r.Context(), request.Email, request.Password)
-
-	if errors.Is(err, authUsecase.ErrInvalidRequest) {
+	if err := validateCredentials(request.Email, request.Password); err != nil {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
+
+	tokens, err := h.auth.Login(r.Context(), request.Email, request.Password)
+
 	if errors.Is(err, authUsecase.ErrInvalidCredentials) {
 		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return

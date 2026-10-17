@@ -32,13 +32,6 @@ func NewAuthUsecase(users UserRepository, tokens *auth.TokenManager) *AuthUsecas
 }
 
 func (u *AuthUsecase) Register(ctx context.Context, email, pass, role string) (*Tokens, error) {
-	if err := validateCredentials(email, pass); err != nil {
-		return nil, err
-	}
-	if !isValidRole(role) {
-		return nil, ErrInvalidRole
-	}
-
 	hash, err := password.Hash(pass)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
@@ -57,10 +50,6 @@ func (u *AuthUsecase) Register(ctx context.Context, email, pass, role string) (*
 }
 
 func (u *AuthUsecase) Login(ctx context.Context, email, pass string) (*Tokens, error) {
-	if err := validateCredentials(email, pass); err != nil {
-		return nil, err
-	}
-
 	user, err := u.users.GetByEmail(ctx, email)
 	if err != nil {
 		return nil, ErrInvalidCredentials

@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
-
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
@@ -69,13 +68,13 @@ func TestRegister_Errors(t *testing.T) {
 		{
 			name:       "invalid request format",
 			body:       `{"email":"invalid","password":"short","role":"seeker"}`,
-			mockErr:    authUsecase.ErrInvalidRequest,
+			mockErr:    nil,
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "invalid role",
 			body:       `{"email":"test@example.com","password":"Password123","role":"admin"}`,
-			mockErr:    authUsecase.ErrInvalidRole,
+			mockErr:    nil,
 			wantStatus: http.StatusBadRequest,
 		},
 		{
@@ -138,17 +137,20 @@ func TestLogin_Success(t *testing.T) {
 func TestLogin_Errors(t *testing.T) {
 	tests := []struct {
 		name       string
+		body       string
 		mockErr    error
 		wantStatus int
 	}{
 		{
 			name:       "invalid credentials",
+			body:       `{"email":"test@example.com","password":"Password123"}`,
 			mockErr:    authUsecase.ErrInvalidCredentials,
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "invalid format",
-			mockErr:    authUsecase.ErrInvalidRequest,
+			body:       `{"email":"invalid","password":"short"}`,
+			mockErr:    nil,
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 	}
@@ -162,7 +164,7 @@ func TestLogin_Errors(t *testing.T) {
 			}
 			h := NewHandler(mockUC)
 
-			request := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(`{"email":"test@example.com","password":"Password123"}`))
+			request := httptest.NewRequest(http.MethodPost, "/api/login", strings.NewReader(tt.body))
 			recorder := httptest.NewRecorder()
 
 			h.Login(recorder, request)
