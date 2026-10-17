@@ -8,13 +8,13 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
+	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
 type AuthUsecase interface {
-	Register(ctx context.Context, email, password, role string) (*usecase.Tokens, error)
-	Login(ctx context.Context, email, password string) (*usecase.Tokens, error)
-	Refresh(ctx context.Context, refreshToken string) (*usecase.Tokens, error)
+	Register(ctx context.Context, email, password, role string) (*authUsecase.Tokens, error)
+	Login(ctx context.Context, email, password string) (*authUsecase.Tokens, error)
+	Refresh(ctx context.Context, refreshToken string) (*authUsecase.Tokens, error)
 }
 
 type Handler struct {
@@ -51,11 +51,11 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		request.Role,
 	)
 
-	if errors.Is(err, usecase.ErrInvalidRequest) {
+	if errors.Is(err, authUsecase.ErrInvalidRequest) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	if errors.Is(err, usecase.ErrInvalidRole) {
+	if errors.Is(err, authUsecase.ErrInvalidRole) {
 		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
@@ -81,12 +81,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokens, err := h.auth.Login(r.Context(), request.Email, request.Password)
-	if errors.Is(err, usecase.ErrInvalidRequest) {
+	if errors.Is(err, authUsecase.ErrInvalidRequest) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	if errors.Is(err, usecase.ErrInvalidCredentials) {
-		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
+	if errors.Is(err, authUsecase.ErrInvalidRole) {
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if err != nil {
@@ -106,7 +106,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokens, err := h.auth.Refresh(r.Context(), cookie.Value)
-	if errors.Is(err, usecase.ErrInvalidToken) {
+	if errors.Is(err, authUsecase.ErrInvalidToken) {
 		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}

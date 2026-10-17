@@ -1,4 +1,4 @@
-package usecase
+package vacancy
 
 import (
 	"context"

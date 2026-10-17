@@ -15,7 +15,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 	userRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
 	vacancyRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
+	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
+	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 func New() http.Handler {
@@ -37,11 +38,11 @@ func New() http.Handler {
 	userRepository := userRepo.NewPostgresRepository(pool)
 	vacancyRepository := vacancyRepo.NewDemoRepository()
 
-	authUsecase := usecase.NewAuthUsecase(userRepository, tokens)
-	vacancyUsecase := usecase.NewVacancyUsecase(vacancyRepository)
+	authUC := authUsecase.NewAuthUsecase(userRepository, tokens)
+	vacancyUC := vacancyUsecase.NewVacancyUsecase(vacancyRepository)
 
-	authHandler := authDelivery.NewHandler(authUsecase)
-	vacancyHandler := vacancyDelivery.NewHandler(vacancyUsecase)
+	authHandler := authDelivery.NewHandler(authUC)
+	vacancyHandler := vacancyDelivery.NewHandler(vacancyUC)
 
 	mux := http.NewServeMux()
 

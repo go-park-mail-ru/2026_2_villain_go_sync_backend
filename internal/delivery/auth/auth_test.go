@@ -8,7 +8,8 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
+
+	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
 func findCookie(cookies []*http.Cookie, name string) *http.Cookie {
@@ -24,8 +25,8 @@ func findCookie(cookies []*http.Cookie, name string) *http.Cookie {
 
 func TestRegister_Success(t *testing.T) {
 	mockUC := &mockAuthUsecase{
-		registerFn: func(ctx context.Context, email, password, role string) (*usecase.Tokens, error) {
-			return &usecase.Tokens{Access: "test-access", Refresh: "test-refresh"}, nil
+		registerFn: func(ctx context.Context, email, password, role string) (*authUsecase.Tokens, error) {
+			return &authUsecase.Tokens{Access: "test-access", Refresh: "test-refresh"}, nil
 		},
 	}
 	h := NewHandler(mockUC)
@@ -68,13 +69,13 @@ func TestRegister_Errors(t *testing.T) {
 		{
 			name:       "invalid request format",
 			body:       `{"email":"invalid","password":"short","role":"seeker"}`,
-			mockErr:    usecase.ErrInvalidRequest,
+			mockErr:    authUsecase.ErrInvalidRequest,
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 		{
 			name:       "invalid role",
 			body:       `{"email":"test@example.com","password":"Password123","role":"admin"}`,
-			mockErr:    usecase.ErrInvalidRole,
+			mockErr:    authUsecase.ErrInvalidRole,
 			wantStatus: http.StatusBadRequest,
 		},
 		{
@@ -88,7 +89,7 @@ func TestRegister_Errors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := &mockAuthUsecase{
-				registerFn: func(ctx context.Context, email, password, role string) (*usecase.Tokens, error) {
+				registerFn: func(ctx context.Context, email, password, role string) (*authUsecase.Tokens, error) {
 					return nil, tt.mockErr
 				},
 			}
@@ -110,8 +111,8 @@ func TestRegister_Errors(t *testing.T) {
 
 func TestLogin_Success(t *testing.T) {
 	mockUC := &mockAuthUsecase{
-		loginFn: func(ctx context.Context, email, password string) (*usecase.Tokens, error) {
-			return &usecase.Tokens{Access: "test-access", Refresh: "test-refresh"}, nil
+		loginFn: func(ctx context.Context, email, password string) (*authUsecase.Tokens, error) {
+			return &authUsecase.Tokens{Access: "test-access", Refresh: "test-refresh"}, nil
 		},
 	}
 	h := NewHandler(mockUC)
@@ -142,12 +143,12 @@ func TestLogin_Errors(t *testing.T) {
 	}{
 		{
 			name:       "invalid credentials",
-			mockErr:    usecase.ErrInvalidCredentials,
+			mockErr:    authUsecase.ErrInvalidCredentials,
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name:       "invalid format",
-			mockErr:    usecase.ErrInvalidRequest,
+			mockErr:    authUsecase.ErrInvalidRequest,
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 	}
@@ -155,7 +156,7 @@ func TestLogin_Errors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := &mockAuthUsecase{
-				loginFn: func(ctx context.Context, email, password string) (*usecase.Tokens, error) {
+				loginFn: func(ctx context.Context, email, password string) (*authUsecase.Tokens, error) {
 					return nil, tt.mockErr
 				},
 			}
@@ -180,8 +181,8 @@ func TestLogin_Errors(t *testing.T) {
 
 func TestRefresh_Success(t *testing.T) {
 	mockUC := &mockAuthUsecase{
-		refreshFn: func(ctx context.Context, refreshToken string) (*usecase.Tokens, error) {
-			return &usecase.Tokens{Access: "new-access", Refresh: "new-refresh"}, nil
+		refreshFn: func(ctx context.Context, refreshToken string) (*authUsecase.Tokens, error) {
+			return &authUsecase.Tokens{Access: "new-access", Refresh: "new-refresh"}, nil
 		},
 	}
 	h := NewHandler(mockUC)
@@ -218,7 +219,7 @@ func TestRefresh_Errors(t *testing.T) {
 		{
 			name:       "invalid token",
 			cookieVal:  "garbage",
-			mockErr:    usecase.ErrInvalidToken,
+			mockErr:    authUsecase.ErrInvalidToken,
 			wantStatus: http.StatusUnauthorized,
 		},
 	}
@@ -226,7 +227,7 @@ func TestRefresh_Errors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := &mockAuthUsecase{
-				refreshFn: func(ctx context.Context, refreshToken string) (*usecase.Tokens, error) {
+				refreshFn: func(ctx context.Context, refreshToken string) (*authUsecase.Tokens, error) {
 					return nil, tt.mockErr
 				},
 			}

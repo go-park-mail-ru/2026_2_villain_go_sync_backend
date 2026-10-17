@@ -1,34 +1,13 @@
-package usecase
+package auth
 
 import (
 	"context"
 	"fmt"
-	"regexp"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
 )
-
-const (
-	maxEmailLength    = 254
-	minPasswordLength = 8
-	maxPasswordLength = 72
-)
-
-var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-
-var (
-	reUpper = regexp.MustCompile(`[A-Z]`)
-	reLower = regexp.MustCompile(`[a-z]`)
-	reDigit = regexp.MustCompile(`[0-9]`)
-	reChars = regexp.MustCompile("^[A-Za-z0-9!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~]+$")
-)
-
-var allowedRoles = map[string]bool{
-	"employer": true,
-	"seeker":   true,
-}
 
 type UserRepository interface {
 	Create(ctx context.Context, user models.User) (models.User, error)
@@ -56,7 +35,6 @@ func (u *AuthUsecase) Register(ctx context.Context, email, pass, role string) (*
 	if err := validateCredentials(email, pass); err != nil {
 		return nil, err
 	}
-
 	if !isValidRole(role) {
 		return nil, ErrInvalidRole
 	}
@@ -116,44 +94,4 @@ func (u *AuthUsecase) issueTokens(userID int64, role string) (*Tokens, error) {
 	}
 
 	return &Tokens{Access: access, Refresh: refresh}, nil
-}
-
-func validateCredentials(email, pass string) error {
-	if !isValidEmail(email) || !isValidPassword(pass) {
-		return ErrInvalidRequest
-	}
-	return nil
-}
-
-func isValidEmail(email string) bool {
-	if len(email) > maxEmailLength {
-		return false
-	}
-
-	return emailRegex.MatchString(email)
-}
-
-func isValidPassword(password string) bool {
-	if len(password) < minPasswordLength || len(password) > maxPasswordLength {
-		return false
-	}
-
-	if !reUpper.MatchString(password) {
-		return false
-	}
-	if !reLower.MatchString(password) {
-		return false
-	}
-	if !reDigit.MatchString(password) {
-		return false
-	}
-	if !reChars.MatchString(password) {
-		return false
-	}
-
-	return true
-}
-
-func isValidRole(role string) bool {
-	return allowedRoles[role]
 }
