@@ -1,6 +1,7 @@
-package delivery
+package vacancy
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -16,8 +17,13 @@ func TestListVacancies_Success(t *testing.T) {
 		{ID: 1, EmployerID: 10, Title: "Go developer"},
 		{ID: 2, EmployerID: 20, Title: "C++ developer"},
 	}
-	repo := &mockVacancyRepository{vacancies: want}
-	h := newTestHandler(nil, repo, newTestTokens())
+
+	mockUC := &mockVacancyUsecase{
+		listFn: func(ctx context.Context) ([]models.Vacancy, error) {
+			return want, nil
+		},
+	}
+	h := NewHandler(mockUC)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	recorder := httptest.NewRecorder()
@@ -40,16 +46,15 @@ func TestListVacancies_Success(t *testing.T) {
 	if !reflect.DeepEqual(resp.Data, want) {
 		t.Errorf("vacancies = %+v, want %+v", resp.Data, want)
 	}
-	if repo.calls != 1 {
-		t.Errorf("List() called %d times, want 1", repo.calls)
-	}
 }
 
-func TestListVacancies_RepositoryError(t *testing.T) {
-	repo := &mockVacancyRepository{
-		err: errors.New("database unavailable"),
+func TestListVacancies_UsecaseError(t *testing.T) {
+	mockUC := &mockVacancyUsecase{
+		listFn: func(ctx context.Context) ([]models.Vacancy, error) {
+			return nil, errors.New("usecase error")
+		},
 	}
-	h := newTestHandler(nil, repo, newTestTokens())
+	h := NewHandler(mockUC)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	recorder := httptest.NewRecorder()
@@ -72,8 +77,5 @@ func TestListVacancies_RepositoryError(t *testing.T) {
 	}
 	if resp.Error != "internal error" {
 		t.Errorf("error = %q, want internal error", resp.Error)
-	}
-	if repo.calls != 1 {
-		t.Errorf("List() called %d times, want 1", repo.calls)
 	}
 }

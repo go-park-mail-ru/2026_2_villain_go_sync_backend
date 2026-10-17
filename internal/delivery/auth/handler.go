@@ -1,6 +1,7 @@
-package delivery
+package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -9,6 +10,20 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
 )
+
+type AuthUsecase interface {
+	Register(ctx context.Context, email, password, role string) (*usecase.Tokens, error)
+	Login(ctx context.Context, email, password string) (*usecase.Tokens, error)
+	Refresh(ctx context.Context, refreshToken string) (*usecase.Tokens, error)
+}
+
+type Handler struct {
+	auth AuthUsecase
+}
+
+func NewHandler(auth AuthUsecase) *Handler {
+	return &Handler{auth: auth}
+}
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
@@ -29,7 +44,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.Auth.Register(
+	tokens, err := h.auth.Register(
 		r.Context(),
 		request.Email,
 		request.Password,
@@ -65,7 +80,7 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.Auth.Login(r.Context(), request.Email, request.Password)
+	tokens, err := h.auth.Login(r.Context(), request.Email, request.Password)
 	if errors.Is(err, usecase.ErrInvalidRequest) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
@@ -90,7 +105,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tokens, err := h.Auth.Refresh(r.Context(), cookie.Value)
+	tokens, err := h.auth.Refresh(r.Context(), cookie.Value)
 	if errors.Is(err, usecase.ErrInvalidToken) {
 		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
@@ -102,24 +117,4 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	setAuthCookies(w, tokens.Access, tokens.Refresh)
 	httputil.WriteOK(w, http.StatusOK, nil)
-}
-
-func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   false,
-	})
-
-	http.SetCookie(w, &http.Cookie{
-		Name:     "refresh_token",
-		Value:    refreshToken,
-		Path:     "/api/refresh",
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-		Secure:   false,
-	})
 }
