@@ -13,6 +13,8 @@ import (
 	vacancyDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
+	userRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
+	vacancyRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
 )
 
@@ -32,11 +34,11 @@ func New() http.Handler {
 
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	userRepo := repository.NewUserPostgresRepository(pool)
-	vacancyRepo := repository.NewDemoVacancyRepository()
+	userRepository := userRepo.NewPostgresRepository(pool)
+	vacancyRepository := vacancyRepo.NewDemoRepository()
 
-	authUsecase := usecase.NewAuthUsecase(userRepo, tokens)
-	vacancyUsecase := usecase.NewVacancyUsecase(vacancyRepo)
+	authUsecase := usecase.NewAuthUsecase(userRepository, tokens)
+	vacancyUsecase := usecase.NewVacancyUsecase(vacancyRepository)
 
 	authHandler := authDelivery.NewHandler(authUsecase)
 	vacancyHandler := vacancyDelivery.NewHandler(vacancyUsecase)

@@ -1,4 +1,4 @@
-package repository
+package user
 
 import (
 	"context"
@@ -20,15 +20,15 @@ func isUniqueViolation(err error) bool {
 	return false
 }
 
-type UserPostgresRepository struct {
+type PostgresRepository struct {
 	pool *pgxpool.Pool
 }
 
-func NewUserPostgresRepository(pool *pgxpool.Pool) *UserPostgresRepository {
-	return &UserPostgresRepository{pool: pool}
+func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
+	return &PostgresRepository{pool: pool}
 }
 
-func (r *UserPostgresRepository) Create(ctx context.Context, user models.User) (models.User, error) {
+func (r *PostgresRepository) Create(ctx context.Context, user models.User) (models.User, error) {
 	query := `
         INSERT INTO app_user (email, password_hash, role)
         VALUES ($1, $2, $3)
@@ -49,7 +49,7 @@ func (r *UserPostgresRepository) Create(ctx context.Context, user models.User) (
 	return user, nil
 }
 
-func (r *UserPostgresRepository) GetByEmail(ctx context.Context, email string) (models.User, error) {
+func (r *PostgresRepository) GetByEmail(ctx context.Context, email string) (models.User, error) {
 	query := `
         SELECT user_id, email, password_hash, role, created_at
         FROM app_user

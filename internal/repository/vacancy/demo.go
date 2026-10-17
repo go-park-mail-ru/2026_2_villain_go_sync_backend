@@ -1,4 +1,4 @@
-package repository
+package vacancy
 
 import (
 	"time"
@@ -6,8 +6,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
-func NewDemoVacancyRepository() *MemoryVacancyRepository {
-	repo := NewMemoryVacancyRepository()
+func NewDemoRepository() *MemoryRepository {
+	repo := NewMemoryRepository()
 	createdAt := time.Date(2026, time.October, 1, 12, 0, 0, 0, time.UTC)
 
 	repo.vacancies = []models.Vacancy{
