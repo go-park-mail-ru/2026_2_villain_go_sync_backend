@@ -81,12 +81,13 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tokens, err := h.auth.Login(r.Context(), request.Email, request.Password)
+
 	if errors.Is(err, authUsecase.ErrInvalidRequest) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	if errors.Is(err, authUsecase.ErrInvalidRole) {
-		httputil.WriteError(w, http.StatusBadRequest, err.Error())
+	if errors.Is(err, authUsecase.ErrInvalidCredentials) {
+		httputil.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 	if err != nil {
