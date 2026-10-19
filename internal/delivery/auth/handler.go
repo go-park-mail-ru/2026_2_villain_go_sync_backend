@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	id "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
@@ -120,4 +121,16 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	setAuthCookies(w, tokens.Access, tokens.Refresh)
 	httputil.WriteOK(w, http.StatusOK, nil)
+}
+
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
+	userID, ok := id.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	data := map[string]int64{
+		"id": userID,
+	}
+	httputil.WriteOK(w, http.StatusOK, data)
 }
