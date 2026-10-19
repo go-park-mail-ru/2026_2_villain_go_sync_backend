@@ -8,9 +8,15 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/handler"
+	authDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/auth"
+	healthDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/health"
+	vacancyDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
+	userRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
+	vacancyRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
+	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
+	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 func New() http.Handler {
@@ -22,27 +28,32 @@ func New() http.Handler {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	pool, err := storage.NewPostgresPool(ctx, cfg.DSN())
+	pool, err := repository.NewPostgresPool(ctx, cfg.DSN())
 	if err != nil {
 		log.Fatalf("connect db: %v", err)
 	}
 
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	h := handler.NewHandler(
-		storage.NewUserPostgresRepository(pool),
-		storage.NewDemoVacancyRepository(),
-		tokens,
-	)
+	userRepository := userRepo.NewPostgresRepository(pool)
+	vacancyRepository := vacancyRepo.NewDemoRepository()
+
+	authUC := authUsecase.NewAuthUsecase(userRepository, tokens)
+	vacancyUC := vacancyUsecase.NewVacancyUsecase(vacancyRepository)
+
+	authHandler := authDelivery.NewHandler(authUC)
+	vacancyHandler := vacancyDelivery.NewHandler(vacancyUC)
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("POST /api/refresh", h.Refresh)
-	mux.HandleFunc("GET /api/health", handler.Health)
-	mux.HandleFunc("POST /api/register", h.Register)
-	mux.HandleFunc("POST /api/login", h.Login)
-	mux.HandleFunc("POST /api/logout", h.Logout)
-	mux.HandleFunc("GET /api/vacancies", h.ListVacancies)
+	mux.HandleFunc("GET /api/health", healthDelivery.Health)
+
+	mux.HandleFunc("POST /api/register", authHandler.Register)
+	mux.HandleFunc("POST /api/login", authHandler.Login)
+	mux.HandleFunc("POST /api/refresh", authHandler.Refresh)
+	mux.HandleFunc("POST /api/logout", authHandler.Logout)
+
+	mux.Handle("GET /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(vacancyHandler.ListVacancies)))
 
 	return middleware.CORS(mux)
 }

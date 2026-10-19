@@ -1,12 +1,12 @@
-package storage
+package vacancy
 
 import (
 	"context"
 	"testing"
 )
 
-func TestMemoryVacancyRepository_List_Empty(t *testing.T) {
-	repo := NewMemoryVacancyRepository()
+func TestMemoryRepository_List_Empty(t *testing.T) {
+	repo := NewMemoryRepository()
 
 	vacancies, err := repo.List(context.Background())
 	if err != nil {
