@@ -6,17 +6,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/app"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
-	authDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/auth"
 	healthDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/health"
-	vacancyDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
-	userRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
-	vacancyRepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
-	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
-	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 func New() http.Handler {
@@ -35,25 +30,18 @@ func New() http.Handler {
 
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	userRepository := userRepo.NewPostgresRepository(pool)
-	vacancyRepository := vacancyRepo.NewDemoRepository()
-
-	authUC := authUsecase.NewAuthUsecase(userRepository, tokens)
-	vacancyUC := vacancyUsecase.NewVacancyUsecase(vacancyRepository)
-
-	authHandler := authDelivery.NewHandler(authUC)
-	vacancyHandler := vacancyDelivery.NewHandler(vacancyUC)
+	appConfig := app.CreateConfig(pool, tokens)
 
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", healthDelivery.Health)
 
-	mux.HandleFunc("POST /api/register", authHandler.Register)
-	mux.HandleFunc("POST /api/login", authHandler.Login)
-	mux.HandleFunc("POST /api/refresh", authHandler.Refresh)
-	mux.HandleFunc("POST /api/logout", authHandler.Logout)
+	mux.HandleFunc("POST /api/register", appConfig.Handlers.Auth.Register)
+	mux.HandleFunc("POST /api/login", appConfig.Handlers.Auth.Login)
+	mux.HandleFunc("POST /api/refresh", appConfig.Handlers.Auth.Refresh)
+	mux.HandleFunc("POST /api/logout", appConfig.Handlers.Auth.Logout)
 
-	mux.Handle("GET /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(vacancyHandler.ListVacancies)))
+	mux.HandleFunc("GET /api/vacancies", appConfig.Handlers.Vacancy.ListVacancies)
 
 	return middleware.CORS(mux)
 }
