@@ -34,7 +34,7 @@
 **Функциональные зависимости:**
 
 ```
-{user_id} -> company_name, description, website, created_at, updated_at
+{user_id} -> company_name, description, website, logo_key, created_at, updated_at
 ```
 
 **Нормальные формы:** 1НФ, 2НФ, 3НФ, НФБК.
@@ -54,7 +54,7 @@
 **Функциональные зависимости:**
 
 ```
-{user_id} -> first_name, last_name, phone, about, created_at, updated_at
+{user_id} -> first_name, last_name, phone, about, avatar_key, created_at, updated_at
 ```
 
 **Нормальные формы:** 1НФ, 2НФ, 3НФ, НФБК.
@@ -107,7 +107,7 @@
 **Функциональные зависимости:**
 
 ```
-{vacancy_id, version} -> title, description, salary_from, salary_to, changed_at
+{vacancy_id, version} -> title, description, salary_from, salary_to, currency, changed_at
 ```
 
 **Нормальные формы:**
@@ -305,9 +305,11 @@
 - Для `is_read` используется `DEFAULT FALSE`, так как новое сообщение или
   уведомление изначально считается непрочитанным.
 - Идентификаторы создаются автоматически с помощью `GENERATED ALWAYS AS IDENTITY`.
-- Для пользовательских и предметных данных (`email`, `role`, названия, текст,
-  зарплата и внешние ключи) значения по умолчанию не задаются: обязательные
-  значения должны передаваться явно, а необязательные могут оставаться `NULL`.
+- Для полей `email`, `role`, названий, текстовых описаний, зарплаты и внешних ключей
+  значения по умолчанию не задаются: обязательные значения должны передаваться
+  явно, а необязательные могут оставаться `NULL`.
+- Для `currency` используется `DEFAULT 'RUB'`, поскольку рубль принят в качестве
+  валюты по умолчанию. Допустимые значения ограничены `CHECK`: `RUB`, `USD`, `EUR`.
 - Для `version` значение по умолчанию не задаётся, поскольку номер версии
   определяется при создании новой записи истории вакансии.
 
@@ -329,7 +331,7 @@
 Для отношений с составными ключами:
 
 - `VACANCY_HISTORY` имеет ключ `(vacancy_id, version)`. Атрибуты `title`,
-  `description`, `salary_from`, `salary_to`, `changed_at` относятся к конкретной
+  `description`, `salary_from`, `salary_to`, `currency`, `changed_at` относятся к конкретной
   версии конкретной вакансии и зависят от всей пары.
 - `VACANCY_CATEGORY` имеет составной ключ `(vacancy_id, category_id)` и не
   содержит неключевых атрибутов.

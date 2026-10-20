@@ -46,6 +46,7 @@ erDiagram
         text company_name
         text description
         text website
+        text logo_key
         timestamp created_at
         timestamp updated_at
     }
@@ -56,6 +57,7 @@ erDiagram
         text last_name
         text phone
         text about
+        text avatar_key
         timestamp created_at
         timestamp updated_at
     }
@@ -85,6 +87,7 @@ erDiagram
         text description
         numeric salary_from
         numeric salary_to
+        text currency
         timestamp changed_at
     }
 
