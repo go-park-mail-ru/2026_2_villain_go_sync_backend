@@ -8,12 +8,12 @@ import (
 
 type Config struct {
 	User    *user.PostgresRepository
-	Vacancy *vacancy.MemoryRepository
+	Vacancy *vacancy.PostgresRepository
 }
 
 func CreateConfig(pool *pgxpool.Pool) *Config {
 	return &Config{
 		User:    user.NewPostgresRepository(pool),
-		Vacancy: vacancy.NewDemoRepository(),
+		Vacancy: vacancy.NewPostgresRepository(pool),
 	}
 }

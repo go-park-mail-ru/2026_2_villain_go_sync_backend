@@ -2,14 +2,19 @@ package vacancy
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	vacancyusecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 type VacancyUsecase interface {
 	List(ctx context.Context) ([]models.Vacancy, error)
+	Create(ctx context.Context, input vacancyusecase.CreateVacancyInput) (models.Vacancy, error)
 }
 
 type Handler struct {
@@ -28,4 +33,45 @@ func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.WriteOK(w, http.StatusOK, vacancies)
+}
+
+func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
+	var request CreateVacancyRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid request")
+		return
+	}
+
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	input := vacancyusecase.CreateVacancyInput{
+		EmployerID:  userID,
+		Title:       request.Title,
+		Description: request.Description,
+		SalaryFrom:  request.SalaryFrom,
+		SalaryTo:    request.SalaryTo,
+		Currency:    request.Currency,
+		CategoryIDs: request.CategoryIDs,
+	}
+
+	createdVacancy, err := h.vacancy.Create(r.Context(), input)
+	if err != nil {
+		switch {
+		case errors.Is(err, vacancyusecase.ErrInvalidVacancy):
+			httputil.WriteError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired):
+			httputil.WriteError(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, vacancyusecase.ErrNotEmployer):
+			httputil.WriteError(w, http.StatusForbidden, err.Error())
+		default:
+			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+	httputil.WriteOK(w, http.StatusCreated, createdVacancy)
 }

@@ -6,6 +6,10 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+func float64Ptr(v float64) *float64 {
+	return &v
+}
+
 func NewDemoRepository() *MemoryRepository {
 	repo := NewMemoryRepository()
 	createdAt := time.Date(2026, time.October, 1, 12, 0, 0, 0, time.UTC)
@@ -16,8 +20,8 @@ func NewDemoRepository() *MemoryRepository {
 			EmployerID:  1,
 			Title:       "Go-разработчик",
 			Description: "Разработка backend-сервисов на Go. Работа с HTTP API и PostgreSQL.",
-			SalaryFrom:  120000,
-			SalaryTo:    180000,
+			SalaryFrom:  float64Ptr(120000),
+			SalaryTo:    float64Ptr(180000),
 			CreatedAt:   createdAt,
 		},
 		{
@@ -25,8 +29,8 @@ func NewDemoRepository() *MemoryRepository {
 			EmployerID:  2,
 			Title:       "Frontend-разработчик",
 			Description: "Разработка интерфейсов на JavaScript. Интеграция с API.",
-			SalaryFrom:  100000,
-			SalaryTo:    160000,
+			SalaryFrom:  float64Ptr(100000),
+			SalaryTo:    float64Ptr(160000),
 			CreatedAt:   createdAt,
 		},
 		{
@@ -34,8 +38,8 @@ func NewDemoRepository() *MemoryRepository {
 			EmployerID:  1,
 			Title:       "Стажёр DevOps",
 			Description: "Автоматизация сборки и развёртывания. Работа с Linux и Docker.",
-			SalaryFrom:  50000,
-			SalaryTo:    80000,
+			SalaryFrom:  float64Ptr(50000),
+			SalaryTo:    float64Ptr(80000),
 			CreatedAt:   createdAt,
 		},
 	}

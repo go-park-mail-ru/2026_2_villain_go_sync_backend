@@ -4,10 +4,12 @@ import "time"
 
 type Vacancy struct {
 	ID          int64     `json:"id"`
+	Version     int       `json:"version"`
 	EmployerID  int64     `json:"employer_id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
-	SalaryFrom  float64   `json:"salary_from"`
-	SalaryTo    float64   `json:"salary_to"`
+	SalaryFrom  *float64  `json:"salary_from"`
+	SalaryTo    *float64  `json:"salary_to"`
+	Currency    string    `json:"currency"`
 	CreatedAt   time.Time `json:"created_at"`
 }
