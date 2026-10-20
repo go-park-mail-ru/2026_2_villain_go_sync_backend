@@ -1,4 +1,4 @@
-.PHONY: run build test coverage lint fmt docker-up docker-down
+.PHONY: run build test coverage lint fmt docker-up docker-down migrate-up migrate-down migrate-version
 
 run:
 	go run ./cmd/server
@@ -24,3 +24,15 @@ docker-up:
 
 docker-down:
 	docker compose down
+
+MIGRATE := $(shell go env GOPATH)/bin/migrate
+DATABASE_URL ?= postgres://villain@127.0.0.1:5432/villain?sslmode=disable
+
+migrate-up:
+	$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" up
+
+migrate-down:
+	$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" down 1
+
+migrate-version:
+	$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" version
