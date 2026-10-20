@@ -41,6 +41,8 @@ func New() http.Handler {
 	mux.HandleFunc("POST /api/refresh", appConfig.Handlers.Auth.Refresh)
 	mux.HandleFunc("POST /api/logout", appConfig.Handlers.Auth.Logout)
 
+	mux.Handle("GET /api/me", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Auth.Me)))
+
 	mux.HandleFunc("GET /api/vacancies", appConfig.Handlers.Vacancy.ListVacancies)
 
 	return middleware.CORS(mux)
