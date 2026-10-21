@@ -15,6 +15,7 @@ type VacancyRepository interface {
 	List(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
+	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 }
 
 type UserRepository interface {
@@ -142,4 +143,15 @@ func (u *VacancyUsecase) GetByID(ctx context.Context, id int64) (models.Vacancy,
 	}
 
 	return vacancy, nil
+}
+
+func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
+	role, err := u.users.GetRoleByID(ctx, employerID)
+	if err != nil {
+		return nil, fmt.Errorf("get employer role: %w", err)
+	}
+	if role != "employer" {
+		return nil, ErrNotEmployer
+	}
+	return u.vacancies.ListByEmployer(ctx, employerID)
 }

@@ -143,12 +143,58 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vaca
 		&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-        return models.Vacancy{}, ErrVacancyNotFound
-    }
+		return models.Vacancy{}, ErrVacancyNotFound
+	}
 
 	if err != nil {
 		return models.Vacancy{}, err
 	}
 
 	return vacancy, nil
+}
+
+func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
+	query := `SELECT
+                 v.vacancy_id,
+                 vh.version,
+                 v.employer_id,
+                 vh.title,
+                 COALESCE(vh.description, '') AS description,
+                 vh.salary_from,
+                 vh.salary_to,
+                 vh.currency,
+                 v.created_at
+			FROM vacancy v
+            JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
+            WHERE vh.version = (
+                 SELECT MAX(version)
+                 FROM vacancy_history
+                 WHERE vacancy_id = v.vacancy_id
+            )
+            AND v.employer_id = $1`
+	rows, err := r.pool.Query(ctx, query, employerID)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	vacancies := make([]models.Vacancy, 0)
+
+	for rows.Next() {
+		var vacancy models.Vacancy
+
+		err = rows.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
+			&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		vacancies = append(vacancies, vacancy)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return vacancies, nil
 }

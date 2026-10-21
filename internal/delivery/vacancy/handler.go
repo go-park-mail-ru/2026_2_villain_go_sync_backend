@@ -17,6 +17,7 @@ type VacancyUsecase interface {
 	List(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, input vacancyusecase.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
+	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 }
 
 type Handler struct {
@@ -94,6 +95,27 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK , vacancy)
+	httputil.WriteOK(w, http.StatusOK, vacancy)
 
+}
+
+func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	vacancies, err := h.vacancy.ListByEmployer(r.Context(), userID)
+	if errors.Is(err, vacancyusecase.ErrNotEmployer) {
+		httputil.WriteError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	httputil.WriteOK(w, http.StatusOK, vacancies)
 }
