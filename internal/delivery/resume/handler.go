@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	usecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
 )
 
 type ResumeUsecase interface {
@@ -53,7 +53,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		Experience:  req.Experience,
 		Education:   req.Education,
 	})
-	if errors.Is(err, usecase.ErrForbidden) {
+	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "only seekers can create resumes")
 		return
 	}
@@ -73,7 +73,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.resumes.GetByID(r.Context(), id)
-	if errors.Is(err, usecase.ErrNotFound) {
+	if errors.Is(err, apperrors.ErrNotFound) {
 		httputil.WriteError(w, http.StatusNotFound, "resume not found")
 		return
 	}
@@ -137,11 +137,11 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		Experience:  req.Experience,
 		Education:   req.Education,
 	})
-	if errors.Is(err, usecase.ErrForbidden) {
+	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
-	if errors.Is(err, usecase.ErrNotFound) {
+	if errors.Is(err, apperrors.ErrNotFound) {
 		httputil.WriteError(w, http.StatusNotFound, "resume not found")
 		return
 	}
@@ -168,11 +168,11 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = h.resumes.Delete(r.Context(), int(userID), role, id)
-	if errors.Is(err, usecase.ErrForbidden) {
+	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
-	if errors.Is(err, usecase.ErrNotFound) {
+	if errors.Is(err, apperrors.ErrNotFound) {
 		httputil.WriteError(w, http.StatusNotFound, "resume not found")
 		return
 	}

@@ -3,8 +3,8 @@ package resume
 import (
 	"context"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	repo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/resume"
 )
 
 type ResumeRepository interface {
@@ -25,7 +25,7 @@ func NewResumeUsecase(resumes ResumeRepository) *ResumeUsecase {
 
 func (u *ResumeUsecase) Create(ctx context.Context, userID int, role string, resume models.Resume) (models.Resume, error) {
 	if role != "seeker" {
-		return models.Resume{}, ErrForbidden
+		return models.Resume{}, apperrors.ErrForbidden
 	}
 	resume.SeekerID = userID
 	return u.resumes.Create(ctx, resume)
@@ -34,8 +34,8 @@ func (u *ResumeUsecase) Create(ctx context.Context, userID int, role string, res
 func (u *ResumeUsecase) GetByID(ctx context.Context, id int) (models.Resume, error) {
 	res, err := u.resumes.GetByID(ctx, id)
 	if err != nil {
-		if err == repo.ErrNotFound {
-			return models.Resume{}, ErrNotFound
+		if err == apperrors.ErrNotFound {
+			return models.Resume{}, apperrors.ErrNotFound
 		}
 		return models.Resume{}, err
 	}
@@ -48,13 +48,13 @@ func (u *ResumeUsecase) ListBySeekerID(ctx context.Context, seekerID int) ([]mod
 
 func (u *ResumeUsecase) Update(ctx context.Context, userID int, role string, resume models.Resume) (models.Resume, error) {
 	if role != "seeker" {
-		return models.Resume{}, ErrForbidden
+		return models.Resume{}, apperrors.ErrForbidden
 	}
 
 	res, err := u.resumes.Update(ctx, resume, userID)
 	if err != nil {
-		if err == repo.ErrNotFound {
-			return models.Resume{}, ErrNotFound
+		if err == apperrors.ErrNotFound {
+			return models.Resume{}, apperrors.ErrNotFound
 		}
 		return models.Resume{}, err
 	}
@@ -63,13 +63,13 @@ func (u *ResumeUsecase) Update(ctx context.Context, userID int, role string, res
 
 func (u *ResumeUsecase) Delete(ctx context.Context, userID int, role string, id int) error {
 	if role != "seeker" {
-		return ErrForbidden
+		return apperrors.ErrForbidden
 	}
 
 	err := u.resumes.Delete(ctx, id, userID)
 	if err != nil {
-		if err == repo.ErrNotFound {
-			return ErrNotFound
+		if err == apperrors.ErrNotFound {
+			return apperrors.ErrNotFound
 		}
 		return err
 	}

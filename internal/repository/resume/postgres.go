@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -45,7 +46,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int) (models.Resume
 		Scan(&res.ID, &res.SeekerID, &res.Title, &res.Description, &res.Experience, &res.Education, &res.CreatedAt, &res.UpdatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return models.Resume{}, ErrNotFound
+		return models.Resume{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return models.Resume{}, fmt.Errorf("select resume: %w", err)
@@ -95,7 +96,7 @@ func (r *PostgresRepository) Update(ctx context.Context, resume models.Resume, s
 	).Scan(&resume.UpdatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return models.Resume{}, ErrNotFound
+		return models.Resume{}, apperrors.ErrNotFound
 	}
 	if err != nil {
 		return models.Resume{}, fmt.Errorf("update resume: %w", err)
@@ -111,7 +112,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, id int, seekerID int) e
 	}
 
 	if tag.RowsAffected() == 0 {
-		return ErrNotFound
+		return apperrors.ErrNotFound
 	}
 	return nil
 }
