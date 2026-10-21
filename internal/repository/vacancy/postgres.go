@@ -292,3 +292,49 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	}
 	return vacancy, nil
 }
+
+func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID int64) error {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback(ctx)
+
+	var employer_id int64
+
+	err = tx.QueryRow(
+		ctx,
+		`SELECT employer_id FROM vacancy
+		WHERE vacancy_id = $1
+		FOR UPDATE`,
+		vacancyID,
+	).Scan(&employer_id)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ErrVacancyNotFound
+	}
+
+	if err != nil {
+		return err
+	}
+
+	if employer_id != employerID {
+		return ErrNotVacancyOwner
+	}
+
+	_, err = tx.Exec(ctx,
+		`DELETE FROM vacancy
+         WHERE vacancy_id = $1`,
+		vacancyID,
+	)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -19,6 +19,7 @@ type VacancyUsecase interface {
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 	Update(ctx context.Context, input vacancyusecase.UpdateVacancyInput) (models.Vacancy, error)
+	Delete(ctx context.Context, vacancyID, employerID int64) error
 }
 
 type Handler struct {
@@ -200,4 +201,34 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.WriteOK(w, http.StatusOK, updatedVacancy)
+}
+
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	vacancyID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || vacancyID <= 0 {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid vacancy id")
+		return
+	}
+
+	err = h.vacancy.Delete(r.Context(), vacancyID, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired),
+			errors.Is(err, vacancyusecase.ErrNotEmployer),
+			errors.Is(err, vacancyusecase.ErrNotVacancyOwner):
+			httputil.WriteError(w, http.StatusForbidden, err.Error())
+		case errors.Is(err, vacancyusecase.ErrVacancyNotFound):
+			httputil.WriteError(w, http.StatusNotFound, err.Error())
+		default:
+			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		}
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

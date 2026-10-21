@@ -17,6 +17,7 @@ type VacancyRepository interface {
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 	Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error)
+	Delete(ctx context.Context, vacancyID, employerID int64) error
 }
 
 type UserRepository interface {
@@ -258,20 +259,49 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	}
 
 	updatedVacancy, err := u.vacancies.Update(ctx, vacancy, input.CategoryIDs)
-	if errors.Is(err, vacancyrepo.ErrCategoryNotFound) {
+	switch {
+	case errors.Is(err, vacancyrepo.ErrCategoryNotFound):
 		return models.Vacancy{}, fmt.Errorf("%w: category not found", ErrInvalidVacancy)
-	}
-	if errors.Is(err, vacancyrepo.ErrNotVacancyOwner) {
-		return models.Vacancy{}, fmt.Errorf("%w: vacancy does not belong to this employer", ErrNotVacancyOwner)
-	}
-	if errors.Is(err, vacancyrepo.ErrVacancyVersionConflict) {
-		return models.Vacancy{}, fmt.Errorf("%w: vacancy version conflict", ErrVacancyVersionConflict)
-	}
-	if errors.Is(err, vacancyrepo.ErrVacancyNotFound) {
-		return models.Vacancy{}, fmt.Errorf("%w: vacancy not found", ErrVacancyNotFound)
-	}
-	if err != nil {
+	case errors.Is(err, vacancyrepo.ErrNotVacancyOwner):
+		return models.Vacancy{}, ErrNotVacancyOwner
+	case errors.Is(err, vacancyrepo.ErrVacancyVersionConflict):
+		return models.Vacancy{}, ErrVacancyVersionConflict
+	case errors.Is(err, vacancyrepo.ErrVacancyNotFound):
+		return models.Vacancy{}, ErrVacancyNotFound
+	case err != nil:
 		return models.Vacancy{}, err
 	}
 	return updatedVacancy, nil
+}
+
+func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64) error {
+	if vacancyID <= 0 {
+		return ErrInvalidVacancy
+	}
+	role, err := u.users.GetRoleByID(ctx, employerID)
+	if err != nil {
+		return fmt.Errorf("get employer role: %w", err)
+	}
+	if role != "employer" {
+		return ErrNotEmployer
+	}
+
+	exist, err := u.users.HasEmployerProfile(ctx, employerID)
+	if err != nil {
+		return fmt.Errorf("check employer profile: %w", err)
+	}
+	if !exist {
+		return ErrEmployerProfileRequired
+	}
+
+	err = u.vacancies.Delete(ctx, vacancyID, employerID)
+	switch {
+	case errors.Is(err, vacancyrepo.ErrNotVacancyOwner):
+		return ErrNotVacancyOwner
+	case errors.Is(err, vacancyrepo.ErrVacancyNotFound):
+		return ErrVacancyNotFound
+	case err != nil:
+		return err
+	}
+	return nil
 }
