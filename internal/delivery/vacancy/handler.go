@@ -69,9 +69,8 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, vacancyusecase.ErrInvalidVacancy):
 			httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired):
-			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, vacancyusecase.ErrNotEmployer):
+		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired),
+		errors.Is(err, vacancyusecase.ErrNotEmployer):
 			httputil.WriteError(w, http.StatusForbidden, err.Error())
 		default:
 			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
@@ -93,7 +92,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
@@ -185,11 +184,9 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, vacancyusecase.ErrInvalidVacancy):
 			httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired):
-			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, vacancyusecase.ErrNotEmployer):
-			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, vacancyusecase.ErrNotVacancyOwner):
+		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired),
+		errors.Is(err, vacancyusecase.ErrNotEmployer),
+		errors.Is(err, vacancyusecase.ErrNotVacancyOwner):
 			httputil.WriteError(w, http.StatusForbidden, err.Error())
 		case errors.Is(err, vacancyusecase.ErrVacancyNotFound):
 			httputil.WriteError(w, http.StatusNotFound, err.Error())

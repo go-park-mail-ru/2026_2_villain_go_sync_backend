@@ -19,6 +19,35 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
+const vacancySelectQuery = `
+    SELECT
+        v.vacancy_id,
+        vh.version,
+        v.employer_id,
+        vh.title,
+        COALESCE(vh.description, ''),
+        vh.salary_from,
+        vh.salary_to,
+        vh.currency,
+        v.created_at
+    FROM vacancy v
+    JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
+    WHERE vh.version = (
+        SELECT MAX(version)
+        FROM vacancy_history
+        WHERE vacancy_id = v.vacancy_id
+    )`
+
+func scanVacancy(row pgx.Row) (models.Vacancy, error) {
+	var vacancy models.Vacancy
+	err := row.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
+		&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+	return vacancy, nil
+}
+
 func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -72,24 +101,7 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 }
 
 func (r *PostgresRepository) List(ctx context.Context) ([]models.Vacancy, error) {
-	query := `SELECT
-             	v.vacancy_id,
-             	vh.version,
-             	v.employer_id,
-             	vh.title,
-             	COALESCE(vh.description, '') AS description,
-             	vh.salary_from,
-             	vh.salary_to,
-             	vh.currency,
-             	v.created_at
-             FROM vacancy v
-             JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
-             WHERE vh.version = (
-             	SELECT MAX(version)
-             	FROM vacancy_history
-             	WHERE vacancy_id = v.vacancy_id
-             )`
-	rows, err := r.pool.Query(ctx, query)
+	rows, err := r.pool.Query(ctx, vacancySelectQuery)
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +111,7 @@ func (r *PostgresRepository) List(ctx context.Context) ([]models.Vacancy, error)
 	vacancies := make([]models.Vacancy, 0)
 
 	for rows.Next() {
-		var vacancy models.Vacancy
-
-		err = rows.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
-			&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
+		vacancy, err := scanVacancy(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -117,31 +126,10 @@ func (r *PostgresRepository) List(ctx context.Context) ([]models.Vacancy, error)
 }
 
 func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vacancy, error) {
-	query := `SELECT
-		v.vacancy_id,
-		vh.version,
-		v.employer_id,
-		vh.title,
-		COALESCE(vh.description, '') AS description,
-		vh.salary_from,
-		vh.salary_to,
-		vh.currency,
-		v.created_at
-		FROM vacancy v
-		JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
-		WHERE vh.version = (
-			SELECT MAX(version)
-			FROM vacancy_history
-			WHERE vacancy_id = v.vacancy_id
-		)
-		AND v.vacancy_id = $1`
+	query := vacancySelectQuery + "\nAND v.vacancy_id = $1"
 	row := r.pool.QueryRow(ctx, query, id)
 
-	var vacancy models.Vacancy
-
-	err := row.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
-		&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
-
+	vacancy, err := scanVacancy(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.Vacancy{}, ErrVacancyNotFound
 	}
@@ -154,24 +142,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vaca
 }
 
 func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
-	query := `SELECT
-                 v.vacancy_id,
-                 vh.version,
-                 v.employer_id,
-                 vh.title,
-                 COALESCE(vh.description, '') AS description,
-                 vh.salary_from,
-                 vh.salary_to,
-                 vh.currency,
-                 v.created_at
-			FROM vacancy v
-            JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
-            WHERE vh.version = (
-                 SELECT MAX(version)
-                 FROM vacancy_history
-                 WHERE vacancy_id = v.vacancy_id
-            )
-            AND v.employer_id = $1`
+	query := vacancySelectQuery + "\nAND v.employer_id = $1"
 	rows, err := r.pool.Query(ctx, query, employerID)
 	if err != nil {
 		return nil, err
@@ -184,8 +155,7 @@ func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int6
 	for rows.Next() {
 		var vacancy models.Vacancy
 
-		err = rows.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
-			&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
+		vacancy, err = scanVacancy(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -244,7 +214,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	if vacancy.Version != currentVersion {
 		return models.Vacancy{}, ErrVacancyVersionConflict
 	}
-	//TODO: полноценную защиту сделать
+	//TODO: полноценную защиту от устаревшего состояния на клиенте сделать
 
 	vacancy.Version = currentVersion + 1
 
@@ -301,7 +271,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID i
 
 	defer tx.Rollback(ctx)
 
-	var employer_id int64
+	var actualEmployerID int64
 
 	err = tx.QueryRow(
 		ctx,
@@ -309,7 +279,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID i
 		WHERE vacancy_id = $1
 		FOR UPDATE`,
 		vacancyID,
-	).Scan(&employer_id)
+	).Scan(&actualEmployerID)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrVacancyNotFound
@@ -319,7 +289,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID i
 		return err
 	}
 
-	if employer_id != employerID {
+	if actualEmployerID != employerID {
 		return ErrNotVacancyOwner
 	}
 

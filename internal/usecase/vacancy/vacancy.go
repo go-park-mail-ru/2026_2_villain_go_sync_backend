@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"strings"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -41,53 +40,36 @@ func (u *VacancyUsecase) List(ctx context.Context) ([]models.Vacancy, error) {
 	return u.vacancies.List(ctx)
 }
 
-func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (models.Vacancy, error) {
-	role, err := u.users.GetRoleByID(ctx, input.EmployerID)
+func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64) error {
+	role, err := u.users.GetRoleByID(ctx, employerID)
 	if err != nil {
-		return models.Vacancy{}, fmt.Errorf("get employer role: %w", err)
+		return fmt.Errorf("get employer role: %w", err)
 	}
 	if role != "employer" {
-		return models.Vacancy{}, ErrNotEmployer
+		return ErrNotEmployer
 	}
 
-	exist, err := u.users.HasEmployerProfile(ctx, input.EmployerID)
+	exist, err := u.users.HasEmployerProfile(ctx, employerID)
 	if err != nil {
-		return models.Vacancy{}, fmt.Errorf("check employer profile: %w", err)
+		return fmt.Errorf("check employer profile: %w", err)
 	}
 	if !exist {
-		return models.Vacancy{}, ErrEmployerProfileRequired
+		return ErrEmployerProfileRequired
+	}
+	return nil
+}
+
+func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (models.Vacancy, error) {
+	if err := u.validateEmployer(ctx, input.EmployerID); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	if strings.TrimSpace(input.Title) == "" {
 		return models.Vacancy{}, fmt.Errorf("%w: title is required", ErrInvalidVacancy)
 	}
 
-	if input.SalaryFrom != nil && *input.SalaryFrom < 0 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from must be non-negative", ErrInvalidVacancy)
-	}
-
-	if input.SalaryTo != nil && *input.SalaryTo < 0 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_to must be non-negative", ErrInvalidVacancy)
-	}
-
-	if input.SalaryFrom != nil && *input.SalaryFrom > 9999999999.99 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from is too large", ErrInvalidVacancy)
-	}
-
-	if input.SalaryTo != nil && *input.SalaryTo > 9999999999.99 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_to is too large", ErrInvalidVacancy)
-	}
-
-	if input.SalaryFrom != nil && input.SalaryTo != nil && *input.SalaryFrom > *input.SalaryTo {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from must not exceed salary_to", ErrInvalidVacancy)
-	}
-
-	if input.SalaryFrom != nil && math.Round(*input.SalaryFrom*100)/100 != *input.SalaryFrom {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from must have at most 2 decimal places", ErrInvalidVacancy)
-	}
-
-	if input.SalaryTo != nil && math.Round(*input.SalaryTo*100)/100 != *input.SalaryTo {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_to must have at most 2 decimal places", ErrInvalidVacancy)
+	if err := validateSalary(input.SalaryFrom, input.SalaryTo); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	if input.Currency == "" {
@@ -100,19 +82,8 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", ErrInvalidVacancy)
 	}
 
-	if len(input.CategoryIDs) > 5 {
-		return models.Vacancy{}, fmt.Errorf("%w: too many categories", ErrInvalidVacancy)
-	}
-
-	seen := make(map[int64]bool)
-	for _, categoryID := range input.CategoryIDs {
-		if categoryID <= 0 {
-			return models.Vacancy{}, fmt.Errorf("%w: invalid category id", ErrInvalidVacancy)
-		}
-		if seen[categoryID] {
-			return models.Vacancy{}, fmt.Errorf("%w: duplicate category id", ErrInvalidVacancy)
-		}
-		seen[categoryID] = true
+	if err := validateCategories(input.CategoryIDs); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	vacancy := models.Vacancy{
@@ -159,20 +130,8 @@ func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) (
 }
 
 func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (models.Vacancy, error) {
-	role, err := u.users.GetRoleByID(ctx, input.EmployerID)
-	if err != nil {
-		return models.Vacancy{}, fmt.Errorf("get employer role: %w", err)
-	}
-	if role != "employer" {
-		return models.Vacancy{}, ErrNotEmployer
-	}
-
-	exist, err := u.users.HasEmployerProfile(ctx, input.EmployerID)
-	if err != nil {
-		return models.Vacancy{}, fmt.Errorf("check employer profile: %w", err)
-	}
-	if !exist {
-		return models.Vacancy{}, ErrEmployerProfileRequired
+	if err := u.validateEmployer(ctx, input.EmployerID); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	if input.VacancyID <= 0 {
@@ -193,10 +152,10 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	if input.Description != nil {
 		vacancy.Description = *input.Description
 	}
-	if input.SalaryFrom.Provided == true {
+	if input.SalaryFrom.Provided {
 		vacancy.SalaryFrom = input.SalaryFrom.Value
 	}
-	if input.SalaryTo.Provided == true {
+	if input.SalaryTo.Provided {
 		vacancy.SalaryTo = input.SalaryTo.Value
 	}
 	if input.Currency != nil {
@@ -207,32 +166,8 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 		return models.Vacancy{}, fmt.Errorf("%w: title is required", ErrInvalidVacancy)
 	}
 
-	if vacancy.SalaryFrom != nil && *vacancy.SalaryFrom < 0 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from must be non-negative", ErrInvalidVacancy)
-	}
-
-	if vacancy.SalaryTo != nil && *vacancy.SalaryTo < 0 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_to must be non-negative", ErrInvalidVacancy)
-	}
-
-	if vacancy.SalaryFrom != nil && *vacancy.SalaryFrom > 9999999999.99 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from is too large", ErrInvalidVacancy)
-	}
-
-	if vacancy.SalaryTo != nil && *vacancy.SalaryTo > 9999999999.99 {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_to is too large", ErrInvalidVacancy)
-	}
-
-	if vacancy.SalaryFrom != nil && vacancy.SalaryTo != nil && *vacancy.SalaryFrom > *vacancy.SalaryTo {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from must not exceed salary_to", ErrInvalidVacancy)
-	}
-
-	if vacancy.SalaryFrom != nil && math.Round(*vacancy.SalaryFrom*100)/100 != *vacancy.SalaryFrom {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_from must have at most 2 decimal places", ErrInvalidVacancy)
-	}
-
-	if vacancy.SalaryTo != nil && math.Round(*vacancy.SalaryTo*100)/100 != *vacancy.SalaryTo {
-		return models.Vacancy{}, fmt.Errorf("%w: salary_to must have at most 2 decimal places", ErrInvalidVacancy)
+	if err := validateSalary(vacancy.SalaryFrom, vacancy.SalaryTo); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	switch vacancy.Currency {
@@ -242,19 +177,8 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	}
 
 	if input.CategoryIDs != nil {
-		if len(*input.CategoryIDs) > 5 {
-			return models.Vacancy{}, fmt.Errorf("%w: too many categories", ErrInvalidVacancy)
-		}
-
-		seen := make(map[int64]bool)
-		for _, categoryID := range *input.CategoryIDs {
-			if categoryID <= 0 {
-				return models.Vacancy{}, fmt.Errorf("%w: invalid category id", ErrInvalidVacancy)
-			}
-			if seen[categoryID] {
-				return models.Vacancy{}, fmt.Errorf("%w: duplicate category id", ErrInvalidVacancy)
-			}
-			seen[categoryID] = true
+		if err := validateCategories(*input.CategoryIDs); err != nil {
+			return models.Vacancy{}, err
 		}
 	}
 
@@ -278,23 +202,11 @@ func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64
 	if vacancyID <= 0 {
 		return ErrInvalidVacancy
 	}
-	role, err := u.users.GetRoleByID(ctx, employerID)
-	if err != nil {
-		return fmt.Errorf("get employer role: %w", err)
-	}
-	if role != "employer" {
-		return ErrNotEmployer
+	if err := u.validateEmployer(ctx, employerID); err != nil {
+		return err
 	}
 
-	exist, err := u.users.HasEmployerProfile(ctx, employerID)
-	if err != nil {
-		return fmt.Errorf("check employer profile: %w", err)
-	}
-	if !exist {
-		return ErrEmployerProfileRequired
-	}
-
-	err = u.vacancies.Delete(ctx, vacancyID, employerID)
+	err := u.vacancies.Delete(ctx, vacancyID, employerID)
 	switch {
 	case errors.Is(err, vacancyrepo.ErrNotVacancyOwner):
 		return ErrNotVacancyOwner
