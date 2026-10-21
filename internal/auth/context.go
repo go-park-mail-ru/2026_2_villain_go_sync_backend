@@ -1,6 +1,10 @@
 package auth
 
-import "context"
+import (
+	"context"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+)
 
 type ctxKey int
 
@@ -18,11 +22,11 @@ func UserIDFromContext(ctx context.Context) (int64, bool) {
 	return id, ok
 }
 
-func WithRole(ctx context.Context, role string) context.Context {
+func WithRole(ctx context.Context, role models.Role) context.Context {
 	return context.WithValue(ctx, roleKey, role)
 }
 
-func RoleFromContext(ctx context.Context) (string, bool) {
-	role, ok := ctx.Value(roleKey).(string)
+func RoleFromContext(ctx context.Context) (models.Role, bool) {
+	role, ok := ctx.Value(roleKey).(models.Role)
 	return role, ok
 }

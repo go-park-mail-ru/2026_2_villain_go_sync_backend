@@ -31,7 +31,7 @@ func NewAuthUsecase(users UserRepository, tokens *auth.TokenManager) *AuthUsecas
 	}
 }
 
-func (u *AuthUsecase) Register(ctx context.Context, email, pass, role string) (*Tokens, error) {
+func (u *AuthUsecase) Register(ctx context.Context, email, pass string, role models.Role) (*Tokens, error) {
 	hash, err := password.Hash(pass)
 	if err != nil {
 		return nil, fmt.Errorf("hash password: %w", err)
@@ -71,7 +71,7 @@ func (u *AuthUsecase) Refresh(ctx context.Context, refreshToken string) (*Tokens
 	return u.issueTokens(claims.UserID, claims.Role)
 }
 
-func (u *AuthUsecase) issueTokens(userID int64, role string) (*Tokens, error) {
+func (u *AuthUsecase) issueTokens(userID int64, role models.Role) (*Tokens, error) {
 	access, err := u.tokens.Generate(userID, role, auth.TokenTypeAccess)
 	if err != nil {
 		return nil, fmt.Errorf("generate access: %w", err)

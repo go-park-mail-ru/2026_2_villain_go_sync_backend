@@ -24,8 +24,8 @@ func NewResumeUsecase(resumes ResumeRepository) *ResumeUsecase {
 	return &ResumeUsecase{resumes: resumes}
 }
 
-func (u *ResumeUsecase) Create(ctx context.Context, userID int, role string, resume models.Resume) (models.Resume, error) {
-	if role != "seeker" {
+func (u *ResumeUsecase) Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
+	if role != models.RoleSeeker {
 		return models.Resume{}, apperrors.ErrForbidden
 	}
 	resume.SeekerID = userID
@@ -47,8 +47,8 @@ func (u *ResumeUsecase) ListBySeekerID(ctx context.Context, seekerID int) ([]mod
 	return u.resumes.ListBySeekerID(ctx, seekerID)
 }
 
-func (u *ResumeUsecase) Update(ctx context.Context, userID int, role string, resume models.Resume) (models.Resume, error) {
-	if role != "seeker" {
+func (u *ResumeUsecase) Update(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
+	if role != models.RoleSeeker {
 		return models.Resume{}, apperrors.ErrForbidden
 	}
 
@@ -62,15 +62,15 @@ func (u *ResumeUsecase) Update(ctx context.Context, userID int, role string, res
 	return res, nil
 }
 
-func (u *ResumeUsecase) Delete(ctx context.Context, userID int, role string, id int) error {
-	if role != "seeker" {
+func (u *ResumeUsecase) Delete(ctx context.Context, userID int, role models.Role, id int) error {
+	if role != models.RoleSeeker {
 		return apperrors.ErrForbidden
 	}
 
 	err := u.resumes.Delete(ctx, id, userID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return apperrors.ErrNotFound
+		if errors.Is(err, apperrors.ErrNoContent) {
+			return apperrors.ErrNoContent
 		}
 		return err
 	}

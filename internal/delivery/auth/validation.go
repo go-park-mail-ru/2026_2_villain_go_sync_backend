@@ -2,6 +2,8 @@ package auth
 
 import (
 	"regexp"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
 const (
@@ -57,6 +59,11 @@ func isValidPassword(password string) bool {
 	return true
 }
 
-func isValidRole(role string) bool {
-	return allowedRoles[role]
+func isValidRole(role models.Role) bool {
+	switch role {
+	case models.RoleSeeker, models.RoleEmployer:
+		return true
+	default:
+		return false
+	}
 }

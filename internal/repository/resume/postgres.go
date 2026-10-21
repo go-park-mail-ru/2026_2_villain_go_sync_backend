@@ -112,7 +112,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, id int, seekerID int) e
 	}
 
 	if tag.RowsAffected() == 0 {
-		return apperrors.ErrNotFound
+		return apperrors.ErrNoContent
 	}
 	return nil
 }

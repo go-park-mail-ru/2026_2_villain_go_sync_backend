@@ -14,11 +14,11 @@ import (
 )
 
 type ResumeUsecase interface {
-	Create(ctx context.Context, userID int, role string, resume models.Resume) (models.Resume, error)
+	Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error)
 	GetByID(ctx context.Context, id int) (models.Resume, error)
 	ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error)
-	Update(ctx context.Context, userID int, role string, resume models.Resume) (models.Resume, error)
-	Delete(ctx context.Context, userID int, role string, id int) error
+	Update(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error)
+	Delete(ctx context.Context, userID int, role models.Role, id int) error
 }
 
 type Handler struct {
@@ -172,8 +172,8 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusForbidden, "forbidden")
 		return
 	}
-	if errors.Is(err, apperrors.ErrNotFound) {
-		httputil.WriteError(w, http.StatusNotFound, "resume not found")
+	if errors.Is(err, apperrors.ErrNoContent) {
+		httputil.WriteError(w, http.StatusNoContent, "no content")
 		return
 	}
 	if err != nil {
