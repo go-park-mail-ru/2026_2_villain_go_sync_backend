@@ -5,6 +5,7 @@ import (
 
 	"errors"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -87,7 +88,7 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 		if err != nil {
 			var pgErr *pgconn.PgError
 			if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "vacancy_category_category_fk" {
-				return models.Vacancy{}, ErrCategoryNotFound
+				return models.Vacancy{}, apperrors.ErrCategoryNotFound
 			}
 			return models.Vacancy{}, err
 		}
@@ -131,7 +132,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vaca
 
 	vacancy, err := scanVacancy(row)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return models.Vacancy{}, ErrVacancyNotFound
+		return models.Vacancy{}, apperrors.ErrVacancyNotFound
 	}
 
 	if err != nil {
@@ -188,7 +189,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	).Scan(&employerID)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return models.Vacancy{}, ErrVacancyNotFound
+		return models.Vacancy{}, apperrors.ErrVacancyNotFound
 	}
 
 	if err != nil {
@@ -196,7 +197,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	}
 
 	if employerID != vacancy.EmployerID {
-		return models.Vacancy{}, ErrNotVacancyOwner
+		return models.Vacancy{}, apperrors.ErrNotVacancyOwner
 	}
 
 	var currentVersion int
@@ -212,7 +213,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	}
 
 	if vacancy.Version != currentVersion {
-		return models.Vacancy{}, ErrVacancyVersionConflict
+		return models.Vacancy{}, apperrors.ErrVacancyVersionConflict
 	}
 	//TODO: полноценную защиту от устаревшего состояния на клиенте сделать
 
@@ -249,7 +250,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 			if err != nil {
 				var pgErr *pgconn.PgError
 				if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "vacancy_category_category_fk" {
-					return models.Vacancy{}, ErrCategoryNotFound
+					return models.Vacancy{}, apperrors.ErrCategoryNotFound
 				}
 				return models.Vacancy{}, err
 			}
@@ -282,7 +283,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID i
 	).Scan(&actualEmployerID)
 
 	if errors.Is(err, pgx.ErrNoRows) {
-		return ErrVacancyNotFound
+		return apperrors.ErrVacancyNotFound
 	}
 
 	if err != nil {
@@ -290,7 +291,7 @@ func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID i
 	}
 
 	if actualEmployerID != employerID {
-		return ErrNotVacancyOwner
+		return apperrors.ErrNotVacancyOwner
 	}
 
 	_, err = tx.Exec(ctx,

@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	vacancyrepo "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
 )
 
 type VacancyRepository interface {
@@ -96,7 +96,7 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 	}
 
 	createdVacancy, err := u.vacancies.Create(ctx, vacancy, input.CategoryIDs)
-	if errors.Is(err, vacancyrepo.ErrCategoryNotFound) {
+	if errors.Is(err, apperrors.ErrCategoryNotFound) {
 		return models.Vacancy{}, fmt.Errorf("%w: category not found", ErrInvalidVacancy)
 	}
 	if err != nil {
@@ -108,7 +108,7 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 func (u *VacancyUsecase) GetByID(ctx context.Context, id int64) (models.Vacancy, error) {
 	vacancy, err := u.vacancies.GetByID(ctx, id)
 
-	if errors.Is(err, vacancyrepo.ErrVacancyNotFound) {
+	if errors.Is(err, apperrors.ErrVacancyNotFound) {
 		return models.Vacancy{}, ErrVacancyNotFound
 	}
 	if err != nil {
@@ -184,13 +184,13 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 
 	updatedVacancy, err := u.vacancies.Update(ctx, vacancy, input.CategoryIDs)
 	switch {
-	case errors.Is(err, vacancyrepo.ErrCategoryNotFound):
+	case errors.Is(err, apperrors.ErrCategoryNotFound):
 		return models.Vacancy{}, fmt.Errorf("%w: category not found", ErrInvalidVacancy)
-	case errors.Is(err, vacancyrepo.ErrNotVacancyOwner):
+	case errors.Is(err, apperrors.ErrNotVacancyOwner):
 		return models.Vacancy{}, ErrNotVacancyOwner
-	case errors.Is(err, vacancyrepo.ErrVacancyVersionConflict):
+	case errors.Is(err, apperrors.ErrVacancyVersionConflict):
 		return models.Vacancy{}, ErrVacancyVersionConflict
-	case errors.Is(err, vacancyrepo.ErrVacancyNotFound):
+	case errors.Is(err, apperrors.ErrVacancyNotFound):
 		return models.Vacancy{}, ErrVacancyNotFound
 	case err != nil:
 		return models.Vacancy{}, err
@@ -208,9 +208,9 @@ func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64
 
 	err := u.vacancies.Delete(ctx, vacancyID, employerID)
 	switch {
-	case errors.Is(err, vacancyrepo.ErrNotVacancyOwner):
+	case errors.Is(err, apperrors.ErrNotVacancyOwner):
 		return ErrNotVacancyOwner
-	case errors.Is(err, vacancyrepo.ErrVacancyNotFound):
+	case errors.Is(err, apperrors.ErrVacancyNotFound):
 		return ErrVacancyNotFound
 	case err != nil:
 		return err
