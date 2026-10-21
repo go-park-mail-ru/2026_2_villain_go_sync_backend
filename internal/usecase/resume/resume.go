@@ -2,6 +2,7 @@ package resume
 
 import (
 	"context"
+	"errors"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -34,7 +35,7 @@ func (u *ResumeUsecase) Create(ctx context.Context, userID int, role string, res
 func (u *ResumeUsecase) GetByID(ctx context.Context, id int) (models.Resume, error) {
 	res, err := u.resumes.GetByID(ctx, id)
 	if err != nil {
-		if err == apperrors.ErrNotFound {
+		if errors.Is(err, apperrors.ErrNotFound) {
 			return models.Resume{}, apperrors.ErrNotFound
 		}
 		return models.Resume{}, err
@@ -53,7 +54,7 @@ func (u *ResumeUsecase) Update(ctx context.Context, userID int, role string, res
 
 	res, err := u.resumes.Update(ctx, resume, userID)
 	if err != nil {
-		if err == apperrors.ErrNotFound {
+		if errors.Is(err, apperrors.ErrNotFound) {
 			return models.Resume{}, apperrors.ErrNotFound
 		}
 		return models.Resume{}, err
@@ -68,7 +69,7 @@ func (u *ResumeUsecase) Delete(ctx context.Context, userID int, role string, id 
 
 	err := u.resumes.Delete(ctx, id, userID)
 	if err != nil {
-		if err == apperrors.ErrNotFound {
+		if errors.Is(err, apperrors.ErrNotFound) {
 			return apperrors.ErrNotFound
 		}
 		return err
