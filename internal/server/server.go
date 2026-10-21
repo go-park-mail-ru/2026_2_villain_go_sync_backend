@@ -47,6 +47,7 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/vacancies/{id}", appConfig.Handlers.Vacancy.GetByID)
 	mux.Handle("POST /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.CreateVacancy)))
 	mux.Handle("GET /api/employer/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListVacanciesByEmployer)))
+	mux.Handle("PATCH /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.UpdateVacancy)))
 
 	return middleware.CORS(mux)
 }

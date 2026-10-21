@@ -198,3 +198,97 @@ func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int6
 
 	return vacancies, nil
 }
+
+func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+
+	defer tx.Rollback(ctx)
+
+	var employerID int64
+
+	err = tx.QueryRow(
+		ctx,
+		`SELECT employer_id FROM vacancy
+		WHERE vacancy_id = $1
+		FOR UPDATE`,
+		vacancy.ID,
+	).Scan(&employerID)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Vacancy{}, ErrVacancyNotFound
+	}
+
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+
+	if employerID != vacancy.EmployerID {
+		return models.Vacancy{}, ErrNotVacancyOwner
+	}
+
+	var currentVersion int
+
+	err = tx.QueryRow(ctx,
+		`SELECT COALESCE(MAX(version), 0)
+         FROM vacancy_history
+         WHERE vacancy_id = $1`,
+		vacancy.ID,
+	).Scan(&currentVersion)
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+
+	if vacancy.Version != currentVersion {
+		return models.Vacancy{}, ErrVacancyVersionConflict
+	}
+	//TODO: полноценную защиту сделать
+
+	vacancy.Version = currentVersion + 1
+
+	_, err = tx.Exec(
+		ctx,
+		`INSERT INTO vacancy_history
+			(vacancy_id, version, title, description, salary_from, salary_to, currency)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		vacancy.ID, vacancy.Version, vacancy.Title, vacancy.Description, vacancy.SalaryFrom, vacancy.SalaryTo, vacancy.Currency,
+	)
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+
+	if categoryIDs != nil {
+		_, err = tx.Exec(
+			ctx,
+			`DELETE FROM vacancy_category WHERE vacancy_id = $1`,
+			vacancy.ID,
+		)
+		if err != nil {
+			return models.Vacancy{}, err
+		}
+
+		for _, categoryID := range *categoryIDs {
+			_, err = tx.Exec(
+				ctx,
+				`INSERT INTO vacancy_category (vacancy_id, category_id)
+				VALUES ($1, $2)`,
+				vacancy.ID, categoryID,
+			)
+			if err != nil {
+				var pgErr *pgconn.PgError
+				if errors.As(err, &pgErr) && pgErr.Code == "23503" && pgErr.ConstraintName == "vacancy_category_category_fk" {
+					return models.Vacancy{}, ErrCategoryNotFound
+				}
+				return models.Vacancy{}, err
+			}
+		}
+	}
+
+	err = tx.Commit(ctx)
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+	return vacancy, nil
+}
