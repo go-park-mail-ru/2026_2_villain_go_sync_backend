@@ -4,7 +4,9 @@ import (
 	"context"
 
 	"errors"
+
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -112,4 +114,41 @@ func (r *PostgresRepository) List(ctx context.Context) ([]models.Vacancy, error)
 	}
 
 	return vacancies, nil
+}
+
+func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vacancy, error) {
+	query := `SELECT
+		v.vacancy_id,
+		vh.version,
+		v.employer_id,
+		vh.title,
+		COALESCE(vh.description, '') AS description,
+		vh.salary_from,
+		vh.salary_to,
+		vh.currency,
+		v.created_at
+		FROM vacancy v
+		JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
+		WHERE vh.version = (
+			SELECT MAX(version)
+			FROM vacancy_history
+			WHERE vacancy_id = v.vacancy_id
+		)
+		AND v.vacancy_id = $1`
+	row := r.pool.QueryRow(ctx, query, id)
+
+	var vacancy models.Vacancy
+
+	err := row.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
+		&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
+
+	if errors.Is(err, pgx.ErrNoRows) {
+        return models.Vacancy{}, ErrVacancyNotFound
+    }
+
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+
+	return vacancy, nil
 }

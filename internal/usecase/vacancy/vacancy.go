@@ -14,6 +14,7 @@ import (
 type VacancyRepository interface {
 	List(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
+	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 }
 
 type UserRepository interface {
@@ -128,4 +129,17 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 		return models.Vacancy{}, err
 	}
 	return createdVacancy, nil
+}
+
+func (u *VacancyUsecase) GetByID(ctx context.Context, id int64) (models.Vacancy, error) {
+	vacancy, err := u.vacancies.GetByID(ctx, id)
+
+	if errors.Is(err, vacancyrepo.ErrVacancyNotFound) {
+		return models.Vacancy{}, ErrVacancyNotFound
+	}
+	if err != nil {
+		return models.Vacancy{}, err
+	}
+
+	return vacancy, nil
 }

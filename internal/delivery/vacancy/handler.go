@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
@@ -15,6 +16,7 @@ import (
 type VacancyUsecase interface {
 	List(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, input vacancyusecase.CreateVacancyInput) (models.Vacancy, error)
+	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 }
 
 type Handler struct {
@@ -74,4 +76,24 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.WriteOK(w, http.StatusCreated, createdVacancy)
+}
+
+func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid vacancy id")
+		return
+	}
+	vacancy, err := h.vacancy.GetByID(r.Context(), id)
+	if errors.Is(err, vacancyusecase.ErrVacancyNotFound) {
+		httputil.WriteError(w, http.StatusNotFound, err.Error())
+		return
+	}
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	httputil.WriteOK(w, http.StatusOK , vacancy)
+
 }
