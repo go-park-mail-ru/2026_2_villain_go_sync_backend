@@ -45,5 +45,15 @@ func New() http.Handler {
 
 	mux.HandleFunc("GET /api/vacancies", appConfig.Handlers.Vacancy.ListVacancies)
 
+	mux.Handle("POST /api/resumes",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Create)))
+	mux.Handle("PUT /api/resumes/{id}",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Update)))
+	mux.Handle("DELETE /api/resumes/{id}",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Delete)))
+
+	mux.HandleFunc("GET /api/resumes/{id}", appConfig.Handlers.Resume.GetByID)
+	mux.HandleFunc("GET /api/resumes", appConfig.Handlers.Resume.ListBySeekerID)
+
 	return middleware.CORS(mux)
 }

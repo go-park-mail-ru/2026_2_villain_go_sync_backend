@@ -56,7 +56,3 @@ func isValidPassword(password string) bool {
 	}
 	return true
 }
-
-func isValidRole(role string) bool {
-	return allowedRoles[role]
-}

@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -24,9 +25,9 @@ var (
 )
 
 type Claims struct {
-	UserID    int64     `json:"uid"`
-	TokenType TokenType `json:"typ"`
-	Role      string    `json:"role"`
+	UserID    int64       `json:"uid"`
+	TokenType TokenType   `json:"typ"`
+	Role      models.Role `json:"role"`
 	jwt.RegisteredClaims
 }
 
@@ -65,7 +66,7 @@ func (m *TokenManager) ttlFor(typ TokenType) (time.Duration, error) {
 	}
 }
 
-func (m *TokenManager) Generate(userID int64, role string, typ TokenType) (string, error) {
+func (m *TokenManager) Generate(userID int64, role models.Role, typ TokenType) (string, error) {
 	ttl, err := m.ttlFor(typ)
 	if err != nil {
 		return "", err

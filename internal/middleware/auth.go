@@ -22,6 +22,7 @@ func Auth(tm *auth.TokenManager, next http.Handler) http.Handler {
 		}
 
 		ctx := auth.WithUserID(r.Context(), claims.UserID)
+		ctx = auth.WithRole(ctx, claims.Role)
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

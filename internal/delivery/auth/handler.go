@@ -9,11 +9,12 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	id "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
 type AuthUsecase interface {
-	Register(ctx context.Context, email, password, role string) (*authUsecase.Tokens, error)
+	Register(ctx context.Context, email, password string, role models.Role) (*authUsecase.Tokens, error)
 	Login(ctx context.Context, email, password string) (*authUsecase.Tokens, error)
 	Refresh(ctx context.Context, refreshToken string) (*authUsecase.Tokens, error)
 }
@@ -27,9 +28,9 @@ func NewHandler(auth AuthUsecase) *Handler {
 }
 
 type RegisterRequest struct {
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Role     string `json:"role"`
+	Email    string      `json:"email"`
+	Password string      `json:"password"`
+	Role     models.Role `json:"role"`
 }
 
 type LoginRequest struct {
@@ -49,7 +50,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	if !isValidRole(request.Role) {
+	if !request.Role.IsValid() {
 		httputil.WriteError(w, http.StatusBadRequest, ErrInvalidRole.Error())
 		return
 	}
