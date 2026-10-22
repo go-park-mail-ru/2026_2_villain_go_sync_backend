@@ -18,6 +18,14 @@ func (r Role) IsValid() bool {
 	}
 }
 
+func (r Role) IsSeeker() bool {
+	return r == RoleSeeker
+}
+
+func (r Role) IsEmployer() bool {
+	return r == RoleEmployer
+}
+
 type User struct {
 	ID           int       `json:"id"`
 	Email        string    `json:"email"`

@@ -25,7 +25,7 @@ func NewResumeUsecase(resumes ResumeRepository) *ResumeUsecase {
 }
 
 func (u *ResumeUsecase) Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
-	if role != models.RoleSeeker {
+	if !role.IsSeeker() {
 		return models.Resume{}, apperrors.ErrForbidden
 	}
 	resume.SeekerID = userID
@@ -48,7 +48,7 @@ func (u *ResumeUsecase) ListBySeekerID(ctx context.Context, seekerID int) ([]mod
 }
 
 func (u *ResumeUsecase) Update(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
-	if role != models.RoleSeeker {
+	if !role.IsSeeker() {
 		return models.Resume{}, apperrors.ErrForbidden
 	}
 
@@ -63,7 +63,7 @@ func (u *ResumeUsecase) Update(ctx context.Context, userID int, role models.Role
 }
 
 func (u *ResumeUsecase) Delete(ctx context.Context, userID int, role models.Role, id int) error {
-	if role != models.RoleSeeker {
+	if !role.IsSeeker() {
 		return apperrors.ErrForbidden
 	}
 
