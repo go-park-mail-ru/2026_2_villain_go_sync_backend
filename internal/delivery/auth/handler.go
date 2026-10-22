@@ -50,7 +50,7 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
-	if !isValidRole(request.Role) {
+	if !request.Role.IsValid() {
 		httputil.WriteError(w, http.StatusBadRequest, ErrInvalidRole.Error())
 		return
 	}

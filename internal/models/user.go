@@ -9,6 +9,15 @@ const (
 	RoleEmployer Role = "employer"
 )
 
+func (r Role) IsValid() bool {
+	switch r {
+	case RoleSeeker, RoleEmployer:
+		return true
+	default:
+		return false
+	}
+}
+
 type User struct {
 	ID           int       `json:"id"`
 	Email        string    `json:"email"`
