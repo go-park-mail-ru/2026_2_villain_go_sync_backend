@@ -7,18 +7,19 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	vacancyusecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 type VacancyUsecase interface {
 	List(ctx context.Context) ([]models.Vacancy, error)
-	Create(ctx context.Context, input vacancyusecase.CreateVacancyInput) (models.Vacancy, error)
+	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
-	Update(ctx context.Context, input vacancyusecase.UpdateVacancyInput) (models.Vacancy, error)
+	Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 }
 
@@ -54,7 +55,7 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input := vacancyusecase.CreateVacancyInput{
+	input := dto.CreateVacancyInput{
 		EmployerID:  userID,
 		Title:       request.Title,
 		Description: request.Description,
@@ -67,10 +68,9 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 	createdVacancy, err := h.vacancy.Create(r.Context(), input)
 	if err != nil {
 		switch {
-		case errors.Is(err, vacancyusecase.ErrInvalidVacancy):
+		case errors.Is(err, apperrors.ErrInvalidInput):
 			httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired),
-		errors.Is(err, vacancyusecase.ErrNotEmployer):
+		case errors.Is(err, apperrors.ErrForbidden):
 			httputil.WriteError(w, http.StatusForbidden, err.Error())
 		default:
 			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
@@ -87,7 +87,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vacancy, err := h.vacancy.GetByID(r.Context(), id)
-	if errors.Is(err, vacancyusecase.ErrVacancyNotFound) {
+	if errors.Is(err, apperrors.ErrNotFound) {
 		httputil.WriteError(w, http.StatusNotFound, err.Error())
 		return
 	}
@@ -108,7 +108,7 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 	}
 
 	vacancies, err := h.vacancy.ListByEmployer(r.Context(), userID)
-	if errors.Is(err, vacancyusecase.ErrNotEmployer) {
+	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, err.Error())
 		return
 	}
@@ -121,20 +121,20 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 	httputil.WriteOK(w, http.StatusOK, vacancies)
 }
 
-func parseOptionalSalary(raw json.RawMessage) (vacancyusecase.OptionalSalary, error) {
+func parseOptionalSalary(raw json.RawMessage) (dto.OptionalSalary, error) {
 	if len(raw) == 0 {
-		return vacancyusecase.OptionalSalary{Provided: false}, nil
+		return dto.OptionalSalary{Provided: false}, nil
 	}
 	if string(raw) == "null" {
-		return vacancyusecase.OptionalSalary{Provided: true, Value: nil}, nil
+		return dto.OptionalSalary{Provided: true, Value: nil}, nil
 	}
 
 	var value float64
 	if err := json.Unmarshal(raw, &value); err != nil {
-		return vacancyusecase.OptionalSalary{}, err
+		return dto.OptionalSalary{}, err
 	}
 
-	return vacancyusecase.OptionalSalary{Provided: true, Value: &value}, nil
+	return dto.OptionalSalary{Provided: true, Value: &value}, nil
 }
 
 func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
@@ -168,7 +168,7 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	input := vacancyusecase.UpdateVacancyInput{
+	input := dto.UpdateVacancyInput{
 		VacancyID:   vacancyID,
 		EmployerID:  userID,
 		Title:       request.Title,
@@ -182,15 +182,13 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 	updatedVacancy, err := h.vacancy.Update(r.Context(), input)
 	if err != nil {
 		switch {
-		case errors.Is(err, vacancyusecase.ErrInvalidVacancy):
+		case errors.Is(err, apperrors.ErrInvalidInput):
 			httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired),
-		errors.Is(err, vacancyusecase.ErrNotEmployer),
-		errors.Is(err, vacancyusecase.ErrNotVacancyOwner):
+		case errors.Is(err, apperrors.ErrForbidden):
 			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, vacancyusecase.ErrVacancyNotFound):
+		case errors.Is(err, apperrors.ErrNotFound):
 			httputil.WriteError(w, http.StatusNotFound, err.Error())
-		case errors.Is(err, vacancyusecase.ErrVacancyVersionConflict):
+		case errors.Is(err, apperrors.ErrConflict):
 			httputil.WriteError(w, http.StatusConflict, err.Error())
 		default:
 			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
@@ -216,11 +214,9 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	err = h.vacancy.Delete(r.Context(), vacancyID, userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, vacancyusecase.ErrEmployerProfileRequired),
-			errors.Is(err, vacancyusecase.ErrNotEmployer),
-			errors.Is(err, vacancyusecase.ErrNotVacancyOwner):
+		case errors.Is(err, apperrors.ErrForbidden):
 			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, vacancyusecase.ErrVacancyNotFound):
+		case errors.Is(err, apperrors.ErrNotFound):
 			httputil.WriteError(w, http.StatusNotFound, err.Error())
 		default:
 			httputil.WriteError(w, http.StatusInternalServerError, "internal error")

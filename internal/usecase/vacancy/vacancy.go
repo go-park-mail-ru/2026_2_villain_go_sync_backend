@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
@@ -46,7 +47,7 @@ func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64)
 		return fmt.Errorf("get employer role: %w", err)
 	}
 	if role != "employer" {
-		return ErrNotEmployer
+		return apperrors.ErrForbidden
 	}
 
 	exist, err := u.users.HasEmployerProfile(ctx, employerID)
@@ -54,18 +55,18 @@ func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64)
 		return fmt.Errorf("check employer profile: %w", err)
 	}
 	if !exist {
-		return ErrEmployerProfileRequired
+		return apperrors.ErrForbidden
 	}
 	return nil
 }
 
-func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (models.Vacancy, error) {
+func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error) {
 	if err := u.validateEmployer(ctx, input.EmployerID); err != nil {
 		return models.Vacancy{}, err
 	}
 
 	if strings.TrimSpace(input.Title) == "" {
-		return models.Vacancy{}, fmt.Errorf("%w: title is required", ErrInvalidVacancy)
+		return models.Vacancy{}, fmt.Errorf("%w: title is required", apperrors.ErrInvalidInput)
 	}
 
 	if err := validateSalary(input.SalaryFrom, input.SalaryTo); err != nil {
@@ -79,7 +80,7 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 	switch input.Currency {
 	case "RUB", "USD", "EUR":
 	default:
-		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", ErrInvalidVacancy)
+		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 
 	if err := validateCategories(input.CategoryIDs); err != nil {
@@ -97,7 +98,7 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 
 	createdVacancy, err := u.vacancies.Create(ctx, vacancy, input.CategoryIDs)
 	if errors.Is(err, apperrors.ErrCategoryNotFound) {
-		return models.Vacancy{}, fmt.Errorf("%w: category not found", ErrInvalidVacancy)
+		return models.Vacancy{}, fmt.Errorf("%w: category not found", apperrors.ErrInvalidInput)
 	}
 	if err != nil {
 		return models.Vacancy{}, err
@@ -106,16 +107,7 @@ func (u *VacancyUsecase) Create(ctx context.Context, input CreateVacancyInput) (
 }
 
 func (u *VacancyUsecase) GetByID(ctx context.Context, id int64) (models.Vacancy, error) {
-	vacancy, err := u.vacancies.GetByID(ctx, id)
-
-	if errors.Is(err, apperrors.ErrVacancyNotFound) {
-		return models.Vacancy{}, ErrVacancyNotFound
-	}
-	if err != nil {
-		return models.Vacancy{}, err
-	}
-
-	return vacancy, nil
+	return u.vacancies.GetByID(ctx, id)
 }
 
 func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
@@ -124,18 +116,18 @@ func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) (
 		return nil, fmt.Errorf("get employer role: %w", err)
 	}
 	if role != "employer" {
-		return nil, ErrNotEmployer
+		return nil, apperrors.ErrForbidden
 	}
 	return u.vacancies.ListByEmployer(ctx, employerID)
 }
 
-func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (models.Vacancy, error) {
+func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error) {
 	if err := u.validateEmployer(ctx, input.EmployerID); err != nil {
 		return models.Vacancy{}, err
 	}
 
 	if input.VacancyID <= 0 {
-		return models.Vacancy{}, ErrInvalidVacancy
+		return models.Vacancy{}, apperrors.ErrInvalidInput
 	}
 	vacancy, err := u.GetByID(ctx, input.VacancyID)
 	if err != nil {
@@ -143,7 +135,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	}
 
 	if vacancy.EmployerID != input.EmployerID {
-		return models.Vacancy{}, ErrNotVacancyOwner
+		return models.Vacancy{}, apperrors.ErrForbidden
 	}
 
 	if input.Title != nil {
@@ -163,7 +155,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	}
 
 	if strings.TrimSpace(vacancy.Title) == "" {
-		return models.Vacancy{}, fmt.Errorf("%w: title is required", ErrInvalidVacancy)
+		return models.Vacancy{}, fmt.Errorf("%w: title is required", apperrors.ErrInvalidInput)
 	}
 
 	if err := validateSalary(vacancy.SalaryFrom, vacancy.SalaryTo); err != nil {
@@ -173,7 +165,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	switch vacancy.Currency {
 	case "RUB", "USD", "EUR":
 	default:
-		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", ErrInvalidVacancy)
+		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 
 	if input.CategoryIDs != nil {
@@ -183,37 +175,19 @@ func (u *VacancyUsecase) Update(ctx context.Context, input UpdateVacancyInput) (
 	}
 
 	updatedVacancy, err := u.vacancies.Update(ctx, vacancy, input.CategoryIDs)
-	switch {
-	case errors.Is(err, apperrors.ErrCategoryNotFound):
-		return models.Vacancy{}, fmt.Errorf("%w: category not found", ErrInvalidVacancy)
-	case errors.Is(err, apperrors.ErrNotVacancyOwner):
-		return models.Vacancy{}, ErrNotVacancyOwner
-	case errors.Is(err, apperrors.ErrVacancyVersionConflict):
-		return models.Vacancy{}, ErrVacancyVersionConflict
-	case errors.Is(err, apperrors.ErrVacancyNotFound):
-		return models.Vacancy{}, ErrVacancyNotFound
-	case err != nil:
-		return models.Vacancy{}, err
+	if errors.Is(err, apperrors.ErrCategoryNotFound) {
+		return models.Vacancy{}, fmt.Errorf("%w: category not found", apperrors.ErrInvalidInput)
 	}
-	return updatedVacancy, nil
+	return updatedVacancy, err
 }
 
 func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64) error {
 	if vacancyID <= 0 {
-		return ErrInvalidVacancy
+		return apperrors.ErrInvalidInput
 	}
 	if err := u.validateEmployer(ctx, employerID); err != nil {
 		return err
 	}
 
-	err := u.vacancies.Delete(ctx, vacancyID, employerID)
-	switch {
-	case errors.Is(err, apperrors.ErrNotVacancyOwner):
-		return ErrNotVacancyOwner
-	case errors.Is(err, apperrors.ErrVacancyNotFound):
-		return ErrVacancyNotFound
-	case err != nil:
-		return err
-	}
-	return nil
+	return u.vacancies.Delete(ctx, vacancyID, employerID)
 }
