@@ -69,3 +69,37 @@ func (r *PostgresRepository) GetByEmail(ctx context.Context, email string) (mode
 
 	return user, nil
 }
+
+func (r *PostgresRepository) GetRoleByID(ctx context.Context, userID int64) (string, error) {
+	var role string
+	err := r.pool.QueryRow(
+		ctx,
+		`SELECT role
+		FROM app_user
+		WHERE user_id = $1`,
+		userID,
+	).Scan(&role)
+	if err != nil {
+		return "", fmt.Errorf("get user role: %w", err)
+	}
+	return role, nil
+}
+
+func (r *PostgresRepository) HasEmployerProfile(ctx context.Context, userID int64) (bool, error) {
+	var exist bool
+	err := r.pool.QueryRow(
+		ctx,
+		`SELECT EXISTS (
+			SELECT 1
+			FROM employer_profile
+			WHERE user_id = $1
+		)`,
+		userID,
+	).Scan(&exist)
+
+	if err != nil {
+		return false, fmt.Errorf("check employer profile: %w", err)
+	}
+
+	return exist, nil
+}

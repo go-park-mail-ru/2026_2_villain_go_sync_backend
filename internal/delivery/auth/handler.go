@@ -83,8 +83,8 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := validateCredentials(request.Email, request.Password); err != nil {
-		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+	if !isValidEmail(request.Email) || request.Password == "" {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, "invalid request")
 		return
 	}
 
