@@ -17,7 +17,7 @@ type Config struct {
 func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager) *Config {
 	return &Config{
 		Auth:    auth.NewAuthUsecase(repos.User, tokens),
-		Vacancy: vacancy.NewVacancyUsecase(repos.Vacancy),
+		Vacancy: vacancy.NewVacancyUsecase(repos.Vacancy, repos.User),
 		Resume:  resume.NewResumeUsecase(repos.Resume),
 	}
 }

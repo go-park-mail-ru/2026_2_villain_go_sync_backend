@@ -44,6 +44,11 @@ func New() http.Handler {
 	mux.Handle("GET /api/me", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Auth.Me)))
 
 	mux.HandleFunc("GET /api/vacancies", appConfig.Handlers.Vacancy.ListVacancies)
+	mux.HandleFunc("GET /api/vacancies/{id}", appConfig.Handlers.Vacancy.GetByID)
+	mux.Handle("POST /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.CreateVacancy)))
+	mux.Handle("GET /api/employer/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListVacanciesByEmployer)))
+	mux.Handle("PATCH /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.UpdateVacancy)))
+	mux.Handle("DELETE /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.Delete)))
 
 	mux.Handle("POST /api/resumes",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Create)))
