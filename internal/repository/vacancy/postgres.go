@@ -83,12 +83,12 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	}
 	vacancy.Version = 1
 
-	for _, categoryID := range categoryIDs {
+	if len(categoryIDs) > 0 {
 		_, err = tx.Exec(
 			ctx,
 			`INSERT INTO vacancy_category (vacancy_id, category_id)
-			VALUES ($1, $2)`,
-			vacancy.ID, categoryID,
+             SELECT $1, unnest($2::bigint[])`,
+			vacancy.ID, categoryIDs,
 		)
 		if err != nil {
 			var pgErr *pgconn.PgError
@@ -247,12 +247,12 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 			return models.Vacancy{}, err
 		}
 
-		for _, categoryID := range *categoryIDs {
+		if len(*categoryIDs) > 0 {
 			_, err = tx.Exec(
 				ctx,
 				`INSERT INTO vacancy_category (vacancy_id, category_id)
-				VALUES ($1, $2)`,
-				vacancy.ID, categoryID,
+                 SELECT $1, unnest($2::bigint[])`,
+				vacancy.ID, *categoryIDs,
 			)
 			if err != nil {
 				var pgErr *pgconn.PgError
