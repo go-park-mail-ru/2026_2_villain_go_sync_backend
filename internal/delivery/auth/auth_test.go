@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
@@ -24,7 +25,7 @@ func findCookie(cookies []*http.Cookie, name string) *http.Cookie {
 
 func TestRegister_Success(t *testing.T) {
 	mockUC := &mockAuthUsecase{
-		registerFn: func(ctx context.Context, email, password, role string) (*authUsecase.Tokens, error) {
+		registerFn: func(ctx context.Context, email, password string, role models.Role) (*authUsecase.Tokens, error) {
 			return &authUsecase.Tokens{Access: "test-access", Refresh: "test-refresh"}, nil
 		},
 	}
@@ -88,7 +89,7 @@ func TestRegister_Errors(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockUC := &mockAuthUsecase{
-				registerFn: func(ctx context.Context, email, password, role string) (*authUsecase.Tokens, error) {
+				registerFn: func(ctx context.Context, email, password string, role models.Role) (*authUsecase.Tokens, error) {
 					return nil, tt.mockErr
 				},
 			}
