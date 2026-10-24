@@ -7,6 +7,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 )
 
+const maxSalary = 9999999999.99
+
 func validateSalary(from, to *float64) error {
 	if from != nil && *from < 0 {
 		return fmt.Errorf("%w: salary_from must be non-negative", apperrors.ErrInvalidInput)
@@ -16,11 +18,11 @@ func validateSalary(from, to *float64) error {
 		return fmt.Errorf("%w: salary_to must be non-negative", apperrors.ErrInvalidInput)
 	}
 
-	if from != nil && *from > 9999999999.99 {
+	if from != nil && *from > maxSalary {
 		return fmt.Errorf("%w: salary_from is too large", apperrors.ErrInvalidInput)
 	}
 
-	if to != nil && *to > 9999999999.99 {
+	if to != nil && *to > maxSalary {
 		return fmt.Errorf("%w: salary_to is too large", apperrors.ErrInvalidInput)
 	}
 
