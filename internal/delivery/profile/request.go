@@ -6,10 +6,10 @@ import (
 )
 
 type UpdateSeekerRequest struct {
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
-	About     string `json:"about"`
+	FirstName   string `json:"first_name"`
+	LastName    string `json:"last_name"`
+	Phone       string `json:"phone"`
+	Description string `json:"description"`
 }
 
 func (r UpdateSeekerRequest) IsValid() error {

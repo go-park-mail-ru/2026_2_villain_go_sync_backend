@@ -19,14 +19,14 @@ func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
-func (r *PostgresRepository) GetSeeker(ctx context.Context, userID int) (models.SeekerProfile, error) {
+func (r *PostgresRepository) GetSeekerByID(ctx context.Context, userID int) (models.SeekerProfile, error) {
 	query := `
 		SELECT user_id, first_name, last_name, phone, about, created_at, updated_at 
 		FROM seeker_profile 
 		WHERE user_id = $1
 	`
 	var p models.SeekerProfile
-	err := r.pool.QueryRow(ctx, query, userID).Scan(&p.UserID, &p.FirstName, &p.LastName, &p.Phone, &p.About, &p.CreatedAt, &p.UpdatedAt)
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&p.UserID, &p.FirstName, &p.LastName, &p.Phone, &p.Description, &p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.SeekerProfile{}, apperrors.ErrNotFound
 	}
@@ -43,16 +43,15 @@ func (r *PostgresRepository) UpsertSeeker(ctx context.Context, p models.SeekerPr
 			phone = EXCLUDED.phone, 
 			about = EXCLUDED.about, 
 			updated_at = now()
-		RETURNING created_at, updated_at
 	`
-	err := r.pool.QueryRow(ctx, query, p.UserID, p.FirstName, p.LastName, p.Phone, p.About).Scan(&p.CreatedAt, &p.UpdatedAt)
+	_, err := r.pool.Exec(ctx, query, p.UserID, p.FirstName, p.LastName, p.Phone, p.Description)
 	if err != nil {
 		return models.SeekerProfile{}, fmt.Errorf("upsert seeker: %w", err)
 	}
 	return p, nil
 }
 
-func (r *PostgresRepository) GetEmployer(ctx context.Context, userID int) (models.EmployerProfile, error) {
+func (r *PostgresRepository) GetEmployerByID(ctx context.Context, userID int) (models.EmployerProfile, error) {
 	query := `
 		SELECT user_id, company_name, description, website, created_at, updated_at 
 		FROM employer_profile
@@ -75,9 +74,8 @@ func (r *PostgresRepository) UpsertEmployer(ctx context.Context, p models.Employ
 			description = EXCLUDED.description, 
 			website = EXCLUDED.website, 
 			updated_at = now()
-		RETURNING created_at, updated_at
 	`
-	err := r.pool.QueryRow(ctx, query, p.UserID, p.CompanyName, p.Description, p.Website).Scan(&p.CreatedAt, &p.UpdatedAt)
+	_, err := r.pool.Exec(ctx, query, p.UserID, p.CompanyName, p.Description, p.Website)
 	if err != nil {
 		return models.EmployerProfile{}, fmt.Errorf("upsert employer: %w", err)
 	}

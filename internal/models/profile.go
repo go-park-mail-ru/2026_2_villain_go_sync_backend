@@ -2,21 +2,22 @@ package models
 
 import "time"
 
+type Profile struct {
+	UserID      int       `json:"user_id"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type SeekerProfile struct {
-	UserID    int       `json:"user_id"`
-	FirstName string    `json:"first_name"`
-	LastName  string    `json:"last_name"`
-	Phone     string    `json:"phone"`
-	About     string    `json:"about"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Profile
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	Phone     string `json:"phone"`
 }
 
 type EmployerProfile struct {
-	UserID      int       `json:"user_id"`
-	CompanyName string    `json:"company_name"`
-	Description string    `json:"description"`
-	Website     string    `json:"website"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	Profile
+	CompanyName string `json:"company_name"`
+	Website     string `json:"website"`
 }

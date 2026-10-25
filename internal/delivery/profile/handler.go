@@ -14,9 +14,8 @@ import (
 )
 
 type ProfileUsecase interface {
-	GetSeeker(ctx context.Context, userID int, role models.Role) (models.SeekerProfile, error)
+	GetSeekerByID(ctx context.Context, seekerID int) (models.SeekerProfile, error)
 	UpdateSeeker(ctx context.Context, userID int, role models.Role, profile models.SeekerProfile) (models.SeekerProfile, error)
-	GetEmployer(ctx context.Context, userID int, role models.Role) (models.EmployerProfile, error)
 	GetEmployerByID(ctx context.Context, employerID int) (models.EmployerProfile, error)
 	UpdateEmployer(ctx context.Context, userID int, role models.Role, profile models.EmployerProfile) (models.EmployerProfile, error)
 }
@@ -29,21 +28,16 @@ func NewHandler(profiles ProfileUsecase) *Handler {
 	return &Handler{profiles: profiles}
 }
 
-func (h *Handler) GetSeeker(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.UserIDFromContext(r.Context())
-	if !ok {
-		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+func (h *Handler) GetSeekerByID(w http.ResponseWriter, r *http.Request) {
+	seekerID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	role, _ := auth.RoleFromContext(r.Context())
 
-	profile, err := h.profiles.GetSeeker(r.Context(), int(userID), role)
-	if errors.Is(err, apperrors.ErrForbidden) {
-		httputil.WriteError(w, http.StatusForbidden, "only seekers have this profile")
-		return
-	}
+	profile, err := h.profiles.GetSeekerByID(r.Context(), seekerID)
 	if errors.Is(err, apperrors.ErrNotFound) {
-		httputil.WriteError(w, http.StatusNotFound, "profile not found")
+		httputil.WriteError(w, http.StatusNotFound, "seeker not found")
 		return
 	}
 	if err != nil {
@@ -73,39 +67,16 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, err := h.profiles.UpdateSeeker(r.Context(), int(userID), role, models.SeekerProfile{
-		UserID:    int(userID),
+		Profile: models.Profile{
+			UserID:      int(userID),
+			Description: req.Description,
+		},
 		FirstName: req.FirstName,
 		LastName:  req.LastName,
 		Phone:     req.Phone,
-		About:     req.About,
 	})
 	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "only seekers can update this profile")
-		return
-	}
-	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
-		return
-	}
-
-	httputil.WriteOK(w, http.StatusOK, profile)
-}
-
-func (h *Handler) GetEmployer(w http.ResponseWriter, r *http.Request) {
-	userID, ok := auth.UserIDFromContext(r.Context())
-	if !ok {
-		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
-		return
-	}
-	role, _ := auth.RoleFromContext(r.Context())
-
-	profile, err := h.profiles.GetEmployer(r.Context(), int(userID), role)
-	if errors.Is(err, apperrors.ErrForbidden) {
-		httputil.WriteError(w, http.StatusForbidden, "only employers have this profile")
-		return
-	}
-	if errors.Is(err, apperrors.ErrNotFound) {
-		httputil.WriteError(w, http.StatusNotFound, "profile not found")
 		return
 	}
 	if err != nil {
@@ -156,9 +127,11 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, err := h.profiles.UpdateEmployer(r.Context(), int(userID), role, models.EmployerProfile{
-		UserID:      int(userID),
+		Profile: models.Profile{
+			UserID:      int(userID),
+			Description: req.Description,
+		},
 		CompanyName: req.CompanyName,
-		Description: req.Description,
 		Website:     req.Website,
 	})
 	if errors.Is(err, apperrors.ErrForbidden) {
