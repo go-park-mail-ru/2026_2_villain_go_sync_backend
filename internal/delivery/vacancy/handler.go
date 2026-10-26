@@ -15,7 +15,7 @@ import (
 )
 
 type VacancyUsecase interface {
-	List(ctx context.Context) ([]models.Vacancy, error)
+	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
@@ -23,16 +23,21 @@ type VacancyUsecase interface {
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 }
 
-type Handler struct {
-	vacancy VacancyUsecase
+type ApplicantUsecase interface {
+	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error)
 }
 
-func NewHandler(vacancy VacancyUsecase) *Handler {
-	return &Handler{vacancy: vacancy}
+type Handler struct {
+	vacancy    VacancyUsecase
+	applicants ApplicantUsecase
+}
+
+func NewHandler(vacancy VacancyUsecase, applicants ApplicantUsecase) *Handler {
+	return &Handler{vacancy: vacancy, applicants: applicants}
 }
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
-	vacancies, err := h.vacancy.List(r.Context())
+	vacancies, err := h.vacancy.ListVacancies(r.Context())
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -224,4 +229,31 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+
+	vacancyID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	applicants, err := h.applicants.ListApplicants(r.Context(), userID, role, vacancyID)
+	if errors.Is(err, apperrors.ErrForbidden) {
+		httputil.WriteError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	httputil.WriteOK(w, http.StatusOK, applicants)
 }

@@ -1,4 +1,4 @@
-package applicant
+package vacancy
 
 import (
 	"context"
@@ -8,15 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type PostgresRepository struct {
+type ApplicantRepository struct {
 	pool *pgxpool.Pool
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
-	return &PostgresRepository{pool: pool}
+func NewApplicantRepository(pool *pgxpool.Pool) *ApplicantRepository {
+	return &ApplicantRepository{pool: pool}
 }
 
-func (r *PostgresRepository) IsOwner(ctx context.Context, vacancyID int, employerID int) (bool, error) {
+func (r *ApplicantRepository) IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM vacancy WHERE vacancy_id = $1 AND employer_id = $2)`
 	var exists bool
 	err := r.pool.QueryRow(ctx, query, vacancyID, employerID).Scan(&exists)
@@ -26,7 +26,7 @@ func (r *PostgresRepository) IsOwner(ctx context.Context, vacancyID int, employe
 	return exists, nil
 }
 
-func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int) ([]models.Applicant, error) {
+func (r *ApplicantRepository) ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error) {
 	query := `
 		SELECT 
 			sp.first_name, 

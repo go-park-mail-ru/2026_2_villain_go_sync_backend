@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/applicant"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
@@ -12,17 +11,17 @@ import (
 type Config struct {
 	User      *user.PostgresRepository
 	Vacancy   *vacancy.PostgresRepository
+	Applicant *vacancy.ApplicantRepository
 	Resume    *resume.PostgresRepository
 	Profile   *profile.PostgresRepository
-	Applicant *applicant.PostgresRepository
 }
 
 func CreateConfig(pool *pgxpool.Pool) *Config {
 	return &Config{
 		User:      user.NewPostgresRepository(pool),
 		Vacancy:   vacancy.NewPostgresRepository(pool),
+		Applicant: vacancy.NewApplicantRepository(pool),
 		Resume:    resume.NewPostgresRepository(pool),
 		Profile:   profile.NewPostgresRepository(pool),
-		Applicant: applicant.NewPostgresRepository(pool),
 	}
 }

@@ -3,7 +3,6 @@ package usecase
 import (
 	tokenauth "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/applicant"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
@@ -13,17 +12,17 @@ import (
 type Config struct {
 	Auth      *auth.AuthUsecase
 	Vacancy   *vacancy.VacancyUsecase
+	Applicant *vacancy.ApplicantUsecase
 	Resume    *resume.ResumeUsecase
 	Profile   *profile.ProfileUsecase
-	Applicant *applicant.ApplicantUsecase
 }
 
 func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager) *Config {
 	return &Config{
 		Auth:      auth.NewAuthUsecase(repos.User, tokens),
 		Vacancy:   vacancy.NewVacancyUsecase(repos.Vacancy, repos.User),
+		Applicant: vacancy.NewApplicantUsecase(repos.Applicant),
 		Resume:    resume.NewResumeUsecase(repos.Resume),
 		Profile:   profile.NewProfileUsecase(repos.Profile),
-		Applicant: applicant.NewApplicantUsecase(repos.Applicant),
 	}
 }

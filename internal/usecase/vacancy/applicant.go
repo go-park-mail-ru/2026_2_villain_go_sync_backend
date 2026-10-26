@@ -1,4 +1,4 @@
-package applicant
+package vacancy
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 )
 
 type ApplicantRepository interface {
-	IsOwner(ctx context.Context, vacancyID int, employerID int) (bool, error)
-	ListByVacancyID(ctx context.Context, vacancyID int) ([]models.Applicant, error)
+	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
+	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
 }
 
 type ApplicantUsecase struct {
@@ -20,7 +20,7 @@ func NewApplicantUsecase(applicants ApplicantRepository) *ApplicantUsecase {
 	return &ApplicantUsecase{applicants: applicants}
 }
 
-func (u *ApplicantUsecase) List(ctx context.Context, userID int, role models.Role, vacancyID int) ([]models.Applicant, error) {
+func (u *ApplicantUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error) {
 	if !role.IsEmployer() {
 		return nil, apperrors.ErrForbidden
 	}

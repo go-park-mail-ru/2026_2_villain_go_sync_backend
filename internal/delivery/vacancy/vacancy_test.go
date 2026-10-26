@@ -23,7 +23,7 @@ func TestListVacancies_Success(t *testing.T) {
 			return want, nil
 		},
 	}
-	h := NewHandler(mockUC)
+	h := NewHandler(mockUC, nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	recorder := httptest.NewRecorder()
@@ -54,7 +54,7 @@ func TestListVacancies_UsecaseError(t *testing.T) {
 			return nil, errors.New("usecase error")
 		},
 	}
-	h := NewHandler(mockUC)
+	h := NewHandler(mockUC, nil)
 
 	request := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	recorder := httptest.NewRecorder()
