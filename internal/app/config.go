@@ -18,6 +18,7 @@ func CreateConfig(pool *pgxpool.Pool, tokens *auth.TokenManager) *Config {
 	repos := repository.CreateConfig(pool)
 	usecases := usecase.CreateConfig(repos, tokens)
 	handlers := delivery.CreateConfig(usecases)
+
 	return &Config{
 		Repositories: repos,
 		Usecases:     usecases,
