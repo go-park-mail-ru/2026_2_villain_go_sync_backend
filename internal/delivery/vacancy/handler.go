@@ -62,11 +62,11 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 
 	input := dto.CreateVacancyInput{
 		EmployerID:  userID,
-		Title:       request.Title,
-		Description: request.Description,
+		Title:       request.Title.String(),
+		Description: request.Description.String(),
 		SalaryFrom:  request.SalaryFrom,
 		SalaryTo:    request.SalaryTo,
-		Currency:    request.Currency,
+		Currency:    request.Currency.String(),
 		CategoryIDs: request.CategoryIDs,
 	}
 
@@ -176,11 +176,11 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 	input := dto.UpdateVacancyInput{
 		VacancyID:   vacancyID,
 		EmployerID:  userID,
-		Title:       request.Title,
-		Description: request.Description,
+		Title:       ptrIfNotNil(request.Title),
+		Description: ptrIfNotNil(request.Description),
 		SalaryFrom:  salaryFrom,
 		SalaryTo:    salaryTo,
-		Currency:    request.Currency,
+		Currency:    ptrIfNotNil(request.Currency),
 		CategoryIDs: request.CategoryIDs,
 	}
 

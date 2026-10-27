@@ -69,11 +69,11 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 	profile, err := h.profiles.UpdateSeeker(r.Context(), int(userID), role, models.SeekerProfile{
 		Profile: models.Profile{
 			UserID:      int(userID),
-			Description: req.Description,
+			Description: req.Description.String(),
 		},
-		FirstName: req.FirstName,
-		LastName:  req.LastName,
-		Phone:     req.Phone,
+		FirstName: req.FirstName.String(),
+		LastName:  req.LastName.String(),
+		Phone:     req.Phone.String(),
 	})
 	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "only seekers can update this profile")
@@ -129,10 +129,10 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 	profile, err := h.profiles.UpdateEmployer(r.Context(), int(userID), role, models.EmployerProfile{
 		Profile: models.Profile{
 			UserID:      int(userID),
-			Description: req.Description,
+			Description: req.Description.String(),
 		},
-		CompanyName: req.CompanyName,
-		Website:     req.Website,
+		CompanyName: req.CompanyName.String(),
+		Website:     req.Website.String(),
 	})
 	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "only employers can update this profile")
