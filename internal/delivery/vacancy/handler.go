@@ -12,6 +12,7 @@ import (
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/sanitizer"
 )
 
 type VacancyUsecase interface {
@@ -21,19 +22,15 @@ type VacancyUsecase interface {
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 	Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
-}
-
-type ApplicantUsecase interface {
 	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error)
 }
 
 type Handler struct {
-	vacancy    VacancyUsecase
-	applicants ApplicantUsecase
+	vacancy VacancyUsecase
 }
 
-func NewHandler(vacancy VacancyUsecase, applicants ApplicantUsecase) *Handler {
-	return &Handler{vacancy: vacancy, applicants: applicants}
+func NewHandler(vacancy VacancyUsecase) *Handler {
+	return &Handler{vacancy: vacancy}
 }
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
@@ -176,11 +173,11 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 	input := dto.UpdateVacancyInput{
 		VacancyID:   vacancyID,
 		EmployerID:  userID,
-		Title:       ptrIfNotNil(request.Title),
-		Description: ptrIfNotNil(request.Description),
+		Title:       sanitizer.Ptr(request.Title),
+		Description: sanitizer.Ptr(request.Description),
 		SalaryFrom:  salaryFrom,
 		SalaryTo:    salaryTo,
-		Currency:    ptrIfNotNil(request.Currency),
+		Currency:    sanitizer.Ptr(request.Currency),
 		CategoryIDs: request.CategoryIDs,
 	}
 
@@ -245,7 +242,7 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applicants, err := h.applicants.ListApplicants(r.Context(), userID, role, vacancyID)
+	applicants, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID)
 	if errors.Is(err, apperrors.ErrForbidden) {
 		httputil.WriteError(w, http.StatusForbidden, "forbidden")
 		return

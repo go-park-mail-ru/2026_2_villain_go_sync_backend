@@ -19,11 +19,17 @@ func (s *SafeString) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (s SafeString) String() string {
-	return string(s)
+func (s *SafeString) String() string {
+	if s == nil {
+		return ""
+	}
+	return string(*s)
 }
 
-func (s SafeString) Ptr() *string {
-	str := string(s)
+func Ptr(s *SafeString) *string {
+	if s == nil {
+		return nil
+	}
+	str := string(*s)
 	return &str
 }

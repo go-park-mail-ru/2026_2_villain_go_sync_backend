@@ -18,6 +18,8 @@ type VacancyRepository interface {
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 	Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
+	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
+	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
 }
 
 type UserRepository interface {

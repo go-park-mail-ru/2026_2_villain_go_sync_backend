@@ -37,3 +37,7 @@ func (m *mockVacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancy
 func (m *mockVacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64) error {
 	return nil
 }
+
+func (m *mockVacancyUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error) {
+	return nil, nil
+}

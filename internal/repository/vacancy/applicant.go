@@ -5,18 +5,9 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type ApplicantRepository struct {
-	pool *pgxpool.Pool
-}
-
-func NewApplicantRepository(pool *pgxpool.Pool) *ApplicantRepository {
-	return &ApplicantRepository{pool: pool}
-}
-
-func (r *ApplicantRepository) IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error) {
+func (r *PostgresRepository) IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error) {
 	query := `SELECT EXISTS(SELECT 1 FROM vacancy WHERE vacancy_id = $1 AND employer_id = $2)`
 	var exists bool
 	err := r.pool.QueryRow(ctx, query, vacancyID, employerID).Scan(&exists)
@@ -26,7 +17,7 @@ func (r *ApplicantRepository) IsOwner(ctx context.Context, vacancyID int64, empl
 	return exists, nil
 }
 
-func (r *ApplicantRepository) ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error) {
+func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error) {
 	query := `
 		SELECT 
 			sp.first_name, 

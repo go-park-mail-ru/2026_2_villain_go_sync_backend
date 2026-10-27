@@ -18,7 +18,7 @@ type Config struct {
 func CreateConfig(usecases *usecase.Config) *Config {
 	return &Config{
 		Auth:    auth.NewHandler(usecases.Auth),
-		Vacancy: vacancy.NewHandler(usecases.Vacancy, usecases.Applicant),
+		Vacancy: vacancy.NewHandler(usecases.Vacancy),
 		Resume:  resume.NewHandler(usecases.Resume),
 		Profile: profile.NewHandler(usecases.Profile),
 	}

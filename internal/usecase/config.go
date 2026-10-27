@@ -10,19 +10,17 @@ import (
 )
 
 type Config struct {
-	Auth      *auth.AuthUsecase
-	Vacancy   *vacancy.VacancyUsecase
-	Applicant *vacancy.ApplicantUsecase
-	Resume    *resume.ResumeUsecase
-	Profile   *profile.ProfileUsecase
+	Auth    *auth.AuthUsecase
+	Vacancy *vacancy.VacancyUsecase
+	Resume  *resume.ResumeUsecase
+	Profile *profile.ProfileUsecase
 }
 
 func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager) *Config {
 	return &Config{
-		Auth:      auth.NewAuthUsecase(repos.User, tokens),
-		Vacancy:   vacancy.NewVacancyUsecase(repos.Vacancy, repos.User),
-		Applicant: vacancy.NewApplicantUsecase(repos.Applicant),
-		Resume:    resume.NewResumeUsecase(repos.Resume),
-		Profile:   profile.NewProfileUsecase(repos.Profile),
+		Auth:    auth.NewAuthUsecase(repos.User, tokens),
+		Vacancy: vacancy.NewVacancyUsecase(repos.Vacancy, repos.User),
+		Resume:  resume.NewResumeUsecase(repos.Resume),
+		Profile: profile.NewProfileUsecase(repos.Profile),
 	}
 }
