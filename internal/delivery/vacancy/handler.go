@@ -207,12 +207,8 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicants, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID)
-	if errors.Is(err, apperrors.ErrForbidden) {
-		httputil.WriteError(w, http.StatusForbidden, "forbidden")
-		return
-	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "failed to list applicants")
 		return
 	}
 
