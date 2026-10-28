@@ -12,12 +12,14 @@ import (
 )
 
 type VacancyRepository interface {
-	List(ctx context.Context) ([]models.Vacancy, error)
+	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 	Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
+	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
+	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
 }
 
 type UserRepository interface {
@@ -37,8 +39,8 @@ func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository) *Vacan
 	}
 }
 
-func (u *VacancyUsecase) List(ctx context.Context) ([]models.Vacancy, error) {
-	return u.vacancies.List(ctx)
+func (u *VacancyUsecase) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
+	return u.vacancies.ListVacancies(ctx)
 }
 
 func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64) error {
