@@ -108,7 +108,7 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	return vacancy, nil
 }
 
-func (r *PostgresRepository) List(ctx context.Context) ([]models.Vacancy, error) {
+func (r *PostgresRepository) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
 	rows, err := r.pool.Query(ctx, vacancySelectQuery)
 	if err != nil {
 		return nil, err

@@ -18,7 +18,7 @@ func NewMemoryRepository() *MemoryRepository {
 	}
 }
 
-func (r *MemoryRepository) List(ctx context.Context) ([]models.Vacancy, error) {
+func (r *MemoryRepository) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

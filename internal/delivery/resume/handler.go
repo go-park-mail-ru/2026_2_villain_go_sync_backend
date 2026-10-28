@@ -46,10 +46,10 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := h.resumes.Create(r.Context(), int(userID), role, models.Resume{
-		Title:       req.Title,
-		Description: req.Description,
-		Experience:  req.Experience,
-		Education:   req.Education,
+		Title:       req.Title.String(),
+		Description: req.Description.String(),
+		Experience:  req.Experience.String(),
+		Education:   req.Education.String(),
 	})
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to create resume")
@@ -122,10 +122,10 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.resumes.Update(r.Context(), int(userID), role, models.Resume{
 		ID:          id,
-		Title:       req.Title,
-		Description: req.Description,
-		Experience:  req.Experience,
-		Education:   req.Education,
+		Title:       req.Title.String(),
+		Description: req.Description.String(),
+		Experience:  req.Experience.String(),
+		Education:   req.Education.String(),
 	})
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update resume")

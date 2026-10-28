@@ -10,15 +10,17 @@ import (
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/sanitizer"
 )
 
 type VacancyUsecase interface {
-	List(ctx context.Context) ([]models.Vacancy, error)
+	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
 	Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
+	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error)
 }
 
 type Handler struct {
@@ -30,7 +32,7 @@ func NewHandler(vacancy VacancyUsecase) *Handler {
 }
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
-	vacancies, err := h.vacancy.List(r.Context())
+	vacancies, err := h.vacancy.ListVacancies(r.Context())
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -55,11 +57,11 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 
 	input := dto.CreateVacancyInput{
 		EmployerID:  userID,
-		Title:       request.Title,
-		Description: request.Description,
+		Title:       request.Title.String(),
+		Description: request.Description.String(),
 		SalaryFrom:  request.SalaryFrom,
 		SalaryTo:    request.SalaryTo,
-		Currency:    request.Currency,
+		Currency:    request.Currency.String(),
 		CategoryIDs: request.CategoryIDs,
 	}
 
@@ -153,11 +155,11 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 	input := dto.UpdateVacancyInput{
 		VacancyID:   vacancyID,
 		EmployerID:  userID,
-		Title:       request.Title,
-		Description: request.Description,
+		Title:       sanitizer.Ptr(request.Title),
+		Description: sanitizer.Ptr(request.Description),
 		SalaryFrom:  salaryFrom,
 		SalaryTo:    salaryTo,
-		Currency:    request.Currency,
+		Currency:    sanitizer.Ptr(request.Currency),
 		CategoryIDs: request.CategoryIDs,
 	}
 
@@ -188,4 +190,31 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+
+	vacancyID, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+
+	applicants, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID)
+	if errors.Is(err, apperrors.ErrForbidden) {
+		httputil.WriteError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	httputil.WriteOK(w, http.StatusOK, applicants)
 }
