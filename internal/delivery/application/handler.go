@@ -3,11 +3,9 @@ package application
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
@@ -63,18 +61,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		switch {
-		case errors.Is(err, apperrors.ErrInvalidInput):
-			httputil.WriteError(w, http.StatusBadRequest, "invalid application data")
-		case errors.Is(err, apperrors.ErrForbidden):
-			httputil.WriteError(w, http.StatusForbidden, "forbidden")
-		case errors.Is(err, apperrors.ErrNotFound):
-			httputil.WriteError(w, http.StatusNotFound, "vacancy or resume not found")
-		case errors.Is(err, apperrors.ErrConflict):
-			httputil.WriteError(w, http.StatusConflict, "already applied with this resume")
-		default:
-			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
-		}
+		httputil.WriteAppError(w, err, "failed to create application")
 		return
 	}
 

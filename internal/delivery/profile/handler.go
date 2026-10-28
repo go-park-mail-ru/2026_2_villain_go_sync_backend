@@ -3,11 +3,9 @@ package profile
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -36,12 +34,8 @@ func (h *Handler) GetSeekerByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, err := h.profiles.GetSeekerByID(r.Context(), seekerID)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		httputil.WriteError(w, http.StatusNotFound, "seeker not found")
-		return
-	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "seeker not found")
 		return
 	}
 
@@ -75,12 +69,8 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 		LastName:  req.LastName,
 		Phone:     req.Phone,
 	})
-	if errors.Is(err, apperrors.ErrForbidden) {
-		httputil.WriteError(w, http.StatusForbidden, "only seekers can update this profile")
-		return
-	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "failed to update seeker profile")
 		return
 	}
 
@@ -96,12 +86,8 @@ func (h *Handler) GetPublicEmployer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, err := h.profiles.GetEmployerByID(r.Context(), employerID)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		httputil.WriteError(w, http.StatusNotFound, "employer not found")
-		return
-	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "employer not found")
 		return
 	}
 
@@ -134,12 +120,8 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 		CompanyName: req.CompanyName,
 		Website:     req.Website,
 	})
-	if errors.Is(err, apperrors.ErrForbidden) {
-		httputil.WriteError(w, http.StatusForbidden, "only employers can update this profile")
-		return
-	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "failed to update employer profile")
 		return
 	}
 

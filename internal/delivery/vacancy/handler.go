@@ -3,11 +3,9 @@ package vacancy
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"strconv"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
@@ -67,14 +65,7 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 
 	createdVacancy, err := h.vacancy.Create(r.Context(), input)
 	if err != nil {
-		switch {
-		case errors.Is(err, apperrors.ErrInvalidInput):
-			httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, apperrors.ErrForbidden):
-			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		default:
-			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
-		}
+		httputil.WriteAppError(w, err, "failed to create vacancy")
 		return
 	}
 	httputil.WriteOK(w, http.StatusCreated, createdVacancy)
@@ -87,12 +78,8 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vacancy, err := h.vacancy.GetByID(r.Context(), id)
-	if errors.Is(err, apperrors.ErrNotFound) {
-		httputil.WriteError(w, http.StatusNotFound, err.Error())
-		return
-	}
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "vacancy not found")
 		return
 	}
 
@@ -108,13 +95,8 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 	}
 
 	vacancies, err := h.vacancy.ListByEmployer(r.Context(), userID)
-	if errors.Is(err, apperrors.ErrForbidden) {
-		httputil.WriteError(w, http.StatusForbidden, err.Error())
-		return
-	}
-
 	if err != nil {
-		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		httputil.WriteAppError(w, err, "failed to list vacancies")
 		return
 	}
 
@@ -181,18 +163,7 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 
 	updatedVacancy, err := h.vacancy.Update(r.Context(), input)
 	if err != nil {
-		switch {
-		case errors.Is(err, apperrors.ErrInvalidInput):
-			httputil.WriteError(w, http.StatusBadRequest, err.Error())
-		case errors.Is(err, apperrors.ErrForbidden):
-			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, apperrors.ErrNotFound):
-			httputil.WriteError(w, http.StatusNotFound, err.Error())
-		case errors.Is(err, apperrors.ErrConflict):
-			httputil.WriteError(w, http.StatusConflict, err.Error())
-		default:
-			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
-		}
+		httputil.WriteAppError(w, err, "failed to update vacancy")
 		return
 	}
 	httputil.WriteOK(w, http.StatusOK, updatedVacancy)
@@ -213,14 +184,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	err = h.vacancy.Delete(r.Context(), vacancyID, userID)
 	if err != nil {
-		switch {
-		case errors.Is(err, apperrors.ErrForbidden):
-			httputil.WriteError(w, http.StatusForbidden, err.Error())
-		case errors.Is(err, apperrors.ErrNotFound):
-			httputil.WriteError(w, http.StatusNotFound, err.Error())
-		default:
-			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
-		}
+		httputil.WriteAppError(w, err, "failed to delete vacancy")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
