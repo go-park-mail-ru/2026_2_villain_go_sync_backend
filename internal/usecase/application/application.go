@@ -2,7 +2,6 @@ package application
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
@@ -60,9 +59,6 @@ func (u *ApplicationUsecase) Create(
 
 	resume, err := u.resumes.GetByID(ctx, input.ResumeID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return models.Application{}, apperrors.ErrNotFound
-		}
 		return models.Application{}, fmt.Errorf("get resume: %w", err)
 	}
 
@@ -72,9 +68,6 @@ func (u *ApplicationUsecase) Create(
 
 	vacancy, err := u.vacancies.GetByID(ctx, input.VacancyID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return models.Application{}, apperrors.ErrNotFound
-		}
 		return models.Application{}, fmt.Errorf("get vacancy: %w", err)
 	}
 
