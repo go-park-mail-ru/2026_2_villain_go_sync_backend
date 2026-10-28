@@ -1,14 +1,17 @@
 package server
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/app"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/handler"
+	healthDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/health"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/storage"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 )
 
 func New() http.Handler {
@@ -17,22 +20,62 @@ func New() http.Handler {
 		log.Fatalf("load config: %v", err)
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	pool, err := repository.NewPostgresPool(ctx, cfg.DSN())
+	if err != nil {
+		log.Fatalf("connect db: %v", err)
+	}
+
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
+
+	appConfig := app.CreateConfig(pool, tokens)
 
 	mux := http.NewServeMux()
 
-	h := handler.NewHandler(
-		storage.NewMemoryRepository(),
-		storage.NewDemoVacancyRepository(),
-		tokens,
-	)
+	mux.HandleFunc("GET /api/health", healthDelivery.Health)
 
-	mux.HandleFunc("POST /api/refresh", h.Refresh)
-	mux.HandleFunc("GET /api/health", handler.Health)
-	mux.HandleFunc("POST /api/register", h.Register)
-	mux.HandleFunc("POST /api/login", h.Login)
-	mux.HandleFunc("POST /api/logout", h.Logout)
-	mux.HandleFunc("GET /api/vacancies", h.ListVacancies)
+	mux.HandleFunc("POST /api/register", appConfig.Handlers.Auth.Register)
+	mux.HandleFunc("POST /api/login", appConfig.Handlers.Auth.Login)
+	mux.HandleFunc("POST /api/refresh", appConfig.Handlers.Auth.Refresh)
+	mux.HandleFunc("POST /api/logout", appConfig.Handlers.Auth.Logout)
+
+	mux.Handle("GET /api/me", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Auth.Me)))
+
+	mux.HandleFunc("GET /api/vacancies", appConfig.Handlers.Vacancy.ListVacancies)
+	mux.HandleFunc("GET /api/vacancies/{id}", appConfig.Handlers.Vacancy.GetByID)
+	mux.Handle("POST /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.CreateVacancy)))
+	mux.Handle("GET /api/employer/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListVacanciesByEmployer)))
+	mux.Handle("PATCH /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.UpdateVacancy)))
+	mux.Handle("DELETE /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.Delete)))
+	mux.Handle("GET /api/vacancies/{id}/applicants", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListApplicants)))
+
+	mux.Handle("POST /api/resumes",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Create)))
+	mux.Handle("PUT /api/resumes/{id}",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Update)))
+	mux.Handle("DELETE /api/resumes/{id}",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Delete)))
+
+	mux.HandleFunc("GET /api/resumes/{id}", appConfig.Handlers.Resume.GetByID)
+	mux.HandleFunc("GET /api/resumes", appConfig.Handlers.Resume.ListBySeekerID)
+
+	mux.HandleFunc("GET /api/seekers/{id}", appConfig.Handlers.Profile.GetSeekerByID)
+	mux.Handle("POST /api/profile/seeker",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
+	mux.Handle("PUT /api/profile/seeker",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
+
+	mux.HandleFunc("GET /api/employers/{id}", appConfig.Handlers.Profile.GetPublicEmployer)
+	mux.Handle("POST /api/profile/employer",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
+	mux.Handle("PUT /api/profile/employer",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
+	mux.Handle(
+		"POST /api/vacancies/{id}/applications",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.Create)),
+	)
 
 	return middleware.CORS(mux)
 }
