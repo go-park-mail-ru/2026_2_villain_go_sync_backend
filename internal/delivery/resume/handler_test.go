@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/resume"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks"
+	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/delivery_resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -45,7 +45,6 @@ func TestCreate_InvalidJSON(t *testing.T) {
 	body := `{invalid_json`
 	req := httptest.NewRequest(http.MethodPost, "/api/resumes", bytes.NewBufferString(body))
 
-	// ДОБАВЛЯЕМ КОНТЕКСТ, ЧТОБЫ ПРОЙТИ ПРОВЕРКУ АВТОРИЗАЦИИ:
 	ctx := auth.WithUserID(req.Context(), 10)
 	ctx = auth.WithRole(ctx, models.RoleSeeker)
 	req = req.WithContext(ctx)
