@@ -7,8 +7,8 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -30,11 +30,15 @@ const (
 	applicationVacancyResumeKey = "application_vacancy_resume_unique"
 )
 
-type PostgresRepository struct {
-	pool *pgxpool.Pool
+type PgxPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
+type PostgresRepository struct {
+	pool PgxPool
+}
+
+func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 

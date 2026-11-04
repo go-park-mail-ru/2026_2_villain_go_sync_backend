@@ -9,19 +9,25 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
 	foreignKeyViolationCode = "23503"
-	vacancyCategoryFK       = "vacancy_category_category_fk"
+	vacancyCategoryFK       = "vacancy_category_fk"
 )
 
-type PostgresRepository struct {
-	pool *pgxpool.Pool
+type PgxPool interface {
+	Begin(ctx context.Context) (pgx.Tx, error)
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
+type PostgresRepository struct {
+	pool PgxPool
+}
+
+func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
