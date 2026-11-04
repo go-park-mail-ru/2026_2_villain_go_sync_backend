@@ -4,8 +4,10 @@ go 1.26.8
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/jackc/pgx/v5 v5.11.0
-	golang.org/x/crypto v0.57.0
+	github.com/jackc/pgx/v5 v5.12.0
+	github.com/microcosm-cc/bluemonday v1.0.27
+	go.uber.org/mock v0.6.0
+	golang.org/x/crypto v0.58.0
 )
 
 require (
@@ -13,9 +15,9 @@ require (
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
-	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/microcosm-cc/bluemonday v1.0.27 // indirect
-	golang.org/x/net v0.58.0 // indirect
-	golang.org/x/sync v0.23.0 // indirect
-	golang.org/x/text v0.42.0 // indirect
+	github.com/jackc/puddle/v2 v2.2.3 // indirect
+	github.com/stretchr/testify v1.12.1 // indirect
+	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/sync v0.24.0 // indirect
+	golang.org/x/text v0.43.0 // indirect
 )
