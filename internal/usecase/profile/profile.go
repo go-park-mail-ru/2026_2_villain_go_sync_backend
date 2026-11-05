@@ -2,11 +2,9 @@ package profile
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
-	"log/slog"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -82,32 +80,15 @@ func (u *ProfileUsecase) UploadSeekerAvatar(ctx context.Context, userID int, rol
 	if err != nil {
 		return err
 	}
-	key := fmt.Sprintf("avatars/%d/%s", userID, rand.Text())
-	err = u.storage.Upload(ctx, key, body, contentType)
-	if err != nil {
-		return fmt.Errorf("upload seeker avatar: %w", err)
-	}
-	err = u.profiles.UpdateSeekerAvatarKey(ctx, userID, &key)
-	if err != nil {
-		deleteErr := u.storage.Delete(ctx, key)
-		if deleteErr != nil {
-			return errors.Join(
-				fmt.Errorf("update seeker avatar key: %w", err),
-				fmt.Errorf("delete seeker avatar: %w", deleteErr),
-			)
-		}
-		return fmt.Errorf("update seeker avatar key: %w", err)
-	}
-	if p.AvatarKey != nil {
-		err := u.storage.Delete(ctx, *p.AvatarKey)
-		if err != nil {
-			slog.Warn("failed to delete old seeker avatar",
-				"user_id", userID,
-				"error", err,
-			)
-		}
-	}
-	return nil
+	return u.replaceProfileImage(
+		ctx,
+		userID,
+		"avatars",
+		p.AvatarKey,
+		body,
+		contentType,
+		u.profiles.UpdateSeekerAvatarKey,
+	)
 }
 
 func (u *ProfileUsecase) GetSeekerAvatar(ctx context.Context, userID int) (io.ReadCloser, string, error) {
@@ -133,20 +114,60 @@ func (u *ProfileUsecase) DeleteSeekerAvatar(ctx context.Context, userID int, rol
 	if err != nil {
 		return err
 	}
-	if p.AvatarKey == nil {
-		return apperrors.ErrNotFound
-	}
+	return u.deleteProfileImage(
+		ctx,
+		userID,
+		p.AvatarKey,
+		u.profiles.UpdateSeekerAvatarKey,
+	)
+}
 
-	err = u.profiles.UpdateSeekerAvatarKey(ctx, userID, nil)
-	if err != nil {
-		return fmt.Errorf("delete seeker avatar key: %w", err)
+func (u *ProfileUsecase) UploadEmployerLogo(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error {
+	if !role.IsEmployer() {
+		return apperrors.ErrForbidden
 	}
-	err = u.storage.Delete(ctx, *p.AvatarKey)
+	p, err := u.profiles.GetEmployerByID(ctx, userID)
 	if err != nil {
-		slog.Warn("failed to delete seeker avatar",
-			"user_id", userID,
-			"error", err,
-		)
+		return err
 	}
-	return nil
+	return u.replaceProfileImage(
+		ctx,
+		userID,
+		"logos",
+		p.LogoKey,
+		body,
+		contentType,
+		u.profiles.UpdateEmployerLogoKey,
+	)
+}
+
+func (u *ProfileUsecase) GetEmployerLogo(ctx context.Context, userID int) (io.ReadCloser, string, error) {
+	p, err := u.profiles.GetEmployerByID(ctx, userID)
+	if err != nil {
+		return nil, "", err
+	}
+	if p.LogoKey == nil {
+		return nil, "", apperrors.ErrNotFound
+	}
+	body, contentType, err := u.storage.Download(ctx, *p.LogoKey)
+	if err != nil {
+		return nil, "", fmt.Errorf("get logo from s3 storage: %w", err)
+	}
+	return body, contentType, nil
+}
+
+func (u *ProfileUsecase) DeleteEmployerLogo(ctx context.Context, userID int, role models.Role) error {
+	if !role.IsEmployer() {
+		return apperrors.ErrForbidden
+	}
+	p, err := u.profiles.GetEmployerByID(ctx, userID)
+	if err != nil {
+		return err
+	}
+	return u.deleteProfileImage(
+		ctx,
+		userID,
+		p.LogoKey,
+		u.profiles.UpdateEmployerLogoKey,
+	)
 }

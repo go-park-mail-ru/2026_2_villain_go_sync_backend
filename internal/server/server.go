@@ -94,10 +94,19 @@ func New() http.Handler {
 	)
 
 	mux.HandleFunc("GET /api/employers/{id}", appConfig.Handlers.Profile.GetPublicEmployer)
+	mux.HandleFunc("GET /api/employers/{id}/logo", appConfig.Handlers.Profile.GetEmployerLogo)
 	mux.Handle("POST /api/profile/employer",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
 	mux.Handle("PUT /api/profile/employer",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
+	mux.Handle(
+		"PUT /api/me/logo",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UploadEmployerLogo)),
+	)
+	mux.Handle(
+		"DELETE /api/me/logo",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.DeleteEmployerLogo)),
+	)
 	mux.Handle(
 		"POST /api/vacancies/{id}/applications",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.Create)),
