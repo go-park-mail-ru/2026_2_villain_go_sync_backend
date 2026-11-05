@@ -79,10 +79,19 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/resumes", appConfig.Handlers.Resume.ListBySeekerID)
 
 	mux.HandleFunc("GET /api/seekers/{id}", appConfig.Handlers.Profile.GetSeekerByID)
+	mux.HandleFunc("GET /api/seekers/{id}/avatar", appConfig.Handlers.Profile.GetSeekerAvatar)
 	mux.Handle("POST /api/profile/seeker",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
 	mux.Handle("PUT /api/profile/seeker",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
+	mux.Handle(
+		"PUT /api/me/avatar",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UploadSeekerAvatar)),
+	)
+	mux.Handle(
+		"DELETE /api/me/avatar",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.DeleteSeekerAvatar)),
+	)
 
 	mux.HandleFunc("GET /api/employers/{id}", appConfig.Handlers.Profile.GetPublicEmployer)
 	mux.Handle("POST /api/profile/employer",

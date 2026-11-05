@@ -11,13 +11,15 @@ type Profile struct {
 
 type SeekerProfile struct {
 	Profile
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Phone     string `json:"phone"`
+	FirstName string  `json:"first_name"`
+	LastName  string  `json:"last_name"`
+	Phone     string  `json:"phone"`
+	AvatarKey *string `json:"-"`
 }
 
 type EmployerProfile struct {
 	Profile
-	CompanyName string `json:"company_name"`
-	Website     string `json:"website"`
+	CompanyName string  `json:"company_name"`
+	Website     string  `json:"website"`
+	LogoKey     *string `json:"-"`
 }
