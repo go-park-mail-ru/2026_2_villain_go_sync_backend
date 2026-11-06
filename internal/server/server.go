@@ -77,5 +77,6 @@ func New() http.Handler {
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.Create)),
 	)
 
-	return middleware.CORS(mux)
+	return middleware.CORS(middleware.CSRF(mux))
+
 }

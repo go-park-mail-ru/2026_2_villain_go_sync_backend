@@ -72,6 +72,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setAuthCookies(w, tokens.Access, tokens.Refresh)
+	csrfToken, err := id.GenerateCSRFToken()
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	setCSRFCookie(w, csrfToken)
 	httputil.WriteOK(w, http.StatusCreated, nil)
 }
 
@@ -100,6 +106,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setAuthCookies(w, tokens.Access, tokens.Refresh)
+	csrfToken, err := id.GenerateCSRFToken()
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	setCSRFCookie(w, csrfToken)
 	httputil.WriteOK(w, http.StatusOK, nil)
 }
 
@@ -121,6 +133,12 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setAuthCookies(w, tokens.Access, tokens.Refresh)
+	csrfToken, err := id.GenerateCSRFToken()
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	setCSRFCookie(w, csrfToken)
 	httputil.WriteOK(w, http.StatusOK, nil)
 }
 
