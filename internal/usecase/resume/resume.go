@@ -8,6 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+//go:generate mockgen -source=resume.go -destination=mock_repository.go -package=resume
 type ResumeRepository interface {
 	Create(ctx context.Context, resume models.Resume) (models.Resume, error)
 	GetByID(ctx context.Context, id int) (models.Resume, error)

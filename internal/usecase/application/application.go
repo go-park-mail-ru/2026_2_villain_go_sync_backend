@@ -9,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+//go:generate mockgen -source=application.go -destination=mock_repository.go -package=application
 type ApplicationRepository interface {
 	Create(ctx context.Context, input models.Application) (models.Application, error)
 }

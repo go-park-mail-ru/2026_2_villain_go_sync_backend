@@ -116,5 +116,6 @@ func New() http.Handler {
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListEmployerApplicants)),
 	)
 
-	return middleware.CORS(mux)
+	return middleware.CORS(middleware.CSRF(mux))
+
 }

@@ -9,7 +9,6 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 const (
@@ -17,11 +16,17 @@ const (
 	resumeSeekerFk          = "resume_seeker_fk"
 )
 
-type PostgresRepository struct {
-	pool *pgxpool.Pool
+type PgxPool interface {
+	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
-func NewPostgresRepository(pool *pgxpool.Pool) *PostgresRepository {
+type PostgresRepository struct {
+	pool PgxPool
+}
+
+func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 

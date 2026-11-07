@@ -12,6 +12,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+//go:generate mockgen -source=handler.go -destination=mock_handler.go -package=application
 type ApplicationUsecase interface {
 	Create(ctx context.Context, input dto.CreateApplicationInput) (models.Application, error)
 }

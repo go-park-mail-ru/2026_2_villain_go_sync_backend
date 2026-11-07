@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+//go:generate mockgen -source=vacancy.go -destination=mock_repository.go -package=vacancy
 type VacancyRepository interface {
 	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
