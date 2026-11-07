@@ -23,8 +23,10 @@ func TestPostgresRepository_GetSeekerByID_Success(t *testing.T) {
 	repo := profile.NewPostgresRepository(mockPool)
 
 	now := time.Now()
-	rows := pgxmock.NewRows([]string{"user_id", "first_name", "last_name", "phone", "about", "created_at", "updated_at"}).
-		AddRow(1, "Ivan", "Ivanov", "12345", "About me", now, now)
+	rows := pgxmock.NewRows([]string{
+		"user_id", "first_name", "last_name", "phone",
+		"about", "avatar_key", "created_at", "updated_at",
+	}).AddRow(1, "Ivan", "Ivanov", "12345", "About me", nil, now, now)
 
 	mockPool.ExpectQuery(`SELECT user_id, first_name`).
 		WithArgs(1).
@@ -67,9 +69,14 @@ func TestPostgresRepository_UpsertSeeker_Success(t *testing.T) {
 
 	repo := profile.NewPostgresRepository(mockPool)
 
-	mockPool.ExpectExec(`INSERT INTO seeker_profile`).
+	now := time.Now()
+
+	mockPool.ExpectQuery(`INSERT INTO seeker_profile`).
 		WithArgs(1, "Ivan", "Ivanov", "12345", "About me").
-		WillReturnResult(pgxmock.NewResult("INSERT", 1))
+		WillReturnRows(
+			pgxmock.NewRows([]string{"created_at", "updated_at", "avatar_key"}).
+				AddRow(now, now, nil),
+		)
 
 	p := models.SeekerProfile{
 		Profile:   models.Profile{UserID: 1, Description: "About me"},

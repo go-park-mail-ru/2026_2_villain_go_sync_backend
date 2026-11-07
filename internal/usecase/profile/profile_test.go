@@ -17,7 +17,7 @@ func TestProfileUsecase_UpdateSeeker_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	p := models.SeekerProfile{FirstName: "Ivan"}
 
@@ -40,7 +40,7 @@ func TestProfileUsecase_UpdateSeeker_Forbidden(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	_, err := uc.UpdateSeeker(context.Background(), 10, models.RoleEmployer, models.SeekerProfile{})
 
@@ -54,7 +54,7 @@ func TestProfileUsecase_GetSeekerByID_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	p := models.SeekerProfile{FirstName: "Ivan"}
 
@@ -77,7 +77,7 @@ func TestProfileUsecase_GetSeekerByID_NotFound(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	mockRepo.EXPECT().
 		GetSeekerByID(gomock.Any(), 1).
@@ -95,7 +95,7 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	p := models.EmployerProfile{CompanyName: "Yandex"}
 
@@ -118,7 +118,7 @@ func TestProfileUsecase_UpdateEmployer_Forbidden(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	_, err := uc.UpdateEmployer(context.Background(), 10, models.RoleSeeker, models.EmployerProfile{})
 
@@ -132,7 +132,7 @@ func TestProfileUsecase_GetEmployerByID_Success(t *testing.T) {
 	defer ctrl.Finish()
 
 	mockRepo := profile.NewMockProfileRepository(ctrl)
-	uc := profileUsecase.NewProfileUsecase(mockRepo)
+	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
 	p := models.EmployerProfile{CompanyName: "Yandex"}
 

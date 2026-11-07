@@ -11,6 +11,7 @@ package profile
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -71,6 +72,34 @@ func (mr *MockProfileRepositoryMockRecorder) GetSeekerByID(ctx, userID any) *gom
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeekerByID", reflect.TypeOf((*MockProfileRepository)(nil).GetSeekerByID), ctx, userID)
 }
 
+// UpdateEmployerLogoKey mocks base method.
+func (m *MockProfileRepository) UpdateEmployerLogoKey(ctx context.Context, userID int, key *string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateEmployerLogoKey", ctx, userID, key)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateEmployerLogoKey indicates an expected call of UpdateEmployerLogoKey.
+func (mr *MockProfileRepositoryMockRecorder) UpdateEmployerLogoKey(ctx, userID, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateEmployerLogoKey", reflect.TypeOf((*MockProfileRepository)(nil).UpdateEmployerLogoKey), ctx, userID, key)
+}
+
+// UpdateSeekerAvatarKey mocks base method.
+func (m *MockProfileRepository) UpdateSeekerAvatarKey(ctx context.Context, userID int, key *string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateSeekerAvatarKey", ctx, userID, key)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateSeekerAvatarKey indicates an expected call of UpdateSeekerAvatarKey.
+func (mr *MockProfileRepositoryMockRecorder) UpdateSeekerAvatarKey(ctx, userID, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSeekerAvatarKey", reflect.TypeOf((*MockProfileRepository)(nil).UpdateSeekerAvatarKey), ctx, userID, key)
+}
+
 // UpsertEmployer mocks base method.
 func (m *MockProfileRepository) UpsertEmployer(ctx context.Context, profile models.EmployerProfile) (models.EmployerProfile, error) {
 	m.ctrl.T.Helper()
@@ -99,4 +128,72 @@ func (m *MockProfileRepository) UpsertSeeker(ctx context.Context, profile models
 func (mr *MockProfileRepositoryMockRecorder) UpsertSeeker(ctx, profile any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpsertSeeker", reflect.TypeOf((*MockProfileRepository)(nil).UpsertSeeker), ctx, profile)
+}
+
+// MockImageStorage is a mock of ImageStorage interface.
+type MockImageStorage struct {
+	ctrl     *gomock.Controller
+	recorder *MockImageStorageMockRecorder
+	isgomock struct{}
+}
+
+// MockImageStorageMockRecorder is the mock recorder for MockImageStorage.
+type MockImageStorageMockRecorder struct {
+	mock *MockImageStorage
+}
+
+// NewMockImageStorage creates a new mock instance.
+func NewMockImageStorage(ctrl *gomock.Controller) *MockImageStorage {
+	mock := &MockImageStorage{ctrl: ctrl}
+	mock.recorder = &MockImageStorageMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockImageStorage) EXPECT() *MockImageStorageMockRecorder {
+	return m.recorder
+}
+
+// Delete mocks base method.
+func (m *MockImageStorage) Delete(ctx context.Context, key string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Delete", ctx, key)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Delete indicates an expected call of Delete.
+func (mr *MockImageStorageMockRecorder) Delete(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Delete", reflect.TypeOf((*MockImageStorage)(nil).Delete), ctx, key)
+}
+
+// Download mocks base method.
+func (m *MockImageStorage) Download(ctx context.Context, key string) (io.ReadCloser, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Download", ctx, key)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// Download indicates an expected call of Download.
+func (mr *MockImageStorageMockRecorder) Download(ctx, key any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Download", reflect.TypeOf((*MockImageStorage)(nil).Download), ctx, key)
+}
+
+// Upload mocks base method.
+func (m *MockImageStorage) Upload(ctx context.Context, key string, body io.ReadSeeker, contentType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Upload", ctx, key, body, contentType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Upload indicates an expected call of Upload.
+func (mr *MockImageStorageMockRecorder) Upload(ctx, key, body, contentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Upload", reflect.TypeOf((*MockImageStorage)(nil).Upload), ctx, key, body, contentType)
 }

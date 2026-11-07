@@ -116,6 +116,21 @@ func (mr *MockVacancyUsecaseMockRecorder) ListByEmployer(ctx, employerID any) *g
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployer", reflect.TypeOf((*MockVacancyUsecase)(nil).ListByEmployer), ctx, employerID)
 }
 
+// ListEmployerApplicants mocks base method.
+func (m *MockVacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListEmployerApplicants", ctx, userID, role)
+	ret0, _ := ret[0].([]models.Applicant)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListEmployerApplicants indicates an expected call of ListEmployerApplicants.
+func (mr *MockVacancyUsecaseMockRecorder) ListEmployerApplicants(ctx, userID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEmployerApplicants", reflect.TypeOf((*MockVacancyUsecase)(nil).ListEmployerApplicants), ctx, userID, role)
+}
+
 // ListVacancies mocks base method.
 func (m *MockVacancyUsecase) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
 	m.ctrl.T.Helper()
