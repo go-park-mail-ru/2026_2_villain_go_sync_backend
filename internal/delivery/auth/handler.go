@@ -130,8 +130,14 @@ func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	data := map[string]int64{
-		"id": userID,
+	role, ok := id.RoleFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	data := map[string]any{
+		"id":   userID,
+		"role": role,
 	}
 	httputil.WriteOK(w, http.StatusOK, data)
 }
