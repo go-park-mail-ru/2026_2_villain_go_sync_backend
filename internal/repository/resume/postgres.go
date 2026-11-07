@@ -8,7 +8,13 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+const (
+	foreignKeyViolationCode = "23503"
+	resumeSeekerFk          = "resume_seeker_fk"
 )
 
 type PostgresRepository struct {
@@ -30,6 +36,13 @@ func (r *PostgresRepository) Create(ctx context.Context, resume models.Resume) (
 	).Scan(&resume.ID, &resume.CreatedAt, &resume.UpdatedAt)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == foreignKeyViolationCode &&
+				pgErr.ConstraintName == resumeSeekerFk {
+				return models.Resume{}, apperrors.ErrNotFound
+			}
+		}
 		return models.Resume{}, fmt.Errorf("insert resume: %w", err)
 	}
 	return resume, nil
