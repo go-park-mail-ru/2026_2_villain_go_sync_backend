@@ -12,7 +12,9 @@ test:
 
 coverage:
 	go test ./... -coverprofile=coverage.out
-	go tool cover -func=coverage.out | grep total
+	awk 'NR==1 || $$1 !~ /\/mock_[^/]*\.go:/' coverage.out > coverage_no_mocks.out
+	go tool cover -func=coverage_no_mocks.out | grep total
+
 lint:
 	go vet ./...
 
