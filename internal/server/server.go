@@ -93,6 +93,10 @@ func New() http.Handler {
 		"POST /api/vacancies/{id}/applications",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.Create)),
 	)
+	mux.Handle(
+		"GET /api/employer/applications",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListEmployerApplicants)),
+	)
 
 	return middleware.CORS(mux)
 }
