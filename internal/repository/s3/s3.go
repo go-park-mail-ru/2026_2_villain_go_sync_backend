@@ -46,3 +46,15 @@ func (a *Adapter) Download(ctx context.Context, key string) (io.ReadCloser, stri
 	}
 	return output.Body, aws.ToString(output.ContentType), nil
 }
+
+func (a *Adapter) Delete(ctx context.Context, key string) error {
+	input := &awss3.DeleteObjectInput{
+		Bucket: aws.String(a.bucket),
+		Key:    aws.String(key),
+	}
+	_, err := a.client.DeleteObject(ctx, input)
+	if err != nil {
+		return fmt.Errorf("delete object from s3: %w", err)
+	}
+	return nil
+}
