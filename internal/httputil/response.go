@@ -28,7 +28,11 @@ func WriteError(w http.ResponseWriter, status int, msg string) {
 }
 
 func WriteAppError(w http.ResponseWriter, err error, msg string) {
+	var maxErr *http.MaxBytesError
+
 	switch {
+	case errors.As(err, &maxErr):
+		WriteError(w, http.StatusRequestEntityTooLarge, msg)
 	case errors.Is(err, apperrors.ErrInvalidInput):
 		WriteError(w, http.StatusBadRequest, msg)
 	case errors.Is(err, apperrors.ErrForbidden):
