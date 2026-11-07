@@ -43,7 +43,7 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 	}
 	defer rows.Close()
 
-	var applicants []models.Applicant
+	applicants := make([]models.Applicant, 0)
 	for rows.Next() {
 		var app models.Applicant
 		err := rows.Scan(

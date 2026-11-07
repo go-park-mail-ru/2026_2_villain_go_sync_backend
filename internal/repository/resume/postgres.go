@@ -80,7 +80,7 @@ func (r *PostgresRepository) ListBySeekerID(ctx context.Context, seekerID int) (
 	}
 	defer rows.Close()
 
-	var resumes []models.Resume
+	resumes := make([]models.Resume, 0)
 	for rows.Next() {
 		var res models.Resume
 		err := rows.Scan(&res.ID, &res.SeekerID, &res.Title, &res.Description, &res.Experience, &res.Education, &res.CreatedAt, &res.UpdatedAt)
