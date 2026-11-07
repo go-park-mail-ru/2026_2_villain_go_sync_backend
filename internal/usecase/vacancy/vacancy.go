@@ -21,6 +21,7 @@ type VacancyRepository interface {
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
 	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
+	ListByEmployerID(ctx context.Context, employerID int64) ([]models.Applicant, error)
 }
 
 type UserRepository interface {
@@ -193,4 +194,11 @@ func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64
 	}
 
 	return u.vacancies.Delete(ctx, vacancyID, employerID)
+}
+
+func (u *VacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error) {
+	if !role.IsEmployer() {
+		return nil, apperrors.ErrForbidden
+	}
+	return u.vacancies.ListByEmployerID(ctx, userID)
 }

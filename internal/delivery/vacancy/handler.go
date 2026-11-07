@@ -22,6 +22,7 @@ type VacancyUsecase interface {
 	Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error)
+	ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error)
 }
 
 type Handler struct {
@@ -208,6 +209,27 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 	}
 
 	applicants, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to list applicants")
+		return
+	}
+
+	httputil.WriteOK(w, http.StatusOK, applicants)
+}
+
+func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, ok := auth.RoleFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	applicants, err := h.vacancy.ListEmployerApplicants(r.Context(), userID, role)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applicants")
 		return

@@ -35,9 +35,15 @@ type User struct {
 }
 
 type Applicant struct {
-	FirstName   string    `json:"first_name"`
-	LastName    string    `json:"last_name"`
-	Status      string    `json:"status"`
-	AppliedAt   time.Time `json:"applied_at"`
-	ResumeTitle string    `json:"resume_title"`
+	FirstName     string    `json:"first_name"`
+	LastName      string    `json:"last_name"`
+	Status        string    `json:"status"`
+	AppliedAt     time.Time `json:"applied_at"`
+	ResumeTitle   string    `json:"resume_title"`
+	ApplicationID int64     `json:"application_id"`
+	VacancyID     int64     `json:"vacancy_id"`
+	VacancyTitle  string    `json:"vacancy_title"`
+	SeekerID      int64     `json:"seeker_id"`
+	ResumeID      int64     `json:"resume_id"`
+	CoverLetter   *string   `json:"cover_letter"`
 }

@@ -11,6 +11,11 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+const (
+	foreignKeyViolationCode = "23503"
+	resumeSeekerFk          = "resume_seeker_fk"
+)
+
 type PgxPool interface {
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
@@ -36,6 +41,13 @@ func (r *PostgresRepository) Create(ctx context.Context, resume models.Resume) (
 	).Scan(&resume.ID, &resume.CreatedAt, &resume.UpdatedAt)
 
 	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == foreignKeyViolationCode &&
+				pgErr.ConstraintName == resumeSeekerFk {
+				return models.Resume{}, apperrors.ErrNotFound
+			}
+		}
 		return models.Resume{}, fmt.Errorf("insert resume: %w", err)
 	}
 	return resume, nil
@@ -73,7 +85,7 @@ func (r *PostgresRepository) ListBySeekerID(ctx context.Context, seekerID int) (
 	}
 	defer rows.Close()
 
-	var resumes []models.Resume
+	resumes := make([]models.Resume, 0)
 	for rows.Next() {
 		var res models.Resume
 		err := rows.Scan(&res.ID, &res.SeekerID, &res.Title, &res.Description, &res.Experience, &res.Education, &res.CreatedAt, &res.UpdatedAt)

@@ -2,8 +2,8 @@ package vacancy
 
 import (
 	"context"
-
 	"errors"
+	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -36,6 +36,7 @@ const vacancySelectQuery = `
         v.vacancy_id,
         vh.version,
         v.employer_id,
+        ep.company_name,
         vh.title,
         COALESCE(vh.description, ''),
         vh.salary_from,
@@ -44,6 +45,7 @@ const vacancySelectQuery = `
         v.created_at
     FROM vacancy v
     JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
+    JOIN employer_profile ep ON ep.user_id = v.employer_id
     WHERE vh.version = (
         SELECT MAX(version)
         FROM vacancy_history
@@ -52,7 +54,7 @@ const vacancySelectQuery = `
 
 func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	var vacancy models.Vacancy
-	err := row.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.Title,
+	err := row.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.CompanyName, &vacancy.Title,
 		&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -105,6 +107,14 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 			}
 			return models.Vacancy{}, err
 		}
+	}
+	query := `
+		SELECT company_name
+        FROM employer_profile
+        WHERE user_id = $1`
+	err = tx.QueryRow(ctx, query, vacancy.EmployerID).Scan(&vacancy.CompanyName)
+	if err != nil {
+		return models.Vacancy{}, fmt.Errorf("get company name: %w", err)
 	}
 
 	err = tx.Commit(ctx)
