@@ -13,6 +13,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/sanitizer"
 )
 
+//go:generate mockgen -source=handler.go -destination=mock_handler.go -package=vacancy
 type VacancyUsecase interface {
 	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
 	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)

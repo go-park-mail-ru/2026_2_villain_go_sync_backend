@@ -21,3 +21,14 @@ func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
 		Secure:   false,
 	})
 }
+
+func setCSRFCookie(w http.ResponseWriter, csrfToken string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "csrf_token",
+		Value:    csrfToken,
+		Path:     "/",
+		HttpOnly: false,
+		SameSite: http.SameSiteLaxMode,
+		Secure:   false, // true в проде
+	})
+}

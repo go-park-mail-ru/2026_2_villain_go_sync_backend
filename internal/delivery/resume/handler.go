@@ -11,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+//go:generate mockgen -source=handler.go -destination=mock_handler.go -package=resume
 type ResumeUsecase interface {
 	Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error)
 	GetByID(ctx context.Context, id int) (models.Resume, error)
