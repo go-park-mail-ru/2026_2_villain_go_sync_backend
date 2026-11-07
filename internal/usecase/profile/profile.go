@@ -8,6 +8,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+//go:generate mockgen -source=profile.go -destination=mock_repository.go -package=profile
 type ProfileRepository interface {
 	GetSeekerByID(ctx context.Context, userID int) (models.SeekerProfile, error)
 	UpsertSeeker(ctx context.Context, profile models.SeekerProfile) (models.SeekerProfile, error)

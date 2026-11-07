@@ -9,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
 )
 
+//go:generate mockgen -source=auth.go -destination=mock_repository.go -package=auth
 type UserRepository interface {
 	Create(ctx context.Context, user models.User) (models.User, error)
 	GetByEmail(ctx context.Context, email string) (models.User, error)

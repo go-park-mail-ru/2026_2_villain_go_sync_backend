@@ -9,7 +9,6 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/profile"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/delivery_profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -18,7 +17,7 @@ func TestGetSeekerByID_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockProfileUsecase(ctrl)
+	mockUC := profile.NewMockProfileUsecase(ctrl)
 	h := profile.NewHandler(mockUC)
 
 	mockUC.EXPECT().
@@ -40,7 +39,7 @@ func TestGetSeekerByID_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockProfileUsecase(ctrl)
+	mockUC := profile.NewMockProfileUsecase(ctrl)
 	h := profile.NewHandler(mockUC)
 
 	mockUC.EXPECT().
@@ -62,7 +61,7 @@ func TestUpdateEmployer_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockProfileUsecase(ctrl)
+	mockUC := profile.NewMockProfileUsecase(ctrl)
 	h := profile.NewHandler(mockUC)
 
 	mockUC.EXPECT().
@@ -88,7 +87,7 @@ func TestUpdateEmployer_Forbidden(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockProfileUsecase(ctrl)
+	mockUC := profile.NewMockProfileUsecase(ctrl)
 	h := profile.NewHandler(mockUC)
 
 	mockUC.EXPECT().

@@ -7,11 +7,10 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/usecase_auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
-	"go.uber.org/mock/gomock"
+	gomock "go.uber.org/mock/gomock"
 )
 
 func newTestTokens() *auth.TokenManager {
@@ -26,7 +25,7 @@ func TestAuthUsecase_Register_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	tm := newTestTokens()
 	uc := authUsecase.NewAuthUsecase(mockRepo, tm)
 
@@ -48,7 +47,7 @@ func TestAuthUsecase_Register_EmailTaken(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	uc := authUsecase.NewAuthUsecase(mockRepo, newTestTokens())
 
 	repoErr := errors.New("email already taken")
@@ -67,7 +66,7 @@ func TestAuthUsecase_Login_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	tm := newTestTokens()
 	uc := authUsecase.NewAuthUsecase(mockRepo, tm)
 
@@ -91,7 +90,7 @@ func TestAuthUsecase_Login_UserNotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	uc := authUsecase.NewAuthUsecase(mockRepo, newTestTokens())
 
 	mockRepo.EXPECT().
@@ -109,7 +108,7 @@ func TestAuthUsecase_Login_WrongPassword(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	uc := authUsecase.NewAuthUsecase(mockRepo, newTestTokens())
 
 	hash, _ := password.Hash("CorrectPassword123")
@@ -129,7 +128,7 @@ func TestAuthUsecase_Refresh_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	tm := newTestTokens()
 	uc := authUsecase.NewAuthUsecase(mockRepo, tm)
 
@@ -149,7 +148,7 @@ func TestAuthUsecase_Refresh_InvalidToken(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockUserRepository(ctrl)
+	mockRepo := authUsecase.NewMockUserRepository(ctrl)
 	uc := authUsecase.NewAuthUsecase(mockRepo, newTestTokens())
 
 	_, err := uc.Refresh(context.Background(), "garbage-token")

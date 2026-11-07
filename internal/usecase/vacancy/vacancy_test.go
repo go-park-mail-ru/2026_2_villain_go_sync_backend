@@ -7,17 +7,17 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/usecase_vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 	"go.uber.org/mock/gomock"
 )
 
-func setupUsecase(t *testing.T) (*vacancyUsecase.VacancyUsecase, *mocks.MockVacancyRepository, *mocks.MockUserRepository) {
+func setupUsecase(t *testing.T) (*vacancyUsecase.VacancyUsecase, *vacancy.MockVacancyRepository, *vacancy.MockUserRepository) {
 	ctrl := gomock.NewController(t)
 
-	mockVacancyRepo := mocks.NewMockVacancyRepository(ctrl)
-	mockUserRepo := mocks.NewMockUserRepository(ctrl)
+	mockVacancyRepo := vacancy.NewMockVacancyRepository(ctrl)
+	mockUserRepo := vacancy.NewMockUserRepository(ctrl)
 
 	uc := vacancyUsecase.NewVacancyUsecase(mockVacancyRepo, mockUserRepo)
 	return uc, mockVacancyRepo, mockUserRepo

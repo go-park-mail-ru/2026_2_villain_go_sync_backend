@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/usecase_profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/profile"
 	profileUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/profile"
 	"go.uber.org/mock/gomock"
 )
@@ -16,7 +16,7 @@ func TestProfileUsecase_UpdateSeeker_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	p := models.SeekerProfile{FirstName: "Ivan"}
@@ -39,7 +39,7 @@ func TestProfileUsecase_UpdateSeeker_Forbidden(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	_, err := uc.UpdateSeeker(context.Background(), 10, models.RoleEmployer, models.SeekerProfile{})
@@ -53,7 +53,7 @@ func TestProfileUsecase_GetSeekerByID_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	p := models.SeekerProfile{FirstName: "Ivan"}
@@ -76,7 +76,7 @@ func TestProfileUsecase_GetSeekerByID_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	mockRepo.EXPECT().
@@ -94,7 +94,7 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	p := models.EmployerProfile{CompanyName: "Yandex"}
@@ -117,7 +117,7 @@ func TestProfileUsecase_UpdateEmployer_Forbidden(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	_, err := uc.UpdateEmployer(context.Background(), 10, models.RoleSeeker, models.EmployerProfile{})
@@ -131,7 +131,7 @@ func TestProfileUsecase_GetEmployerByID_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockProfileRepository(ctrl)
+	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo)
 
 	p := models.EmployerProfile{CompanyName: "Yandex"}

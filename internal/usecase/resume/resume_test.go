@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/usecase_resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
 	resumeUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
 	"go.uber.org/mock/gomock"
 )
@@ -16,7 +16,7 @@ func TestResumeUsecase_Create_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	input := models.Resume{Title: "Go dev"}
@@ -41,7 +41,7 @@ func TestResumeUsecase_Create_Forbidden(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	_, err := uc.Create(context.Background(), 10, models.RoleEmployer, models.Resume{Title: "Go dev"})
@@ -55,7 +55,7 @@ func TestResumeUsecase_GetByID_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	expected := models.Resume{ID: 1, Title: "Go dev"}
@@ -78,7 +78,7 @@ func TestResumeUsecase_GetByID_NotFound(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	mockRepo.EXPECT().
@@ -96,7 +96,7 @@ func TestResumeUsecase_Update_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	input := models.Resume{ID: 1, Title: "Updated"}
@@ -120,7 +120,7 @@ func TestResumeUsecase_Update_Forbidden(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	_, err := uc.Update(context.Background(), 10, models.RoleEmployer, models.Resume{ID: 1})
@@ -134,7 +134,7 @@ func TestResumeUsecase_Delete_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	mockRepo.EXPECT().
@@ -152,7 +152,7 @@ func TestResumeUsecase_Delete_Forbidden(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	err := uc.Delete(context.Background(), 10, models.RoleEmployer, 1)
@@ -166,7 +166,7 @@ func TestResumeUsecase_Delete_NoContent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockRepo := mocks.NewMockResumeRepository(ctrl)
+	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
 	mockRepo.EXPECT().

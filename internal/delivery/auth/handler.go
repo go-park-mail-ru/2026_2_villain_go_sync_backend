@@ -13,6 +13,7 @@ import (
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
+//go:generate mockgen -source=handler.go -destination=mock_handler.go -package=auth
 type AuthUsecase interface {
 	Register(ctx context.Context, email, password string, role models.Role) (*authUsecase.Tokens, error)
 	Login(ctx context.Context, email, password string) (*authUsecase.Tokens, error)

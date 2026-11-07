@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/vacancy"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/delivery_vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -17,7 +16,7 @@ func TestListVacancies_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockVacancyUsecase(ctrl)
+	mockUC := vacancy.NewMockVacancyUsecase(ctrl)
 	h := vacancy.NewHandler(mockUC)
 
 	want := []models.Vacancy{{ID: 1, Title: "Go"}}
@@ -36,7 +35,7 @@ func TestListVacancies_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockVacancyUsecase(ctrl)
+	mockUC := vacancy.NewMockVacancyUsecase(ctrl)
 	h := vacancy.NewHandler(mockUC)
 
 	mockUC.EXPECT().ListVacancies(gomock.Any()).Return(nil, errors.New("db error"))
@@ -54,7 +53,7 @@ func TestListApplicants_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockVacancyUsecase(ctrl)
+	mockUC := vacancy.NewMockVacancyUsecase(ctrl)
 	h := vacancy.NewHandler(mockUC)
 
 	// Настраиваем ожидание мока

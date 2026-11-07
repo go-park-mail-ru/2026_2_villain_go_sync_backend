@@ -8,7 +8,6 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/resume"
-	mocks "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/mocks/delivery_resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -17,7 +16,7 @@ func TestGetByID_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockResumeUsecase(ctrl)
+	mockUC := resume.NewMockResumeUsecase(ctrl)
 	h := resume.NewHandler(mockUC)
 
 	mockUC.EXPECT().
@@ -39,7 +38,7 @@ func TestCreate_InvalidJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	mockUC := mocks.NewMockResumeUsecase(ctrl)
+	mockUC := resume.NewMockResumeUsecase(ctrl)
 	h := resume.NewHandler(mockUC)
 
 	body := `{invalid_json`
