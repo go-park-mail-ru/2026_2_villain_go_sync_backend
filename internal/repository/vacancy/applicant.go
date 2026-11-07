@@ -22,7 +22,7 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 		SELECT 
 			sp.first_name, 
 			sp.last_name, 
-			COALESCE(latest_status.status, 'pending') AS status, 
+			COALESCE(latest_status.status, 'created') AS status,
 			a.created_at AS applied_at, 
 			r.title AS resume_title,
 			a.application_id, a.vacancy_id, vh.title
@@ -76,7 +76,7 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 		SELECT
 			sp.first_name,
 			sp.last_name,
-			COALESCE(latest_status.status, 'pending') AS status,
+			COALESCE(latest_status.status, 'created') AS status,
 			a.created_at AS applied_at,
 			r.title AS resume_title,
 			a.application_id, a.vacancy_id, vh.title
