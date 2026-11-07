@@ -43,10 +43,10 @@ func (r *PostgresRepository) UpsertSeeker(ctx context.Context, p models.SeekerPr
 			phone = EXCLUDED.phone, 
 			about = EXCLUDED.about, 
 			updated_at = now()
-		RETURNING created_at, updated_at
+		RETURNING created_at, updated_at, avatar_key
 
 	`
-	err := r.pool.QueryRow(ctx, query, p.UserID, p.FirstName, p.LastName, p.Phone, p.Description).Scan(&p.CreatedAt, &p.UpdatedAt)
+	err := r.pool.QueryRow(ctx, query, p.UserID, p.FirstName, p.LastName, p.Phone, p.Description).Scan(&p.CreatedAt, &p.UpdatedAt, &p.AvatarKey)
 	if err != nil {
 		return models.SeekerProfile{}, fmt.Errorf("upsert seeker: %w", err)
 	}
@@ -76,9 +76,9 @@ func (r *PostgresRepository) UpsertEmployer(ctx context.Context, p models.Employ
 			description = EXCLUDED.description, 
 			website = EXCLUDED.website, 
 			updated_at = now()
-		RETURNING created_at, updated_at
+		RETURNING created_at, updated_at, logo_key
 	`
-	err := r.pool.QueryRow(ctx, query, p.UserID, p.CompanyName, p.Description, p.Website).Scan(&p.CreatedAt, &p.UpdatedAt)
+	err := r.pool.QueryRow(ctx, query, p.UserID, p.CompanyName, p.Description, p.Website).Scan(&p.CreatedAt, &p.UpdatedAt, &p.LogoKey)
 	if err != nil {
 		return models.EmployerProfile{}, fmt.Errorf("upsert employer: %w", err)
 	}

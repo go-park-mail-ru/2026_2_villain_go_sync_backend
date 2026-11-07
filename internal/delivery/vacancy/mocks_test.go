@@ -41,3 +41,7 @@ func (m *mockVacancyUsecase) Delete(ctx context.Context, vacancyID, employerID i
 func (m *mockVacancyUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error) {
 	return nil, nil
 }
+
+func (m *mockVacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error) {
+	return nil, nil
+}

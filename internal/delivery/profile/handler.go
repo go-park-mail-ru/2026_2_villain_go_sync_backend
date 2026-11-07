@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	profiledto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
@@ -47,7 +48,7 @@ func (h *Handler) GetSeekerByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, profile)
+	httputil.WriteOK(w, http.StatusOK, profiledto.NewSeekerResponse(profile))
 }
 
 func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +83,7 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, profile)
+	httputil.WriteOK(w, http.StatusOK, profiledto.NewSeekerResponse(profile))
 }
 
 func (h *Handler) GetPublicEmployer(w http.ResponseWriter, r *http.Request) {
@@ -99,7 +100,7 @@ func (h *Handler) GetPublicEmployer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, profile)
+	httputil.WriteOK(w, http.StatusOK, profiledto.NewEmployerResponse(profile))
 }
 
 func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +134,7 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, profile)
+	httputil.WriteOK(w, http.StatusOK, profiledto.NewEmployerResponse(profile))
 }
 
 func (h *Handler) GetSeekerAvatar(w http.ResponseWriter, r *http.Request) {
