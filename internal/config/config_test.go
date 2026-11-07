@@ -15,6 +15,11 @@ func setValidEnv(t *testing.T) {
 	t.Setenv("DB_USER", "postgres")
 	t.Setenv("DB_PASSWORD", "postgres")
 	t.Setenv("DB_NAME", "villain_go")
+	t.Setenv("S3_ENDPOINT", "http://localhost:9000")
+	t.Setenv("S3_REGION", "us-east-1")
+	t.Setenv("S3_BUCKET", "hirenoon")
+	t.Setenv("S3_ACCESS_KEY", "test-access-key")
+	t.Setenv("S3_SECRET_KEY", "test-secret-key")
 }
 
 func TestLoad(t *testing.T) {

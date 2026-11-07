@@ -26,12 +26,12 @@ func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 
 func (r *PostgresRepository) GetSeekerByID(ctx context.Context, userID int) (models.SeekerProfile, error) {
 	query := `
-		SELECT user_id, first_name, last_name, phone, about, created_at, updated_at 
+		SELECT user_id, first_name, last_name, phone, about, avatar_key, created_at, updated_at
 		FROM seeker_profile 
 		WHERE user_id = $1
 	`
 	var p models.SeekerProfile
-	err := r.pool.QueryRow(ctx, query, userID).Scan(&p.UserID, &p.FirstName, &p.LastName, &p.Phone, &p.Description, &p.CreatedAt, &p.UpdatedAt)
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&p.UserID, &p.FirstName, &p.LastName, &p.Phone, &p.Description, &p.AvatarKey, &p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.SeekerProfile{}, apperrors.ErrNotFound
 	}
@@ -58,12 +58,12 @@ func (r *PostgresRepository) UpsertSeeker(ctx context.Context, p models.SeekerPr
 
 func (r *PostgresRepository) GetEmployerByID(ctx context.Context, userID int) (models.EmployerProfile, error) {
 	query := `
-		SELECT user_id, company_name, description, website, created_at, updated_at 
+		SELECT user_id, company_name, description, website, logo_key, created_at, updated_at
 		FROM employer_profile
 		WHERE user_id = $1
 	`
 	var p models.EmployerProfile
-	err := r.pool.QueryRow(ctx, query, userID).Scan(&p.UserID, &p.CompanyName, &p.Description, &p.Website, &p.CreatedAt, &p.UpdatedAt)
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&p.UserID, &p.CompanyName, &p.Description, &p.Website, &p.LogoKey, &p.CreatedAt, &p.UpdatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.EmployerProfile{}, apperrors.ErrNotFound
 	}
@@ -85,4 +85,34 @@ func (r *PostgresRepository) UpsertEmployer(ctx context.Context, p models.Employ
 		return models.EmployerProfile{}, fmt.Errorf("upsert employer: %w", err)
 	}
 	return p, nil
+}
+
+func (r *PostgresRepository) UpdateSeekerAvatarKey(ctx context.Context, userID int, key *string) error {
+	query := `UPDATE seeker_profile
+	SET avatar_key=$1
+	WHERE user_id=$2`
+	tag, err := r.pool.Exec(ctx, query, key, userID)
+	if err != nil {
+		return fmt.Errorf("update avatar: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrNotFound
+
+	}
+	return nil
+}
+
+func (r *PostgresRepository) UpdateEmployerLogoKey(ctx context.Context, userID int, key *string) error {
+	query := `UPDATE employer_profile
+	SET logo_key=$1
+	WHERE user_id=$2`
+	tag, err := r.pool.Exec(ctx, query, key, userID)
+	if err != nil {
+		return fmt.Errorf("update logo: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return apperrors.ErrNotFound
+
+	}
+	return nil
 }

@@ -23,7 +23,7 @@ func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager) *Con
 		Auth:    auth.NewAuthUsecase(repos.User, tokens),
 		Vacancy: vacancy.NewVacancyUsecase(repos.Vacancy, repos.User),
 		Resume:  resume.NewResumeUsecase(repos.Resume),
-		Profile: profile.NewProfileUsecase(repos.Profile),
+		Profile: profile.NewProfileUsecase(repos.Profile, repos.S3),
 		Application: application.NewApplicationUsecase(
 			repos.Application,
 			repos.Resume,

@@ -3,6 +3,8 @@ package profile
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -17,6 +19,12 @@ type ProfileUsecase interface {
 	UpdateSeeker(ctx context.Context, userID int, role models.Role, profile models.SeekerProfile) (models.SeekerProfile, error)
 	GetEmployerByID(ctx context.Context, employerID int) (models.EmployerProfile, error)
 	UpdateEmployer(ctx context.Context, userID int, role models.Role, profile models.EmployerProfile) (models.EmployerProfile, error)
+	GetSeekerAvatar(ctx context.Context, userID int) (io.ReadCloser, string, error)
+	UploadSeekerAvatar(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error
+	DeleteSeekerAvatar(ctx context.Context, userID int, role models.Role) error
+	GetEmployerLogo(ctx context.Context, userID int) (io.ReadCloser, string, error)
+	UploadEmployerLogo(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error
+	DeleteEmployerLogo(ctx context.Context, userID int, role models.Role) error
 }
 
 type Handler struct {
@@ -127,4 +135,124 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.WriteOK(w, http.StatusOK, profile)
+}
+
+func (h *Handler) GetSeekerAvatar(w http.ResponseWriter, r *http.Request) {
+	seekerID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	body, contentType, err := h.profiles.GetSeekerAvatar(r.Context(), seekerID)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to get seeker avatar")
+		return
+	}
+
+	defer body.Close()
+	w.Header().Set("Content-Type", contentType)
+	_, err = io.Copy(w, body)
+	if err != nil {
+		slog.Error("failed to hand over seeker avatar",
+			"user_id", seekerID,
+			"error", err,
+		)
+	}
+}
+
+func (h *Handler) UploadSeekerAvatar(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+
+	file, contentType, ok := openProfileImage(w, r, "avatar")
+	if !ok {
+		return
+	}
+	defer file.Close()
+
+	err := h.profiles.UploadSeekerAvatar(r.Context(), int(userID), role, file, contentType)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to upload seeker avatar")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) DeleteSeekerAvatar(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+	err := h.profiles.DeleteSeekerAvatar(r.Context(), int(userID), role)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to delete seeker avatar")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) GetEmployerLogo(w http.ResponseWriter, r *http.Request) {
+	employerID, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	body, contentType, err := h.profiles.GetEmployerLogo(r.Context(), employerID)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to get employer logo")
+		return
+	}
+
+	defer body.Close()
+	w.Header().Set("Content-Type", contentType)
+	_, err = io.Copy(w, body)
+	if err != nil {
+		slog.Error("failed to hand over employer logo",
+			"user_id", employerID,
+			"error", err,
+		)
+	}
+}
+
+func (h *Handler) UploadEmployerLogo(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+
+	file, contentType, ok := openProfileImage(w, r, "logo")
+	if !ok {
+		return
+	}
+	defer file.Close()
+
+	err := h.profiles.UploadEmployerLogo(r.Context(), int(userID), role, file, contentType)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to upload employer logo")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) DeleteEmployerLogo(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+	err := h.profiles.DeleteEmployerLogo(r.Context(), int(userID), role)
+	if err != nil {
+		httputil.WriteAppError(w, err, "failed to delete employer logo")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

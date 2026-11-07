@@ -6,12 +6,17 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/credentials"
+	awss3 "github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/app"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
 	healthDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/health"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/s3"
 )
 
 func New() http.Handler {
@@ -28,9 +33,21 @@ func New() http.Handler {
 		log.Fatalf("connect db: %v", err)
 	}
 
+	sdkCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(cfg.S3Region), awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")))
+	if err != nil {
+		log.Fatalf("load config s3 : %v", err)
+	}
+
+	s3Client := awss3.NewFromConfig(sdkCfg, func(o *awss3.Options) {
+		o.BaseEndpoint = aws.String(cfg.S3Endpoint)
+		o.UsePathStyle = true
+	})
+
+	s3Adapter := s3.NewAdapter(s3Client, cfg.S3Bucket)
+
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	appConfig := app.CreateConfig(pool, tokens)
+	appConfig := app.CreateConfig(pool, tokens, s3Adapter)
 
 	mux := http.NewServeMux()
 
@@ -62,16 +79,34 @@ func New() http.Handler {
 	mux.HandleFunc("GET /api/resumes", appConfig.Handlers.Resume.ListBySeekerID)
 
 	mux.HandleFunc("GET /api/seekers/{id}", appConfig.Handlers.Profile.GetSeekerByID)
+	mux.HandleFunc("GET /api/seekers/{id}/avatar", appConfig.Handlers.Profile.GetSeekerAvatar)
 	mux.Handle("POST /api/profile/seeker",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
 	mux.Handle("PUT /api/profile/seeker",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
+	mux.Handle(
+		"PUT /api/me/avatar",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UploadSeekerAvatar)),
+	)
+	mux.Handle(
+		"DELETE /api/me/avatar",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.DeleteSeekerAvatar)),
+	)
 
 	mux.HandleFunc("GET /api/employers/{id}", appConfig.Handlers.Profile.GetPublicEmployer)
+	mux.HandleFunc("GET /api/employers/{id}/logo", appConfig.Handlers.Profile.GetEmployerLogo)
 	mux.Handle("POST /api/profile/employer",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
 	mux.Handle("PUT /api/profile/employer",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
+	mux.Handle(
+		"PUT /api/me/logo",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UploadEmployerLogo)),
+	)
+	mux.Handle(
+		"DELETE /api/me/logo",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.DeleteEmployerLogo)),
+	)
 	mux.Handle(
 		"POST /api/vacancies/{id}/applications",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.Create)),
