@@ -25,7 +25,8 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 			COALESCE(latest_status.status, 'created') AS status,
 			a.created_at AS applied_at, 
 			r.title AS resume_title,
-			a.application_id, a.vacancy_id, vh.title
+			a.application_id, a.vacancy_id, vh.title,
+			r.seeker_id, a.resume_id, a.cover_letter
 		FROM application a
 		JOIN resume r ON a.resume_id = r.resume_id
 		JOIN seeker_profile sp ON r.seeker_id = sp.user_id
@@ -57,6 +58,9 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 			&app.ApplicationID,
 			&app.VacancyID,
 			&app.VacancyTitle,
+			&app.SeekerID,
+			&app.ResumeID,
+			&app.CoverLetter,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)
@@ -79,7 +83,8 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 			COALESCE(latest_status.status, 'created') AS status,
 			a.created_at AS applied_at,
 			r.title AS resume_title,
-			a.application_id, a.vacancy_id, vh.title
+			a.application_id, a.vacancy_id, vh.title,
+			r.seeker_id, a.resume_id, a.cover_letter
 		FROM application a
 		JOIN resume r ON a.resume_id = r.resume_id
 		JOIN seeker_profile sp ON r.seeker_id = sp.user_id
@@ -112,6 +117,9 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 			&app.ApplicationID,
 			&app.VacancyID,
 			&app.VacancyTitle,
+			&app.SeekerID,
+			&app.ResumeID,
+			&app.CoverLetter,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)

@@ -43,4 +43,7 @@ type Applicant struct {
 	ApplicationID int64     `json:"application_id"`
 	VacancyID     int64     `json:"vacancy_id"`
 	VacancyTitle  string    `json:"vacancy_title"`
+	SeekerID      int64     `json:"seeker_id"`
+	ResumeID      int64     `json:"resume_id"`
+	CoverLetter   *string   `json:"cover_letter"`
 }
