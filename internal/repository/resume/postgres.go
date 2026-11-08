@@ -107,11 +107,11 @@ func (r *PostgresRepository) Update(ctx context.Context, resume models.Resume, s
 		UPDATE resume 
 		SET title = $1, description = $2, experience = $3, education = $4, updated_at = now()
 		WHERE resume_id = $5 AND seeker_id = $6
-		RETURNING updated_at
+		RETURNING seeker_id, created_at, updated_at
 	`
 	err := r.pool.QueryRow(
 		ctx, query, resume.Title, resume.Description, resume.Experience, resume.Education, resume.ID, seekerID,
-	).Scan(&resume.UpdatedAt)
+	).Scan(&resume.SeekerID, &resume.CreatedAt, &resume.UpdatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.Resume{}, apperrors.ErrNotFound
