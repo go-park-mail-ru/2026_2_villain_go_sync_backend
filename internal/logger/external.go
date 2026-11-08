@@ -8,12 +8,19 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/requestid"
 )
 
-func LogExternalCall(ctx context.Context, service, method string, start time.Time, err error) {
+type SourceType string
+
+const (
+	SourcePostgres SourceType = "postgres"
+	SourceS3       SourceType = "s3"
+)
+
+func LogExternalCall(ctx context.Context, source SourceType, method string, duration time.Duration, err error) {
 	args := []any{
 		"request_id", requestid.FromContext(ctx),
-		"service", service,
+		"service", source,
 		"method", method,
-		"duration_ms", time.Since(start).Milliseconds(),
+		"duration_ms", duration.Milliseconds(),
 	}
 
 	if err != nil {

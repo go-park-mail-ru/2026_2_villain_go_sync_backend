@@ -19,20 +19,20 @@ func NewLoggingAdapter(next *Adapter) *LoggingAdapter {
 func (l *LoggingAdapter) Upload(ctx context.Context, key string, body io.ReadSeeker, contentType string) error {
 	start := time.Now()
 	err := l.next.Upload(ctx, key, body, contentType)
-	logger.LogExternalCall(ctx, "s3", "upload", start, err)
+	logger.LogExternalCall(ctx, logger.SourceS3, "upload", time.Since(start), err)
 	return err
 }
 
 func (l *LoggingAdapter) Download(ctx context.Context, key string) (io.ReadCloser, string, error) {
 	start := time.Now()
 	body, contentType, err := l.next.Download(ctx, key)
-	logger.LogExternalCall(ctx, "s3", "download", start, err)
+	logger.LogExternalCall(ctx, logger.SourceS3, "download", time.Since(start), err)
 	return body, contentType, err
 }
 
 func (l *LoggingAdapter) Delete(ctx context.Context, key string) error {
 	start := time.Now()
 	err := l.next.Delete(ctx, key)
-	logger.LogExternalCall(ctx, "s3", "delete", start, err)
+	logger.LogExternalCall(ctx, logger.SourceS3, "delete", time.Since(start), err)
 	return err
 }

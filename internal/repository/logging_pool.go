@@ -30,7 +30,7 @@ func (r *loggingRow) Scan(dest ...any) error {
 	if err == pgx.ErrNoRows {
 		err = nil
 	}
-	logger.LogExternalCall(r.ctx, "postgres", r.method, r.start, err)
+	logger.LogExternalCall(r.ctx, logger.SourcePostgres, r.method, time.Since(r.start), err)
 	return err
 }
 
@@ -43,14 +43,14 @@ func (p *LoggingPool) QueryRow(ctx context.Context, sql string, args ...any) pgx
 func (p *LoggingPool) Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error) {
 	start := time.Now()
 	rows, err := p.next.Query(ctx, sql, args...)
-	logger.LogExternalCall(ctx, "postgres", "query", start, err)
+	logger.LogExternalCall(ctx, logger.SourcePostgres, "query", time.Since(start), err)
 	return rows, err
 }
 
 func (p *LoggingPool) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
 	start := time.Now()
 	tag, err := p.next.Exec(ctx, sql, args...)
-	logger.LogExternalCall(ctx, "postgres", "exec", start, err)
+	logger.LogExternalCall(ctx, logger.SourcePostgres, "exec", time.Since(start), err)
 	return tag, err
 }
 
