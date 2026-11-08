@@ -16,16 +16,19 @@ type Config struct {
 	Resume      *resume.PostgresRepository
 	Profile     *profile.PostgresRepository
 	Application *application.PostgresRepository
-	S3          *s3.Adapter
+	S3          *s3.LoggingAdapter
 }
 
-func CreateConfig(pool *pgxpool.Pool, s3 *s3.Adapter) *Config {
+func CreateConfig(pool *pgxpool.Pool, baseS3 *s3.Adapter) *Config {
+	loggingPool := NewLoggingPool(pool)
+	loggingS3 := s3.NewLoggingAdapter(baseS3)
+
 	return &Config{
-		User:        user.NewPostgresRepository(pool),
-		Vacancy:     vacancy.NewPostgresRepository(pool),
-		Resume:      resume.NewPostgresRepository(pool),
-		Profile:     profile.NewPostgresRepository(pool),
-		Application: application.NewPostgresRepository(pool),
-		S3:          s3,
+		User:        user.NewPostgresRepository(loggingPool),
+		Vacancy:     vacancy.NewPostgresRepository(loggingPool),
+		Resume:      resume.NewPostgresRepository(loggingPool),
+		Profile:     profile.NewPostgresRepository(loggingPool),
+		Application: application.NewPostgresRepository(loggingPool),
+		S3:          loggingS3,
 	}
 }
