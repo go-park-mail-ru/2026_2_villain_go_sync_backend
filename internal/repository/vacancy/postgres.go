@@ -13,7 +13,7 @@ import (
 
 const (
 	foreignKeyViolationCode = "23503"
-	vacancyCategoryFK       = "vacancy_category_fk"
+	vacancyCategoryFK       = "vacancy_category_category_fk"
 )
 
 type PgxPool interface {
