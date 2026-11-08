@@ -11,6 +11,7 @@ package profile
 
 import (
 	context "context"
+	io "io"
 	reflect "reflect"
 
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -41,6 +42,34 @@ func (m *MockProfileUsecase) EXPECT() *MockProfileUsecaseMockRecorder {
 	return m.recorder
 }
 
+// DeleteEmployerLogo mocks base method.
+func (m *MockProfileUsecase) DeleteEmployerLogo(ctx context.Context, userID int, role models.Role) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteEmployerLogo", ctx, userID, role)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteEmployerLogo indicates an expected call of DeleteEmployerLogo.
+func (mr *MockProfileUsecaseMockRecorder) DeleteEmployerLogo(ctx, userID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteEmployerLogo", reflect.TypeOf((*MockProfileUsecase)(nil).DeleteEmployerLogo), ctx, userID, role)
+}
+
+// DeleteSeekerAvatar mocks base method.
+func (m *MockProfileUsecase) DeleteSeekerAvatar(ctx context.Context, userID int, role models.Role) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSeekerAvatar", ctx, userID, role)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSeekerAvatar indicates an expected call of DeleteSeekerAvatar.
+func (mr *MockProfileUsecaseMockRecorder) DeleteSeekerAvatar(ctx, userID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSeekerAvatar", reflect.TypeOf((*MockProfileUsecase)(nil).DeleteSeekerAvatar), ctx, userID, role)
+}
+
 // GetEmployerByID mocks base method.
 func (m *MockProfileUsecase) GetEmployerByID(ctx context.Context, employerID int) (models.EmployerProfile, error) {
 	m.ctrl.T.Helper()
@@ -54,6 +83,38 @@ func (m *MockProfileUsecase) GetEmployerByID(ctx context.Context, employerID int
 func (mr *MockProfileUsecaseMockRecorder) GetEmployerByID(ctx, employerID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmployerByID", reflect.TypeOf((*MockProfileUsecase)(nil).GetEmployerByID), ctx, employerID)
+}
+
+// GetEmployerLogo mocks base method.
+func (m *MockProfileUsecase) GetEmployerLogo(ctx context.Context, userID int) (io.ReadCloser, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetEmployerLogo", ctx, userID)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetEmployerLogo indicates an expected call of GetEmployerLogo.
+func (mr *MockProfileUsecaseMockRecorder) GetEmployerLogo(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetEmployerLogo", reflect.TypeOf((*MockProfileUsecase)(nil).GetEmployerLogo), ctx, userID)
+}
+
+// GetSeekerAvatar mocks base method.
+func (m *MockProfileUsecase) GetSeekerAvatar(ctx context.Context, userID int) (io.ReadCloser, string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSeekerAvatar", ctx, userID)
+	ret0, _ := ret[0].(io.ReadCloser)
+	ret1, _ := ret[1].(string)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetSeekerAvatar indicates an expected call of GetSeekerAvatar.
+func (mr *MockProfileUsecaseMockRecorder) GetSeekerAvatar(ctx, userID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSeekerAvatar", reflect.TypeOf((*MockProfileUsecase)(nil).GetSeekerAvatar), ctx, userID)
 }
 
 // GetSeekerByID mocks base method.
@@ -99,4 +160,32 @@ func (m *MockProfileUsecase) UpdateSeeker(ctx context.Context, userID int, role 
 func (mr *MockProfileUsecaseMockRecorder) UpdateSeeker(ctx, userID, role, profile any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateSeeker", reflect.TypeOf((*MockProfileUsecase)(nil).UpdateSeeker), ctx, userID, role, profile)
+}
+
+// UploadEmployerLogo mocks base method.
+func (m *MockProfileUsecase) UploadEmployerLogo(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadEmployerLogo", ctx, userID, role, body, contentType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UploadEmployerLogo indicates an expected call of UploadEmployerLogo.
+func (mr *MockProfileUsecaseMockRecorder) UploadEmployerLogo(ctx, userID, role, body, contentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadEmployerLogo", reflect.TypeOf((*MockProfileUsecase)(nil).UploadEmployerLogo), ctx, userID, role, body, contentType)
+}
+
+// UploadSeekerAvatar mocks base method.
+func (m *MockProfileUsecase) UploadSeekerAvatar(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UploadSeekerAvatar", ctx, userID, role, body, contentType)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UploadSeekerAvatar indicates an expected call of UploadSeekerAvatar.
+func (mr *MockProfileUsecaseMockRecorder) UploadSeekerAvatar(ctx, userID, role, body, contentType any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UploadSeekerAvatar", reflect.TypeOf((*MockProfileUsecase)(nil).UploadSeekerAvatar), ctx, userID, role, body, contentType)
 }

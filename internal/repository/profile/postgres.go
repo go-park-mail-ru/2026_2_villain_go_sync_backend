@@ -42,14 +42,16 @@ func (r *PostgresRepository) UpsertSeeker(ctx context.Context, p models.SeekerPr
 	query := `
 		INSERT INTO seeker_profile (user_id, first_name, last_name, phone, about)
 		VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (user_id) DO UPDATE 
-		SET first_name = EXCLUDED.first_name, 
+		ON CONFLICT (user_id) DO UPDATE
+		SET first_name = EXCLUDED.first_name,
 			last_name = EXCLUDED.last_name, 
 			phone = EXCLUDED.phone, 
 			about = EXCLUDED.about, 
 			updated_at = now()
+		RETURNING created_at, updated_at, avatar_key
+
 	`
-	_, err := r.pool.Exec(ctx, query, p.UserID, p.FirstName, p.LastName, p.Phone, p.Description)
+	err := r.pool.QueryRow(ctx, query, p.UserID, p.FirstName, p.LastName, p.Phone, p.Description).Scan(&p.CreatedAt, &p.UpdatedAt, &p.AvatarKey)
 	if err != nil {
 		return models.SeekerProfile{}, fmt.Errorf("upsert seeker: %w", err)
 	}
@@ -75,12 +77,13 @@ func (r *PostgresRepository) UpsertEmployer(ctx context.Context, p models.Employ
 		INSERT INTO employer_profile (user_id, company_name, description, website)
 		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (user_id) DO UPDATE 
-		SET company_name = EXCLUDED.company_name, 
+		SET company_name = EXCLUDED.company_name,
 			description = EXCLUDED.description, 
 			website = EXCLUDED.website, 
 			updated_at = now()
+		RETURNING created_at, updated_at, logo_key
 	`
-	_, err := r.pool.Exec(ctx, query, p.UserID, p.CompanyName, p.Description, p.Website)
+	err := r.pool.QueryRow(ctx, query, p.UserID, p.CompanyName, p.Description, p.Website).Scan(&p.CreatedAt, &p.UpdatedAt, &p.LogoKey)
 	if err != nil {
 		return models.EmployerProfile{}, fmt.Errorf("upsert employer: %w", err)
 	}

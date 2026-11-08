@@ -39,8 +39,17 @@ func TestPostgresRepository_ListByVacancyID_Success(t *testing.T) {
 	repo := vacancy.NewPostgresRepository(mockPool)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"first_name", "last_name", "status", "applied_at", "resume_title"}).
-		AddRow("Ivan", "Ivanov", "pending", now, "Go dev")
+	rows := pgxmock.NewRows([]string{
+		"first_name", "last_name", "status",
+		"applied_at", "resume_title",
+		"application_id", "vacancy_id", "vacancy_title",
+		"seeker_id", "resume_id", "cover_letter",
+	}).AddRow(
+		"Ivan", "Ivanov", "created",
+		now, "Go dev",
+		int64(5), int64(1), "Go dev",
+		int64(12), int64(7), nil,
+	)
 
 	mockPool.ExpectQuery(`SELECT`).
 		WithArgs(int64(1)).
@@ -53,5 +62,14 @@ func TestPostgresRepository_ListByVacancyID_Success(t *testing.T) {
 	}
 	if len(applicants) != 1 {
 		t.Errorf("expected 1 applicant, got %d", len(applicants))
+	}
+
+	if len(applicants) == 1 {
+		if applicants[0].ApplicationID != 5 {
+			t.Errorf("unexpected application ID: %d", applicants[0].ApplicationID)
+		}
+		if applicants[0].ResumeID != 7 {
+			t.Errorf("unexpected resume ID: %d", applicants[0].ResumeID)
+		}
 	}
 }

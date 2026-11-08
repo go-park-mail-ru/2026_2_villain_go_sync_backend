@@ -22,12 +22,15 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 		SELECT 
 			sp.first_name, 
 			sp.last_name, 
-			COALESCE(latest_status.status, 'pending') AS status, 
+			COALESCE(latest_status.status, 'created') AS status,
 			a.created_at AS applied_at, 
-			r.title AS resume_title
+			r.title AS resume_title,
+			a.application_id, a.vacancy_id, vh.title,
+			r.seeker_id, a.resume_id, a.cover_letter
 		FROM application a
 		JOIN resume r ON a.resume_id = r.resume_id
 		JOIN seeker_profile sp ON r.seeker_id = sp.user_id
+		JOIN vacancy_history vh ON vh.vacancy_id = a.vacancy_id AND vh.version = a.vacancy_version
 		LEFT JOIN (
 			SELECT DISTINCT ON (application_id) application_id, status
 			FROM application_status_history
@@ -43,7 +46,7 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 	}
 	defer rows.Close()
 
-	var applicants []models.Applicant
+	applicants := make([]models.Applicant, 0)
 	for rows.Next() {
 		var app models.Applicant
 		err := rows.Scan(
@@ -52,6 +55,71 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 			&app.Status,
 			&app.AppliedAt,
 			&app.ResumeTitle,
+			&app.ApplicationID,
+			&app.VacancyID,
+			&app.VacancyTitle,
+			&app.SeekerID,
+			&app.ResumeID,
+			&app.CoverLetter,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("scan applicant: %w", err)
+		}
+		applicants = append(applicants, app)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration: %w", err)
+	}
+
+	return applicants, nil
+}
+
+func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID int64) ([]models.Applicant, error) {
+	query := `
+		SELECT
+			sp.first_name,
+			sp.last_name,
+			COALESCE(latest_status.status, 'created') AS status,
+			a.created_at AS applied_at,
+			r.title AS resume_title,
+			a.application_id, a.vacancy_id, vh.title,
+			r.seeker_id, a.resume_id, a.cover_letter
+		FROM application a
+		JOIN resume r ON a.resume_id = r.resume_id
+		JOIN seeker_profile sp ON r.seeker_id = sp.user_id
+		JOIN vacancy_history vh ON vh.vacancy_id = a.vacancy_id AND vh.version = a.vacancy_version
+		JOIN vacancy v ON v.vacancy_id = a.vacancy_id
+		LEFT JOIN (
+			SELECT DISTINCT ON (application_id) application_id, status
+			FROM application_status_history
+			ORDER BY application_id, changed_at DESC
+		) latest_status ON a.application_id = latest_status.application_id
+		WHERE v.employer_id = $1
+		ORDER BY a.created_at DESC;
+	`
+
+	rows, err := r.pool.Query(ctx, query, employerID)
+	if err != nil {
+		return nil, fmt.Errorf("select applicants: %w", err)
+	}
+	defer rows.Close()
+
+	applicants := make([]models.Applicant, 0)
+	for rows.Next() {
+		var app models.Applicant
+		err := rows.Scan(
+			&app.FirstName,
+			&app.LastName,
+			&app.Status,
+			&app.AppliedAt,
+			&app.ResumeTitle,
+			&app.ApplicationID,
+			&app.VacancyID,
+			&app.VacancyTitle,
+			&app.SeekerID,
+			&app.ResumeID,
+			&app.CoverLetter,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)

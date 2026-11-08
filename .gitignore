@@ -19,3 +19,6 @@ coverage.out
 # OS
 .DS_Store
 Thumbs.db
+
+# Local cookies
+/cookies.txt

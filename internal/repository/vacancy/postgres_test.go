@@ -32,6 +32,13 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 		WithArgs(int64(1), []int64{1, 2}).
 		WillReturnResult(pgxmock.NewResult("INSERT", 2))
 
+	mockPool.ExpectQuery(`SELECT company_name`).
+		WithArgs(int64(10)).
+		WillReturnRows(
+			pgxmock.NewRows([]string{"company_name"}).
+				AddRow("Test Company"),
+		)
+
 	mockPool.ExpectCommit()
 
 	v := models.Vacancy{
@@ -49,6 +56,11 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 	if res.ID != 1 {
 		t.Errorf("expected ID 1, got %d", res.ID)
 	}
+
+	if res.CompanyName != "Test Company" {
+		t.Errorf("expected Test Company, got %s", res.CompanyName)
+	}
+
 	if err := mockPool.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
@@ -61,8 +73,14 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 	repo := vacancy.NewPostgresRepository(mockPool)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"vacancy_id", "version", "employer_id", "title", "description", "salary_from", "salary_to", "currency", "created_at"}).
-		AddRow(1, 1, 10, "Go dev", "desc", nil, nil, "RUB", now)
+	rows := pgxmock.NewRows([]string{
+		"vacancy_id", "version", "employer_id", "company_name",
+		"title", "description", "salary_from", "salary_to",
+		"currency", "created_at",
+	}).AddRow(
+		1, 1, 10, "Test Company",
+		"Go dev", "desc", nil, nil, "RUB", now,
+	)
 
 	mockPool.ExpectQuery(`SELECT`).
 		WithArgs(int64(1)).

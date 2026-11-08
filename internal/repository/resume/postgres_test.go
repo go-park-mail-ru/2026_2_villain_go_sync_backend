@@ -119,7 +119,9 @@ func TestPostgresRepository_Update_Success(t *testing.T) {
 	repo := resume.NewPostgresRepository(mockPool)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"updated_at"}).AddRow(now)
+	rows := pgxmock.NewRows([]string{
+		"seeker_id", "created_at", "updated_at",
+	}).AddRow(10, now, now)
 
 	mockPool.ExpectQuery(`UPDATE resume`).
 		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10).
@@ -138,6 +140,9 @@ func TestPostgresRepository_Update_Success(t *testing.T) {
 	}
 	if res.UpdatedAt.IsZero() {
 		t.Error("expected UpdatedAt to be set")
+	}
+	if res.CreatedAt.IsZero() {
+		t.Error("expected CreatedAt to be set")
 	}
 }
 

@@ -9,10 +9,10 @@ import (
 
 func (h *Handler) Logout(w http.ResponseWriter, _ *http.Request) {
 	for _, cookie := range []http.Cookie{
-		{Name: "access_token", Path: "/"},
-		{Name: "refresh_token", Path: "/api/refresh"},
+		{Name: "access_token", Path: "/", HttpOnly: true},
+		{Name: "refresh_token", Path: "/api/refresh", HttpOnly: true},
+		{Name: "csrf_token", Path: "/", HttpOnly: false},
 	} {
-		cookie.HttpOnly = true
 		cookie.SameSite = http.SameSiteLaxMode
 		cookie.MaxAge = -1
 		cookie.Expires = time.Unix(1, 0)
