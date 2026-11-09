@@ -17,16 +17,6 @@ func (r *PostgresRepository) IsOwner(ctx context.Context, vacancyID int64, emplo
 	return exists, nil
 }
 
-func setApplicantAvatarURL(app *models.Applicant, avatarKey string) {
-	if avatarKey == "" {
-		app.AvatarURL = nil
-		return
-	}
-
-	url := fmt.Sprintf("/api/seekers/%d/avatar", app.SeekerID)
-	app.AvatarURL = &url
-}
-
 func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error) {
 	query := `
 		SELECT 
@@ -78,7 +68,7 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)
 		}
-		setApplicantAvatarURL(&app, avatarKey)
+		app.SetAvatarURL(avatarKey)
 		applicants = append(applicants, app)
 	}
 
@@ -141,7 +131,7 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)
 		}
-		setApplicantAvatarURL(&app, avatarKey)
+		app.SetAvatarURL(avatarKey)
 		applicants = append(applicants, app)
 	}
 

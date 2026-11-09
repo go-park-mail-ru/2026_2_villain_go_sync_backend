@@ -53,16 +53,6 @@ const vacancySelectQuery = `
         WHERE vacancy_id = v.vacancy_id
     )`
 
-func setVacancyLogoURL(v *models.Vacancy, logoKey string) {
-	if logoKey == "" {
-		v.LogoURL = nil
-		return
-	}
-
-	url := fmt.Sprintf("/api/employers/%d/logo", v.EmployerID)
-	v.LogoURL = &url
-}
-
 func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	var vacancy models.Vacancy
 	var logoKey string
@@ -84,7 +74,7 @@ func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 		return models.Vacancy{}, err
 	}
 
-	setVacancyLogoURL(&vacancy, logoKey)
+	vacancy.SetLogoURL(logoKey)
 	return vacancy, nil
 }
 
@@ -147,7 +137,7 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 		return models.Vacancy{}, fmt.Errorf("get company name: %w", err)
 	}
 
-	setVacancyLogoURL(&vacancy, logoKey)
+	vacancy.SetLogoURL(logoKey)
 
 	err = tx.Commit(ctx)
 	if err != nil {
