@@ -35,8 +35,8 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 	mockPool.ExpectQuery(`SELECT company_name`).
 		WithArgs(int64(10)).
 		WillReturnRows(
-			pgxmock.NewRows([]string{"company_name"}).
-				AddRow("Test Company"),
+			pgxmock.NewRows([]string{"company_name", "logo_key"}).
+				AddRow("Test Company", "logos/10/test"),
 		)
 
 	mockPool.ExpectCommit()
@@ -61,6 +61,10 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 		t.Errorf("expected Test Company, got %s", res.CompanyName)
 	}
 
+	if res.LogoURL == nil || *res.LogoURL != "/api/employers/10/logo" {
+		t.Errorf("unexpected logo URL: %v", res.LogoURL)
+	}
+
 	if err := mockPool.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %v", err)
 	}
@@ -76,10 +80,10 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 	rows := pgxmock.NewRows([]string{
 		"vacancy_id", "version", "employer_id", "company_name",
 		"title", "description", "salary_from", "salary_to",
-		"currency", "created_at",
+		"currency", "created_at", "logo_key",
 	}).AddRow(
 		1, 1, 10, "Test Company",
-		"Go dev", "desc", nil, nil, "RUB", now,
+		"Go dev", "desc", nil, nil, "RUB", now, "",
 	)
 
 	mockPool.ExpectQuery(`SELECT`).
@@ -93,5 +97,8 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 	}
 	if res.Title != "Go dev" {
 		t.Errorf("expected Go dev, got %s", res.Title)
+	}
+	if res.LogoURL != nil {
+		t.Errorf("expected nil logo URL, got %v", res.LogoURL)
 	}
 }

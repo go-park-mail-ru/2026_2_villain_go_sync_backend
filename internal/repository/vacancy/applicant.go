@@ -26,7 +26,8 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 			a.created_at AS applied_at, 
 			r.title AS resume_title,
 			a.application_id, a.vacancy_id, vh.title,
-			r.seeker_id, a.resume_id, a.cover_letter
+			r.seeker_id, a.resume_id, a.cover_letter,
+			COALESCE(sp.avatar_key, '') AS avatar_key
 		FROM application a
 		JOIN resume r ON a.resume_id = r.resume_id
 		JOIN seeker_profile sp ON r.seeker_id = sp.user_id
@@ -49,6 +50,7 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 	applicants := make([]models.Applicant, 0)
 	for rows.Next() {
 		var app models.Applicant
+		var avatarKey string
 		err := rows.Scan(
 			&app.FirstName,
 			&app.LastName,
@@ -61,10 +63,12 @@ func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int6
 			&app.SeekerID,
 			&app.ResumeID,
 			&app.CoverLetter,
+			&avatarKey,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)
 		}
+		app.SetAvatarURL(avatarKey)
 		applicants = append(applicants, app)
 	}
 
@@ -84,7 +88,8 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 			a.created_at AS applied_at,
 			r.title AS resume_title,
 			a.application_id, a.vacancy_id, vh.title,
-			r.seeker_id, a.resume_id, a.cover_letter
+			r.seeker_id, a.resume_id, a.cover_letter,
+			COALESCE(sp.avatar_key, '') AS avatar_key
 		FROM application a
 		JOIN resume r ON a.resume_id = r.resume_id
 		JOIN seeker_profile sp ON r.seeker_id = sp.user_id
@@ -108,6 +113,7 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 	applicants := make([]models.Applicant, 0)
 	for rows.Next() {
 		var app models.Applicant
+		var avatarKey string
 		err := rows.Scan(
 			&app.FirstName,
 			&app.LastName,
@@ -120,10 +126,12 @@ func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID in
 			&app.SeekerID,
 			&app.ResumeID,
 			&app.CoverLetter,
+			&avatarKey,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("scan applicant: %w", err)
 		}
+		app.SetAvatarURL(avatarKey)
 		applicants = append(applicants, app)
 	}
 

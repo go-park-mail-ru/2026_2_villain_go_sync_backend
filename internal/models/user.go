@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Role string
 
@@ -46,4 +49,15 @@ type Applicant struct {
 	SeekerID      int64     `json:"seeker_id"`
 	ResumeID      int64     `json:"resume_id"`
 	CoverLetter   *string   `json:"cover_letter"`
+	AvatarURL     *string   `json:"avatar_url"`
+}
+
+func (a *Applicant) SetAvatarURL(avatarKey string) {
+	if avatarKey == "" {
+		a.AvatarURL = nil
+		return
+	}
+
+	url := fmt.Sprintf("/api/seekers/%d/avatar", a.SeekerID)
+	a.AvatarURL = &url
 }

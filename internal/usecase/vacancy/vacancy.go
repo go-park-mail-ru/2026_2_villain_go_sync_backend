@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
@@ -69,8 +68,8 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
-	if strings.TrimSpace(input.Title) == "" {
-		return models.Vacancy{}, fmt.Errorf("%w: title is required", apperrors.ErrInvalidInput)
+	if err := validateVacancyText(input.Title, input.Description); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	if err := validateSalary(input.SalaryFrom, input.SalaryTo); err != nil {
@@ -158,8 +157,8 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		vacancy.Currency = *input.Currency
 	}
 
-	if strings.TrimSpace(vacancy.Title) == "" {
-		return models.Vacancy{}, fmt.Errorf("%w: title is required", apperrors.ErrInvalidInput)
+	if err := validateVacancyText(vacancy.Title, vacancy.Description); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	if err := validateSalary(vacancy.SalaryFrom, vacancy.SalaryTo); err != nil {

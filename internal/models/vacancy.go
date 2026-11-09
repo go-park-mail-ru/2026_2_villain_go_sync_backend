@@ -1,6 +1,9 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Vacancy struct {
 	ID          int64     `json:"id"`
@@ -13,4 +16,15 @@ type Vacancy struct {
 	SalaryTo    *float64  `json:"salary_to"`
 	Currency    string    `json:"currency"`
 	CreatedAt   time.Time `json:"created_at"`
+	LogoURL     *string   `json:"logo_url"`
+}
+
+func (v *Vacancy) SetLogoURL(logoKey string) {
+	if logoKey == "" {
+		v.LogoURL = nil
+		return
+	}
+
+	url := fmt.Sprintf("/api/employers/%d/logo", v.EmployerID)
+	v.LogoURL = &url
 }

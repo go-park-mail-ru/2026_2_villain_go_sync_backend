@@ -42,7 +42,8 @@ const vacancySelectQuery = `
         vh.salary_from,
         vh.salary_to,
         vh.currency,
-        v.created_at
+        v.created_at,
+        COALESCE(ep.logo_key, '')
     FROM vacancy v
     JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
     JOIN employer_profile ep ON ep.user_id = v.employer_id
@@ -54,11 +55,26 @@ const vacancySelectQuery = `
 
 func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	var vacancy models.Vacancy
-	err := row.Scan(&vacancy.ID, &vacancy.Version, &vacancy.EmployerID, &vacancy.CompanyName, &vacancy.Title,
-		&vacancy.Description, &vacancy.SalaryFrom, &vacancy.SalaryTo, &vacancy.Currency, &vacancy.CreatedAt)
+	var logoKey string
+
+	err := row.Scan(
+		&vacancy.ID,
+		&vacancy.Version,
+		&vacancy.EmployerID,
+		&vacancy.CompanyName,
+		&vacancy.Title,
+		&vacancy.Description,
+		&vacancy.SalaryFrom,
+		&vacancy.SalaryTo,
+		&vacancy.Currency,
+		&vacancy.CreatedAt,
+		&logoKey,
+	)
 	if err != nil {
 		return models.Vacancy{}, err
 	}
+
+	vacancy.SetLogoURL(logoKey)
 	return vacancy, nil
 }
 
@@ -109,13 +125,19 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 		}
 	}
 	query := `
-		SELECT company_name
-        FROM employer_profile
-        WHERE user_id = $1`
-	err = tx.QueryRow(ctx, query, vacancy.EmployerID).Scan(&vacancy.CompanyName)
+    SELECT company_name, COALESCE(logo_key, '')
+    FROM employer_profile
+    WHERE user_id = $1`
+
+	var logoKey string
+
+	err = tx.QueryRow(ctx, query, vacancy.EmployerID).
+		Scan(&vacancy.CompanyName, &logoKey)
 	if err != nil {
 		return models.Vacancy{}, fmt.Errorf("get company name: %w", err)
 	}
+
+	vacancy.SetLogoURL(logoKey)
 
 	err = tx.Commit(ctx)
 	if err != nil {

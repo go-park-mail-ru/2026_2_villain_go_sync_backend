@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/logger"
@@ -27,10 +28,20 @@ type loggingRow struct {
 
 func (r *loggingRow) Scan(dest ...any) error {
 	err := r.Row.Scan(dest...)
-	if err == pgx.ErrNoRows {
-		err = nil
+
+	logErr := err
+	if errors.Is(err, pgx.ErrNoRows) {
+		logErr = nil
 	}
-	logger.LogExternalCall(r.ctx, logger.SourcePostgres, r.method, time.Since(r.start), err)
+
+	logger.LogExternalCall(
+		r.ctx,
+		logger.SourcePostgres,
+		r.method,
+		time.Since(r.start),
+		logErr,
+	)
+
 	return err
 }
 
