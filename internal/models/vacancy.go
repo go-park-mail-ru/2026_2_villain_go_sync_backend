@@ -13,4 +13,5 @@ type Vacancy struct {
 	SalaryTo    *float64  `json:"salary_to"`
 	Currency    string    `json:"currency"`
 	CreatedAt   time.Time `json:"created_at"`
+	LogoURL     *string   `json:"logo_url"`
 }

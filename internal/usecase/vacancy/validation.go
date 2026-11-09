@@ -3,6 +3,8 @@ package vacancy
 import (
 	"fmt"
 	"math"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 )
@@ -37,6 +39,27 @@ func validateSalary(from, to *float64) error {
 	if to != nil && math.Round(*to*100)/100 != *to {
 		return fmt.Errorf("%w: salary_to must have at most 2 decimal places", apperrors.ErrInvalidInput)
 	}
+	return nil
+}
+
+const (
+	maxVacancyTitleLength       = 100
+	maxVacancyDescriptionLength = 10000
+)
+
+func validateVacancyText(title, description string) error {
+	if strings.TrimSpace(title) == "" {
+		return fmt.Errorf("%w: title is required", apperrors.ErrInvalidInput)
+	}
+
+	if utf8.RuneCountInString(title) > maxVacancyTitleLength {
+		return fmt.Errorf("%w: title must not exceed 100 characters", apperrors.ErrInvalidInput)
+	}
+
+	if utf8.RuneCountInString(description) > maxVacancyDescriptionLength {
+		return fmt.Errorf("%w: description must not exceed 10000 characters", apperrors.ErrInvalidInput)
+	}
+
 	return nil
 }
 
