@@ -23,6 +23,7 @@ type VacancyUsecase interface {
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error)
 	ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error)
+	ListCategories(ctx context.Context) ([]models.Category, error)
 }
 
 type Handler struct {
@@ -236,4 +237,13 @@ func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request)
 	}
 
 	httputil.WriteOK(w, http.StatusOK, applicants)
+}
+
+func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.vacancy.ListCategories(r.Context())
+	if err != nil {
+		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	httputil.WriteOK(w, http.StatusOK, categories)
 }

@@ -21,6 +21,7 @@ type VacancyRepository interface {
 	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
 	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
 	ListByEmployerID(ctx context.Context, employerID int64) ([]models.Applicant, error)
+	ListCategories(ctx context.Context) ([]models.Category, error)
 }
 
 type UserRepository interface {
