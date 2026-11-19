@@ -72,6 +72,10 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
+	if err := validateVacancyDetails(input.Responsibilities, input.Requirements); err != nil {
+		return models.Vacancy{}, err
+	}
+
 	if err := validateSalary(input.SalaryFrom, input.SalaryTo); err != nil {
 		return models.Vacancy{}, err
 	}
@@ -91,12 +95,26 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 	}
 
 	vacancy := models.Vacancy{
-		EmployerID:  input.EmployerID,
-		Title:       input.Title,
-		Description: input.Description,
-		SalaryFrom:  input.SalaryFrom,
-		SalaryTo:    input.SalaryTo,
-		Currency:    input.Currency,
+		EmployerID:       input.EmployerID,
+		Title:            input.Title,
+		Description:      input.Description,
+		Responsibilities: input.Responsibilities,
+		Requirements:     input.Requirements,
+		SalaryFrom:       input.SalaryFrom,
+		SalaryTo:         input.SalaryTo,
+		Currency:         input.Currency,
+		Offer:            input.Offer,
+		ExperienceLevel:  input.ExperienceLevel,
+		EmploymentType:   input.EmploymentType,
+		WorkFormat:       input.WorkFormat,
+		WorkSchedule:     input.WorkSchedule,
+		WorkHours:        input.WorkHours,
+		City:             input.City,
+		OfficeAddress:    input.OfficeAddress,
+	}
+
+	if err := validateVacancyOptions(vacancy); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	createdVacancy, err := u.vacancies.Create(ctx, vacancy, input.CategoryIDs)
@@ -147,6 +165,12 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 	if input.Description != nil {
 		vacancy.Description = *input.Description
 	}
+	if input.Responsibilities != nil {
+		vacancy.Responsibilities = *input.Responsibilities
+	}
+	if input.Requirements != nil {
+		vacancy.Requirements = *input.Requirements
+	}
 	if input.SalaryFrom.Provided {
 		vacancy.SalaryFrom = input.SalaryFrom.Value
 	}
@@ -157,7 +181,40 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		vacancy.Currency = *input.Currency
 	}
 
+	if input.Offer != nil {
+		vacancy.Offer = input.Offer
+	}
+	if input.ExperienceLevel != nil {
+		vacancy.ExperienceLevel = input.ExperienceLevel
+	}
+	if input.EmploymentType != nil {
+		vacancy.EmploymentType = input.EmploymentType
+	}
+	if input.WorkFormat != nil {
+		vacancy.WorkFormat = input.WorkFormat
+	}
+	if input.WorkSchedule != nil {
+		vacancy.WorkSchedule = input.WorkSchedule
+	}
+	if input.WorkHours != nil {
+		vacancy.WorkHours = input.WorkHours
+	}
+	if input.City != nil {
+		vacancy.City = input.City
+	}
+	if input.OfficeAddress != nil {
+		vacancy.OfficeAddress = input.OfficeAddress
+	}
+
+	if err := validateVacancyOptions(vacancy); err != nil {
+		return models.Vacancy{}, err
+	}
+
 	if err := validateVacancyText(vacancy.Title, vacancy.Description); err != nil {
+		return models.Vacancy{}, err
+	}
+
+	if err := validateVacancyDetails(vacancy.Responsibilities, vacancy.Requirements); err != nil {
 		return models.Vacancy{}, err
 	}
 

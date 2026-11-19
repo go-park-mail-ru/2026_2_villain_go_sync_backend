@@ -58,13 +58,23 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := dto.CreateVacancyInput{
-		EmployerID:  userID,
-		Title:       request.Title.String(),
-		Description: request.Description.String(),
-		SalaryFrom:  request.SalaryFrom,
-		SalaryTo:    request.SalaryTo,
-		Currency:    request.Currency.String(),
-		CategoryIDs: request.CategoryIDs,
+		EmployerID:       userID,
+		Title:            request.Title.String(),
+		Description:      request.Description.String(),
+		Responsibilities: request.Responsibilities.String(),
+		Requirements:     request.Requirements.String(),
+		SalaryFrom:       request.SalaryFrom,
+		SalaryTo:         request.SalaryTo,
+		Currency:         request.Currency.String(),
+		Offer:            sanitizer.Ptr(request.Offer),
+		ExperienceLevel:  sanitizer.Ptr(request.ExperienceLevel),
+		EmploymentType:   sanitizer.Ptr(request.EmploymentType),
+		WorkFormat:       sanitizer.Ptr(request.WorkFormat),
+		WorkSchedule:     sanitizer.Ptr(request.WorkSchedule),
+		WorkHours:        sanitizer.Ptr(request.WorkHours),
+		City:             sanitizer.Ptr(request.City),
+		OfficeAddress:    sanitizer.Ptr(request.OfficeAddress),
+		CategoryIDs:      request.CategoryIDs,
 	}
 
 	createdVacancy, err := h.vacancy.Create(r.Context(), input)
@@ -155,14 +165,24 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := dto.UpdateVacancyInput{
-		VacancyID:   vacancyID,
-		EmployerID:  userID,
-		Title:       sanitizer.Ptr(request.Title),
-		Description: sanitizer.Ptr(request.Description),
-		SalaryFrom:  salaryFrom,
-		SalaryTo:    salaryTo,
-		Currency:    sanitizer.Ptr(request.Currency),
-		CategoryIDs: request.CategoryIDs,
+		VacancyID:        vacancyID,
+		EmployerID:       userID,
+		Title:            sanitizer.Ptr(request.Title),
+		Description:      sanitizer.Ptr(request.Description),
+		Responsibilities: sanitizer.Ptr(request.Responsibilities),
+		Requirements:     sanitizer.Ptr(request.Requirements),
+		SalaryFrom:       salaryFrom,
+		SalaryTo:         salaryTo,
+		Currency:         sanitizer.Ptr(request.Currency),
+		Offer:            sanitizer.Ptr(request.Offer),
+		ExperienceLevel:  sanitizer.Ptr(request.ExperienceLevel),
+		EmploymentType:   sanitizer.Ptr(request.EmploymentType),
+		WorkFormat:       sanitizer.Ptr(request.WorkFormat),
+		WorkSchedule:     sanitizer.Ptr(request.WorkSchedule),
+		WorkHours:        sanitizer.Ptr(request.WorkHours),
+		City:             sanitizer.Ptr(request.City),
+		OfficeAddress:    sanitizer.Ptr(request.OfficeAddress),
+		CategoryIDs:      request.CategoryIDs,
 	}
 
 	updatedVacancy, err := h.vacancy.Update(r.Context(), input)

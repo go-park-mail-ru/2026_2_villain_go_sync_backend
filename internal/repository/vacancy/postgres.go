@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -27,6 +28,67 @@ type PostgresRepository struct {
 	pool PgxPool
 }
 
+const (
+	insertVacancyQuery = "INSERT INTO vacancy (employer_id) VALUES ($1) RETURNING vacancy_id, created_at, updated_at, to_char(apply_until, 'YYYY-MM-DD')"
+
+	vacancyDetailsColumns = `offer, experience_level, employment_type,
+			work_format, work_schedule, work_hours, city, office_address`
+
+	insertVacancyHistoryQuery = `
+		INSERT INTO vacancy_history (
+		    vacancy_id, version, title, description, salary_from, salary_to, currency,
+		    responsibilities, requirements, ` + vacancyDetailsColumns + `
+		)
+		VALUES ($1, 1, $2, $3, $4, $5, $6, NULLIF($7, ''), NULLIF($8, ''),
+		        NULLIF($9, ''), NULLIF($10, ''), NULLIF($11, ''), NULLIF($12, ''),
+		        NULLIF($13, ''), NULLIF($14, ''), NULLIF($15, ''), NULLIF($16, ''))
+		RETURNING changed_at, ` + vacancyDetailsColumns
+
+	insertVacancyCategoriesQuery = `INSERT INTO vacancy_category (vacancy_id, category_id)
+             SELECT $1, unnest($2::bigint[])`
+
+	companyDetailsQuery = `
+    SELECT company_name, COALESCE(logo_key, '')
+    FROM employer_profile
+    WHERE user_id = $1`
+
+	lockVacancyQuery = `SELECT employer_id FROM vacancy
+		WHERE vacancy_id = $1
+		FOR UPDATE`
+
+	currentVacancyVersionQuery = `SELECT COALESCE(MAX(version), 0)
+         FROM vacancy_history
+         WHERE vacancy_id = $1`
+
+	updateVacancyHistoryQuery = `WITH new_version AS (
+		    INSERT INTO vacancy_history (
+		        vacancy_id, version, title, description, salary_from, salary_to, currency,
+		        responsibilities, requirements, ` + vacancyDetailsColumns + `
+		    )
+		    SELECT $1, $2, $3, $4, $5, $6, $7, NULLIF($8, ''), NULLIF($9, ''),
+		           NULLIF(COALESCE($10, offer), ''), NULLIF(COALESCE($11, experience_level), ''),
+		           NULLIF(COALESCE($12, employment_type), ''), NULLIF(COALESCE($13, work_format), ''),
+		           NULLIF(COALESCE($14, work_schedule), ''), NULLIF(COALESCE($15, work_hours), ''),
+		           NULLIF(COALESCE($16, city), ''), NULLIF(COALESCE($17, office_address), '')
+		      FROM vacancy_history
+		     WHERE vacancy_id = $1 AND version = $2 - 1
+		    RETURNING vacancy_id, version, changed_at, ` + vacancyDetailsColumns + `
+		), copied_skills AS (
+		    INSERT INTO vacancy_version_skill (vacancy_id, version, name, position)
+		    SELECT n.vacancy_id, n.version, s.name, s.position
+		      FROM new_version AS n
+		      JOIN vacancy_version_skill AS s
+		        ON s.vacancy_id = n.vacancy_id AND s.version = n.version - 1
+		)
+		SELECT changed_at, ` + vacancyDetailsColumns + `
+		  FROM new_version`
+
+	deleteVacancyCategoriesQuery = `DELETE FROM vacancy_category WHERE vacancy_id = $1`
+
+	deleteVacancyQuery = `DELETE FROM vacancy
+		 WHERE vacancy_id = $1 AND employer_id = $2`
+)
+
 func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
@@ -43,7 +105,12 @@ const vacancySelectQuery = `
         vh.salary_to,
         vh.currency,
         v.created_at,
-        COALESCE(ep.logo_key, '')
+        COALESCE(ep.logo_key, ''),
+        COALESCE(vh.responsibilities, ''),
+        COALESCE(vh.requirements, ''),
+        v.updated_at, vh.changed_at, to_char(v.apply_until, 'YYYY-MM-DD'),
+        vh.offer, vh.experience_level, vh.employment_type, vh.work_format,
+        vh.work_schedule, vh.work_hours, vh.city, vh.office_address
     FROM vacancy v
     JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
     JOIN employer_profile ep ON ep.user_id = v.employer_id
@@ -69,6 +136,11 @@ func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 		&vacancy.Currency,
 		&vacancy.CreatedAt,
 		&logoKey,
+		&vacancy.Responsibilities,
+		&vacancy.Requirements,
+		&vacancy.UpdatedAt, &vacancy.ChangedAt, &vacancy.ApplyUntil,
+		&vacancy.Offer, &vacancy.ExperienceLevel, &vacancy.EmploymentType, &vacancy.WorkFormat,
+		&vacancy.WorkSchedule, &vacancy.WorkHours, &vacancy.City, &vacancy.OfficeAddress,
 	)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -88,19 +160,23 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 
 	err = tx.QueryRow(
 		ctx,
-		"INSERT INTO vacancy (employer_id) VALUES ($1) RETURNING vacancy_id, created_at",
+		insertVacancyQuery,
 		vacancy.EmployerID,
-	).Scan(&vacancy.ID, &vacancy.CreatedAt)
+	).Scan(&vacancy.ID, &vacancy.CreatedAt, &vacancy.UpdatedAt, &vacancy.ApplyUntil)
 	if err != nil {
 		return models.Vacancy{}, err
 	}
 
-	_, err = tx.Exec(
+	err = tx.QueryRow(
 		ctx,
-		`INSERT INTO vacancy_history
-			(vacancy_id, version, title, description, salary_from, salary_to, currency)
-        VALUES ($1, 1, $2, $3, $4, $5, $6)`,
+		insertVacancyHistoryQuery,
 		vacancy.ID, vacancy.Title, vacancy.Description, vacancy.SalaryFrom, vacancy.SalaryTo, vacancy.Currency,
+		strings.TrimSpace(vacancy.Responsibilities), strings.TrimSpace(vacancy.Requirements),
+		vacancy.Offer, vacancy.ExperienceLevel, vacancy.EmploymentType, vacancy.WorkFormat,
+		vacancy.WorkSchedule, vacancy.WorkHours, vacancy.City, vacancy.OfficeAddress,
+	).Scan(
+		&vacancy.ChangedAt, &vacancy.Offer, &vacancy.ExperienceLevel, &vacancy.EmploymentType, &vacancy.WorkFormat,
+		&vacancy.WorkSchedule, &vacancy.WorkHours, &vacancy.City, &vacancy.OfficeAddress,
 	)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -110,8 +186,7 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	if len(categoryIDs) > 0 {
 		_, err = tx.Exec(
 			ctx,
-			`INSERT INTO vacancy_category (vacancy_id, category_id)
-             SELECT $1, unnest($2::bigint[])`,
+			insertVacancyCategoriesQuery,
 			vacancy.ID, categoryIDs,
 		)
 		if err != nil {
@@ -124,14 +199,10 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 			return models.Vacancy{}, err
 		}
 	}
-	query := `
-    SELECT company_name, COALESCE(logo_key, '')
-    FROM employer_profile
-    WHERE user_id = $1`
 
 	var logoKey string
 
-	err = tx.QueryRow(ctx, query, vacancy.EmployerID).
+	err = tx.QueryRow(ctx, companyDetailsQuery, vacancy.EmployerID).
 		Scan(&vacancy.CompanyName, &logoKey)
 	if err != nil {
 		return models.Vacancy{}, fmt.Errorf("get company name: %w", err)
@@ -172,7 +243,7 @@ func (r *PostgresRepository) ListVacancies(ctx context.Context) ([]models.Vacanc
 }
 
 func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vacancy, error) {
-	query := vacancySelectQuery + "\nAND v.vacancy_id = $1"
+	const query = vacancySelectQuery + "\nAND v.vacancy_id = $1"
 	row := r.pool.QueryRow(ctx, query, id)
 
 	vacancy, err := scanVacancy(row)
@@ -188,7 +259,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vaca
 }
 
 func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
-	query := vacancySelectQuery + "\nAND v.employer_id = $1"
+	const query = vacancySelectQuery + "\nAND v.employer_id = $1"
 	rows, err := r.pool.Query(ctx, query, employerID)
 	if err != nil {
 		return nil, err
@@ -227,9 +298,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 
 	err = tx.QueryRow(
 		ctx,
-		`SELECT employer_id FROM vacancy
-		WHERE vacancy_id = $1
-		FOR UPDATE`,
+		lockVacancyQuery,
 		vacancy.ID,
 	).Scan(&employerID)
 
@@ -248,9 +317,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	var currentVersion int
 
 	err = tx.QueryRow(ctx,
-		`SELECT COALESCE(MAX(version), 0)
-         FROM vacancy_history
-         WHERE vacancy_id = $1`,
+		currentVacancyVersionQuery,
 		vacancy.ID,
 	).Scan(&currentVersion)
 	if err != nil {
@@ -264,12 +331,16 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 
 	vacancy.Version = currentVersion + 1
 
-	_, err = tx.Exec(
+	err = tx.QueryRow(
 		ctx,
-		`INSERT INTO vacancy_history
-			(vacancy_id, version, title, description, salary_from, salary_to, currency)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		updateVacancyHistoryQuery,
 		vacancy.ID, vacancy.Version, vacancy.Title, vacancy.Description, vacancy.SalaryFrom, vacancy.SalaryTo, vacancy.Currency,
+		strings.TrimSpace(vacancy.Responsibilities), strings.TrimSpace(vacancy.Requirements),
+		vacancy.Offer, vacancy.ExperienceLevel, vacancy.EmploymentType, vacancy.WorkFormat,
+		vacancy.WorkSchedule, vacancy.WorkHours, vacancy.City, vacancy.OfficeAddress,
+	).Scan(
+		&vacancy.ChangedAt, &vacancy.Offer, &vacancy.ExperienceLevel, &vacancy.EmploymentType, &vacancy.WorkFormat,
+		&vacancy.WorkSchedule, &vacancy.WorkHours, &vacancy.City, &vacancy.OfficeAddress,
 	)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -278,7 +349,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	if categoryIDs != nil {
 		_, err = tx.Exec(
 			ctx,
-			`DELETE FROM vacancy_category WHERE vacancy_id = $1`,
+			deleteVacancyCategoriesQuery,
 			vacancy.ID,
 		)
 		if err != nil {
@@ -288,8 +359,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 		if len(*categoryIDs) > 0 {
 			_, err = tx.Exec(
 				ctx,
-				`INSERT INTO vacancy_category (vacancy_id, category_id)
-                 SELECT $1, unnest($2::bigint[])`,
+				insertVacancyCategoriesQuery,
 				vacancy.ID, *categoryIDs,
 			)
 			if err != nil {
@@ -304,6 +374,10 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 		}
 	}
 
+	if err := tx.QueryRow(ctx, touchVacancyQuery, vacancy.ID).Scan(&vacancy.UpdatedAt, &vacancy.ApplyUntil); err != nil {
+		return models.Vacancy{}, err
+	}
+
 	err = tx.Commit(ctx)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -311,10 +385,12 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	return vacancy, nil
 }
 
+const touchVacancyQuery = `UPDATE vacancy SET updated_at = NOW() WHERE vacancy_id = $1
+	RETURNING updated_at, to_char(apply_until, 'YYYY-MM-DD')`
+
 func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID int64) error {
 	commandTag, err := r.pool.Exec(ctx,
-		`DELETE FROM vacancy
-         WHERE vacancy_id = $1 AND employer_id = $2`,
+		deleteVacancyQuery,
 		vacancyID, employerID,
 	)
 	if err != nil {
