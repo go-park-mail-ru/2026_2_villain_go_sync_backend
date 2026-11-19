@@ -25,11 +25,12 @@ func TestResumeHandlers_Table(t *testing.T) {
 		{name: "create unauthorized", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV"}`, wantStatus: 401},
 		{name: "create bad json", action: "create", method: http.MethodPost, url: "/api/resumes", body: "{", auth: true, wantStatus: 400},
 		{name: "create missing title", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":" "}`, auth: true, wantStatus: 422},
-		{name: "create success", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV","description":"Go dev"}`, auth: true, wantStatus: 201, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
+		{name: "create missing target position", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV"}`, auth: true, wantStatus: 422, wantBody: "target_position is required"},
+		{name: "create success", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV","target_position":"Engineer","description":"Go dev"}`, auth: true, wantStatus: 201, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Create(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
 				Return(models.Resume{ID: 31, Title: "CV"}, nil)
 		}},
-		{name: "create forbidden", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
+		{name: "create forbidden", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV","target_position":"Engineer"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Create(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).Return(models.Resume{}, apperrors.ErrForbidden)
 		}},
 
@@ -57,11 +58,13 @@ func TestResumeHandlers_Table(t *testing.T) {
 		{name: "update invalid id", action: "update", method: http.MethodPut, url: "/api/resumes/bad", id: "bad", body: `{"title":"Updated"}`, auth: true, wantStatus: 400},
 		{name: "update invalid json", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: "{", auth: true, wantStatus: 400},
 		{name: "update missing title", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{}`, auth: true, wantStatus: 422},
-		{name: "update success", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated"}`, auth: true, wantStatus: 200, wantBody: `"title":"Updated"`, setup: func(m *resume.MockResumeUsecase) {
+		{name: "update missing target position", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated"}`, auth: true, wantStatus: 422, wantBody: "target_position is required"},
+		{name: "update blank target position", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated","target_position":" \t"}`, auth: true, wantStatus: 422, wantBody: "target_position is required"},
+		{name: "update success", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated","target_position":"Engineer"}`, auth: true, wantStatus: 200, wantBody: `"title":"Updated"`, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Update(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
 				Return(models.Resume{ID: 31, Title: "Updated"}, nil)
 		}},
-		{name: "update forbidden", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
+		{name: "update forbidden", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated","target_position":"Engineer"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Update(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).Return(models.Resume{}, apperrors.ErrForbidden)
 		}},
 

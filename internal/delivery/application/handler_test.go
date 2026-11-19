@@ -30,7 +30,7 @@ func TestHandler_Create_Success(t *testing.T) {
 			if input.CoverLetter == nil || *input.CoverLetter != "Hello" {
 				t.Errorf("expected cover letter 'Hello', got %v", input.CoverLetter)
 			}
-			return models.Application{ID: 1}, nil
+			return models.Application{ID: 1, SeekerID: input.SeekerID}, nil
 		})
 
 	body := `{"resume_id": 3, "cover_letter": "Hello"}`
@@ -46,6 +46,9 @@ func TestHandler_Create_Success(t *testing.T) {
 
 	if rec.Code != http.StatusCreated {
 		t.Errorf("expected 201, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+	if !bytes.Contains(rec.Body.Bytes(), []byte(`"seeker_id":10`)) {
+		t.Errorf("missing seeker_id in response: %s", rec.Body.String())
 	}
 }
 

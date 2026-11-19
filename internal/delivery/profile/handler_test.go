@@ -229,7 +229,7 @@ func TestUpdateSeeker_Forbidden(t *testing.T) {
 		UpdateSeeker(gomock.Any(), 10, models.RoleEmployer, gomock.Any()).
 		Return(models.SeekerProfile{}, apperrors.ErrForbidden)
 
-	body := `{"first_name":"Ivan"}`
+	body := `{"first_name":"Ivan","last_name":"Ivanov","preferred_position":"Go developer"}`
 
 	req := httptest.NewRequest(
 		http.MethodPut,
@@ -328,5 +328,26 @@ func TestGetPublicEmployer_NotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestUpdateSeeker_RequiresLastName(t *testing.T) {
+	for _, tc := range []struct {
+		body  string
+		field string
+	}{
+		{`{"first_name":"Ivan","preferred_position":"Engineer"}`, "last_name"},
+		{`{"first_name":"Ivan","last_name":" \t","preferred_position":"Engineer"}`, "last_name"},
+	} {
+		t.Run(tc.body, func(t *testing.T) {
+			h := profile.NewHandler(profile.NewMockProfileUsecase(gomock.NewController(t)))
+			req := httptest.NewRequest(http.MethodPut, "/api/profile/seeker", bytes.NewBufferString(tc.body))
+			ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
+			rec := httptest.NewRecorder()
+			h.UpdateSeeker(rec, req.WithContext(ctx))
+			if rec.Code != http.StatusUnprocessableEntity || !bytes.Contains(rec.Body.Bytes(), []byte(tc.field+" is required")) {
+				t.Fatalf("expected 422 for %s, got %d: %s", tc.field, rec.Code, rec.Body.String())
+			}
+		})
 	}
 }

@@ -36,22 +36,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	role, _ := auth.RoleFromContext(r.Context())
 
-	var req UpserRequest
+	var req UpsertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
-	if err := req.IsValid(); err != nil {
+	input, err := req.resume()
+	if err != nil {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
-	res, err := h.resumes.Create(r.Context(), int(userID), role, models.Resume{
-		Title:       req.Title.String(),
-		Description: req.Description.String(),
-		Experience:  req.Experience.String(),
-		Education:   req.Education.String(),
-	})
+	res, err := h.resumes.Create(r.Context(), int(userID), role, input)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to create resume")
 		return
@@ -111,23 +107,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req UpserRequest
+	var req UpsertRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
-	if err := req.IsValid(); err != nil {
+	input, err := req.resume()
+	if err != nil {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
-	res, err := h.resumes.Update(r.Context(), int(userID), role, models.Resume{
-		ID:          id,
-		Title:       req.Title.String(),
-		Description: req.Description.String(),
-		Experience:  req.Experience.String(),
-		Education:   req.Education.String(),
-	})
+	input.ID = id
+	res, err := h.resumes.Update(r.Context(), int(userID), role, input)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update resume")
 		return

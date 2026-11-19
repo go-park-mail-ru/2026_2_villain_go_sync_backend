@@ -92,3 +92,48 @@ func TestApplicationUsecase_Create_ResumeBelongsToAnother(t *testing.T) {
 		t.Errorf("expected ErrForbidden, got %v", err)
 	}
 }
+
+func TestUpdateStatusValidation(t *testing.T) {
+	reason := "skills_mismatch"
+	unknown := "unknown"
+	for _, tc := range []struct {
+		name   string
+		role   models.Role
+		status string
+		reason *string
+		want   error
+	}{
+		{name: "seeker cannot change status", role: models.RoleSeeker, status: "rejected", reason: &reason, want: apperrors.ErrForbidden},
+		{name: "rejection needs reason", role: models.RoleEmployer, status: "rejected", want: apperrors.ErrInvalidInput},
+		{name: "unknown reason", role: models.RoleEmployer, status: "rejected", reason: &unknown, want: apperrors.ErrInvalidInput},
+		{name: "reason on offer", role: models.RoleEmployer, status: "offer", reason: &reason, want: apperrors.ErrInvalidInput},
+		{name: "viewed is forbidden", role: models.RoleEmployer, status: "viewed", want: apperrors.ErrInvalidInput},
+		{name: "accepted is forbidden", role: models.RoleEmployer, status: "accepted", want: apperrors.ErrInvalidInput},
+		{name: "created is automatic", role: models.RoleEmployer, status: "created", want: apperrors.ErrInvalidInput},
+		{name: "valid reviewing", role: models.RoleEmployer, status: "reviewing"},
+		{name: "valid interview", role: models.RoleEmployer, status: "interview"},
+		{name: "valid offer", role: models.RoleEmployer, status: "offer"},
+		{name: "valid rejection", role: models.RoleEmployer, status: "rejected", reason: &reason},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := uc.NewMockApplicationRepository(gomock.NewController(t))
+			usecase := uc.NewApplicationUsecase(repo, nil, nil, nil)
+			input := dto.UpdateStatusInput{ApplicationID: 1, EmployerID: 2, Status: tc.status, ReasonCode: tc.reason}
+			if tc.want == nil {
+				repo.EXPECT().UpdateStatus(gomock.Any(), input).Return(models.ApplicationStatusUpdate{ApplicationID: 1}, nil)
+			}
+			_, err := usecase.UpdateStatus(context.Background(), tc.role, input)
+			if !errors.Is(err, tc.want) {
+				t.Fatalf("got %v, want %v", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestListBySeekerRequiresSeekerRole(t *testing.T) {
+	repo := uc.NewMockApplicationRepository(gomock.NewController(t))
+	usecase := uc.NewApplicationUsecase(repo, nil, nil, nil)
+	if _, err := usecase.ListBySeeker(context.Background(), 1, models.RoleEmployer); !errors.Is(err, apperrors.ErrForbidden) {
+		t.Fatalf("expected forbidden, got %v", err)
+	}
+}

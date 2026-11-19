@@ -19,14 +19,19 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 
 	mockPool.ExpectBegin()
 
-	rows := pgxmock.NewRows([]string{"vacancy_id", "created_at"}).AddRow(1, now)
+	rows := pgxmock.NewRows([]string{"vacancy_id", "created_at", "updated_at", "apply_until"}).AddRow(1, now, now, nil)
 	mockPool.ExpectQuery(`INSERT INTO vacancy`).
 		WithArgs(int64(10)).
 		WillReturnRows(rows)
 
-	mockPool.ExpectExec(`INSERT INTO vacancy_history`).
-		WithArgs(int64(1), "Go dev", "desc", (*float64)(nil), (*float64)(nil), "RUB").
-		WillReturnResult(pgxmock.NewResult("INSERT", 1))
+	mockPool.ExpectQuery(`INSERT INTO vacancy_history`).
+		WithArgs(int64(1), "Go dev", "desc", (*float64)(nil), (*float64)(nil), "RUB", "Develop services", "Know Go",
+			(*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil),
+			(*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil)).
+		WillReturnRows(pgxmock.NewRows([]string{
+			"changed_at", "offer", "experience_level", "employment_type", "work_format",
+			"work_schedule", "work_hours", "city", "office_address",
+		}).AddRow(now, nil, nil, nil, nil, nil, nil, nil, nil))
 
 	mockPool.ExpectExec(`INSERT INTO vacancy_category`).
 		WithArgs(int64(1), []int64{1, 2}).
@@ -42,10 +47,12 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 	mockPool.ExpectCommit()
 
 	v := models.Vacancy{
-		EmployerID:  10,
-		Title:       "Go dev",
-		Description: "desc",
-		Currency:    "RUB",
+		EmployerID:       10,
+		Title:            "Go dev",
+		Description:      "desc",
+		Responsibilities: "Develop services",
+		Requirements:     "Know Go",
+		Currency:         "RUB",
 	}
 
 	res, err := repo.Create(context.Background(), v, []int64{1, 2})
@@ -80,10 +87,13 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 	rows := pgxmock.NewRows([]string{
 		"vacancy_id", "version", "employer_id", "company_name",
 		"title", "description", "salary_from", "salary_to",
-		"currency", "created_at", "logo_key",
+		"currency", "created_at", "logo_key", "responsibilities", "requirements",
+		"updated_at", "changed_at", "apply_until", "offer", "experience_level", "employment_type",
+		"work_format", "work_schedule", "work_hours", "city", "office_address",
 	}).AddRow(
 		1, 1, 10, "Test Company",
-		"Go dev", "desc", nil, nil, "RUB", now, "",
+		"Go dev", "desc", nil, nil, "RUB", now, "", "", "",
+		now, now, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 
 	mockPool.ExpectQuery(`SELECT`).

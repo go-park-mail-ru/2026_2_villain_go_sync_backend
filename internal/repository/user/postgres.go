@@ -11,6 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+const (
+	insertUserQuery = `
+        INSERT INTO app_user (email, password_hash, role)
+        VALUES ($1, $2, $3)
+        RETURNING user_id, created_at
+    `
+
+	userByEmailQuery = `
+        SELECT user_id, email, password_hash, role, created_at
+        FROM app_user
+        WHERE email = $1
+    `
+
+	userRoleQuery = `SELECT role
+		FROM app_user
+		WHERE user_id = $1`
+
+	hasEmployerProfileQuery = `SELECT EXISTS (
+			SELECT 1
+			FROM employer_profile
+			WHERE user_id = $1
+		)`
+)
+
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
@@ -32,13 +56,8 @@ func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 }
 
 func (r *PostgresRepository) Create(ctx context.Context, user models.User) (models.User, error) {
-	query := `
-        INSERT INTO app_user (email, password_hash, role)
-        VALUES ($1, $2, $3)
-        RETURNING user_id, created_at
-    `
 
-	err := r.pool.QueryRow(ctx, query,
+	err := r.pool.QueryRow(ctx, insertUserQuery,
 		user.Email, user.PasswordHash, user.Role,
 	).Scan(&user.ID, &user.CreatedAt)
 
@@ -53,14 +72,9 @@ func (r *PostgresRepository) Create(ctx context.Context, user models.User) (mode
 }
 
 func (r *PostgresRepository) GetByEmail(ctx context.Context, email string) (models.User, error) {
-	query := `
-        SELECT user_id, email, password_hash, role, created_at
-        FROM app_user
-        WHERE email = $1
-    `
 
 	var user models.User
-	err := r.pool.QueryRow(ctx, query, email).
+	err := r.pool.QueryRow(ctx, userByEmailQuery, email).
 		Scan(&user.ID, &user.Email, &user.PasswordHash, &user.Role, &user.CreatedAt)
 
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -77,9 +91,7 @@ func (r *PostgresRepository) GetRoleByID(ctx context.Context, userID int64) (str
 	var role string
 	err := r.pool.QueryRow(
 		ctx,
-		`SELECT role
-		FROM app_user
-		WHERE user_id = $1`,
+		userRoleQuery,
 		userID,
 	).Scan(&role)
 	if err != nil {
@@ -92,11 +104,7 @@ func (r *PostgresRepository) HasEmployerProfile(ctx context.Context, userID int6
 	var exist bool
 	err := r.pool.QueryRow(
 		ctx,
-		`SELECT EXISTS (
-			SELECT 1
-			FROM employer_profile
-			WHERE user_id = $1
-		)`,
+		hasEmployerProfileQuery,
 		userID,
 	).Scan(&exist)
 
