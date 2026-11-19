@@ -15,6 +15,7 @@ type ResumeRepository interface {
 	ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error)
 	Update(ctx context.Context, resume models.Resume, seekerID int) (models.Resume, error)
 	Delete(ctx context.Context, id int, seekerID int) error
+	HasApplicantResume(ctx context.Context, resumeID int, employerID int) (bool, error)
 }
 
 type ResumeUsecase struct {
@@ -33,13 +34,29 @@ func (u *ResumeUsecase) Create(ctx context.Context, userID int, role models.Role
 	return u.resumes.Create(ctx, resume)
 }
 
-func (u *ResumeUsecase) GetByID(ctx context.Context, id int) (models.Resume, error) {
-	res, err := u.resumes.GetByID(ctx, id)
+func (u *ResumeUsecase) GetByID(ctx context.Context, resumeID int, userID int, role models.Role) (models.Resume, error) {
+	res, err := u.resumes.GetByID(ctx, resumeID)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return models.Resume{}, apperrors.ErrNotFound
 		}
 		return models.Resume{}, err
+	}
+
+	if role.IsSeeker() {
+		if int64(res.SeekerID) != int64(userID) {
+			return models.Resume{}, apperrors.ErrForbidden
+		}
+	} else if role.IsEmployer() {
+		hasAccess, err := u.resumes.HasApplicantResume(ctx, resumeID, userID)
+		if err != nil {
+			return models.Resume{}, err
+		}
+		if !hasAccess {
+			return models.Resume{}, apperrors.ErrForbidden
+		}
+	} else {
+		return models.Resume{}, apperrors.ErrForbidden
 	}
 	return res, nil
 }

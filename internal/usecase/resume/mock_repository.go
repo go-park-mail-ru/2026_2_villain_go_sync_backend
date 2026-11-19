@@ -85,6 +85,21 @@ func (mr *MockResumeRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResumeRepository)(nil).GetByID), ctx, id)
 }
 
+// HasApplicantResume mocks base method.
+func (m *MockResumeRepository) HasApplicantResume(ctx context.Context, resumeID, employerID int) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasApplicantResume", ctx, resumeID, employerID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// HasApplicantResume indicates an expected call of HasApplicantResume.
+func (mr *MockResumeRepositoryMockRecorder) HasApplicantResume(ctx, resumeID, employerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasApplicantResume", reflect.TypeOf((*MockResumeRepository)(nil).HasApplicantResume), ctx, resumeID, employerID)
+}
+
 // ListBySeekerID mocks base method.
 func (m *MockResumeRepository) ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error) {
 	m.ctrl.T.Helper()
