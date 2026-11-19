@@ -38,18 +38,26 @@ type User struct {
 }
 
 type Applicant struct {
-	FirstName     string    `json:"first_name"`
-	LastName      string    `json:"last_name"`
-	Status        string    `json:"status"`
-	AppliedAt     time.Time `json:"applied_at"`
-	ResumeTitle   string    `json:"resume_title"`
-	ApplicationID int64     `json:"application_id"`
-	VacancyID     int64     `json:"vacancy_id"`
-	VacancyTitle  string    `json:"vacancy_title"`
-	SeekerID      int64     `json:"seeker_id"`
-	ResumeID      int64     `json:"resume_id"`
-	CoverLetter   *string   `json:"cover_letter"`
-	AvatarURL     *string   `json:"avatar_url"`
+	FirstName       string     `json:"first_name"`
+	LastName        string     `json:"last_name"`
+	Status          string     `json:"status"`
+	StatusHistoryID *int64     `json:"status_history_id"`
+	StatusComment   *string    `json:"status_comment"`
+	StatusChangedAt *time.Time `json:"status_changed_at"`
+	StatusChangedBy *int64     `json:"status_changed_by"`
+	ReasonCode      *string    `json:"reason_code"`
+	AppliedAt       time.Time  `json:"applied_at"`
+	CreatedAt       time.Time  `json:"created_at"`
+	UpdatedAt       time.Time  `json:"updated_at"`
+	VacancyVersion  int        `json:"vacancy_version"`
+	ResumeTitle     string     `json:"resume_title"`
+	ApplicationID   int64      `json:"application_id"`
+	VacancyID       int64      `json:"vacancy_id"`
+	VacancyTitle    string     `json:"vacancy_title"`
+	SeekerID        int64      `json:"seeker_id"`
+	ResumeID        *int64     `json:"resume_id"`
+	CoverLetter     *string    `json:"cover_letter"`
+	AvatarURL       *string    `json:"avatar_url"`
 }
 
 func (a *Applicant) SetAvatarURL(avatarKey string) {

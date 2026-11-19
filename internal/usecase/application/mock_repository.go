@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	application "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -54,6 +55,36 @@ func (m *MockApplicationRepository) Create(ctx context.Context, input models.App
 func (mr *MockApplicationRepositoryMockRecorder) Create(ctx, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockApplicationRepository)(nil).Create), ctx, input)
+}
+
+// ListBySeeker mocks base method.
+func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID int64) ([]models.SeekerApplication, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID)
+	ret0, _ := ret[0].([]models.SeekerApplication)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBySeeker indicates an expected call of ListBySeeker.
+func (mr *MockApplicationRepositoryMockRecorder) ListBySeeker(ctx, seekerID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationRepository)(nil).ListBySeeker), ctx, seekerID)
+}
+
+// UpdateStatus mocks base method.
+func (m *MockApplicationRepository) UpdateStatus(ctx context.Context, input application.UpdateStatusInput) (models.ApplicationStatusUpdate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, input)
+	ret0, _ := ret[0].(models.ApplicationStatusUpdate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockApplicationRepositoryMockRecorder) UpdateStatus(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockApplicationRepository)(nil).UpdateStatus), ctx, input)
 }
 
 // MockResumeRepository is a mock of ResumeRepository interface.

@@ -21,17 +21,14 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 
 	coverLetter := "Cover letter"
 	rows := pgxmock.NewRows([]string{"application_id", "created_at", "updated_at"}).AddRow(1, now, now)
-	mockPool.ExpectQuery(`INSERT INTO application`).
-		WithArgs(int64(10), 1, int64(5), &coverLetter).
+	mockPool.ExpectQuery(`FROM create_application`).
+		WithArgs(int64(10), 1, int64(5), int64(2), &coverLetter).
 		WillReturnRows(rows)
-
-	mockPool.ExpectExec(`INSERT INTO application_status_history`).
-		WithArgs(int64(1)).
-		WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 	mockPool.ExpectCommit()
 
 	app := models.Application{
+		SeekerID:       2,
 		VacancyID:      10,
 		VacancyVersion: 1,
 		ResumeID:       5,

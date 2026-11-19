@@ -6,3 +6,11 @@ type CreateApplicationInput struct {
 	ResumeID    int
 	CoverLetter *string
 }
+
+type UpdateStatusInput struct {
+	ApplicationID int64
+	EmployerID    int64
+	Status        string
+	ReasonCode    *string
+	Comment       *string
+}

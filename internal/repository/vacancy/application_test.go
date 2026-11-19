@@ -70,22 +70,24 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 
 			repo := vacancy.NewPostgresRepository(mockPool)
 			now := time.Now()
+			resumeID := int64(7)
 
 			rows := pgxmock.NewRows([]string{
 				"first_name", "last_name", "status",
 				"applied_at", "resume_title",
 				"application_id", "vacancy_id", "vacancy_title",
 				"seeker_id", "resume_id", "cover_letter",
-				"avatar_key",
+				"avatar_key", "updated_at", "vacancy_version", "status_history_id",
+				"status_comment", "status_changed_at", "status_changed_by", "reason_code",
 			}).AddRow(
 				"Ivan", "Ivanov", "created",
 				now, "Go dev",
 				int64(5), int64(1), "Go dev",
-				int64(12), int64(7), nil,
-				tt.avatarKey,
+				int64(12), &resumeID, nil,
+				tt.avatarKey, now, 2, nil, nil, nil, nil, nil,
 			)
 
-			mockPool.ExpectQuery(`FROM application a`).
+			mockPool.ExpectQuery(`FROM application AS a`).
 				WithArgs(int64(1)).
 				WillReturnRows(rows)
 
@@ -111,7 +113,7 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 
 			app := applicants[0]
 
-			if app.ApplicationID != 5 || app.ResumeID != 7 {
+			if app.ApplicationID != 5 || app.VacancyVersion != 2 || !app.CreatedAt.Equal(now) || !app.UpdatedAt.Equal(now) || app.ResumeID == nil || *app.ResumeID != 7 {
 				t.Fatalf("unexpected applicant IDs: %+v", app)
 			}
 
