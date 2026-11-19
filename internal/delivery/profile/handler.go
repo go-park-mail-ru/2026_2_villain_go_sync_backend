@@ -12,6 +12,7 @@ import (
 	profiledto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/sanitizer"
 )
 
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=profile
@@ -70,14 +71,27 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	details, err := req.CareerDetails.Model(true)
+	if err != nil {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
 	profile, err := h.profiles.UpdateSeeker(r.Context(), int(userID), role, models.SeekerProfile{
+		CareerDetails: details,
 		Profile: models.Profile{
 			UserID:      int(userID),
 			Description: req.Description.String(),
 		},
-		FirstName: req.FirstName.String(),
-		LastName:  req.LastName.String(),
-		Phone:     req.Phone.String(),
+		FirstName:         req.FirstName.String(),
+		LastName:          req.LastName.String(),
+		Phone:             req.Phone.String(),
+		City:              sanitizer.Ptr(req.City),
+		Messenger:         sanitizer.Ptr(req.Messenger),
+		ContactEmail:      sanitizer.Ptr(req.ContactEmail),
+		PreferredPosition: sanitizer.Ptr(req.PreferredPosition),
+		PreferredCities:   sanitizer.Ptr(req.PreferredCities),
+		WorkFormat:        sanitizer.Ptr(req.WorkFormat),
 	})
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update seeker profile")
@@ -122,13 +136,26 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	details, err := req.CompanyDetails.Model()
+	if err != nil {
+		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
+		return
+	}
+
 	profile, err := h.profiles.UpdateEmployer(r.Context(), int(userID), role, models.EmployerProfile{
+		CompanyDetails: details,
 		Profile: models.Profile{
 			UserID:      int(userID),
 			Description: req.Description.String(),
 		},
-		CompanyName: req.CompanyName.String(),
-		Website:     req.Website.String(),
+		CompanyName:   req.CompanyName.String(),
+		Website:       req.Website.String(),
+		Industry:      sanitizer.Ptr(req.Industry),
+		TeamSize:      sanitizer.Ptr(req.TeamSize),
+		MainCity:      sanitizer.Ptr(req.MainCity),
+		Benefits:      sanitizer.Ptr(req.Benefits),
+		HiringEmail:   sanitizer.Ptr(req.HiringEmail),
+		OfficeAddress: sanitizer.Ptr(req.OfficeAddress),
 	})
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update employer profile")
