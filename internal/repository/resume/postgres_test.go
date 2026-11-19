@@ -19,16 +19,21 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 
 	repo := resume.NewPostgresRepository(mockPool)
 	now := time.Now()
+	targetPosition := "Engineer"
 
-	rows := pgxmock.NewRows([]string{"resume_id", "created_at", "updated_at"}).
-		AddRow(1, now, now)
+	rows := pgxmock.NewRows([]string{"resume_id", "created_at", "updated_at", "target_position", "city", "employment_type", "work_format", "work_schedule", "salary_from", "portfolio_url", "languages"}).
+		AddRow(1, now, now, &targetPosition, nil, nil, nil, nil, nil, nil, nil)
 
+	mockPool.ExpectBegin()
 	mockPool.ExpectQuery(`INSERT INTO resume`).
-		WithArgs(10, "Go dev", "desc", "exp", "edu").
+		WithArgs(10, "Go dev", "desc", "exp", "edu", &targetPosition, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*float64)(nil), (*string)(nil), (*string)(nil)).
 		WillReturnRows(rows)
+	expectCareerDetails(mockPool, "resume")
+	mockPool.ExpectCommit()
+	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	res, err := repo.Create(context.Background(), models.Resume{
-		SeekerID:    10,
+		TargetPosition: &targetPosition, SeekerID: 10,
 		Title:       "Go dev",
 		Description: "desc",
 		Experience:  "exp",
@@ -53,12 +58,16 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 	repo := resume.NewPostgresRepository(mockPool)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"resume_id", "seeker_id", "title", "description", "experience", "education", "created_at", "updated_at"}).
-		AddRow(1, 10, "Go dev", "desc", "exp", "edu", now, now)
+	rows := pgxmock.NewRows([]string{"resume_id", "seeker_id", "title", "description", "experience", "education", "created_at", "updated_at", "target_position", "city", "employment_type", "work_format", "work_schedule", "salary_from", "portfolio_url", "languages"}).
+		AddRow(1, 10, "Go dev", "desc", "exp", "edu", now, now, nil, nil, nil, nil, nil, nil, nil, nil)
 
+	mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	mockPool.ExpectQuery(`SELECT resume_id`).
 		WithArgs(1).
 		WillReturnRows(rows)
+	expectCareerDetails(mockPool, "resume")
+	mockPool.ExpectCommit()
+	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	res, err := repo.GetByID(context.Background(), 1)
 
@@ -76,9 +85,12 @@ func TestPostgresRepository_GetByID_NotFound(t *testing.T) {
 
 	repo := resume.NewPostgresRepository(mockPool)
 
+	mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	mockPool.ExpectQuery(`SELECT resume_id`).
 		WithArgs(1).
 		WillReturnError(pgx.ErrNoRows)
+	mockPool.ExpectRollback()
+	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	_, err := repo.GetByID(context.Background(), 1)
 
@@ -94,13 +106,17 @@ func TestPostgresRepository_ListBySeekerID_Success(t *testing.T) {
 	repo := resume.NewPostgresRepository(mockPool)
 	now := time.Now()
 
-	rows := pgxmock.NewRows([]string{"resume_id", "seeker_id", "title", "description", "experience", "education", "created_at", "updated_at"}).
-		AddRow(1, 10, "Go dev", "desc", "exp", "edu", now, now).
-		AddRow(2, 10, "C++ dev", "desc", "exp", "edu", now, now)
+	rows := pgxmock.NewRows([]string{"resume_id", "seeker_id", "title", "description", "experience", "education", "created_at", "updated_at", "target_position", "city", "employment_type", "work_format", "work_schedule", "salary_from", "portfolio_url", "languages"}).
+		AddRow(1, 10, "Go dev", "desc", "exp", "edu", now, now, nil, nil, nil, nil, nil, nil, nil, nil).
+		AddRow(2, 10, "C++ dev", "desc", "exp", "edu", now, now, nil, nil, nil, nil, nil, nil, nil, nil)
 
+	mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	mockPool.ExpectQuery(`SELECT resume_id`).
 		WithArgs(10).
 		WillReturnRows(rows)
+	expectCareerDetails(mockPool, "resume")
+	mockPool.ExpectCommit()
+	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	resumes, err := repo.ListBySeekerID(context.Background(), 10)
 
@@ -118,17 +134,23 @@ func TestPostgresRepository_Update_Success(t *testing.T) {
 
 	repo := resume.NewPostgresRepository(mockPool)
 	now := time.Now()
+	targetPosition := "Engineer"
 
 	rows := pgxmock.NewRows([]string{
 		"seeker_id", "created_at", "updated_at",
-	}).AddRow(10, now, now)
+		"target_position", "city", "employment_type", "work_format", "work_schedule", "salary_from", "portfolio_url", "languages",
+	}).AddRow(10, now, now, &targetPosition, nil, nil, nil, nil, nil, nil, nil)
 
+	mockPool.ExpectBegin()
 	mockPool.ExpectQuery(`UPDATE resume`).
-		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10).
+		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10, &targetPosition, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*float64)(nil), (*string)(nil), (*string)(nil), false).
 		WillReturnRows(rows)
+	expectCareerDetails(mockPool, "resume")
+	mockPool.ExpectCommit()
+	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	res, err := repo.Update(context.Background(), models.Resume{
-		ID:          1,
+		TargetPosition: &targetPosition, ID: 1,
 		Title:       "Updated Title",
 		Description: "desc",
 		Experience:  "exp",
@@ -177,5 +199,13 @@ func TestPostgresRepository_Delete_NoContent(t *testing.T) {
 
 	if !errors.Is(err, apperrors.ErrNoContent) {
 		t.Errorf("expected ErrNoContent, got %v", err)
+	}
+}
+
+func expectCareerDetails(pool pgxmock.PgxPoolIface, prefix string) {
+	for _, section := range []string{"experience", "education", "skill", "project"} {
+		pool.ExpectQuery("FROM " + prefix + "_" + section).
+			WithArgs(pgxmock.AnyArg()).
+			WillReturnRows(pgxmock.NewRows(nil))
 	}
 }
