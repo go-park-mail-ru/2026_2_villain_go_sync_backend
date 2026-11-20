@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v5"
 )
 
@@ -87,24 +88,39 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 				tt.avatarKey, now, 2, nil, nil, nil, nil, nil,
 			)
 
-			mockPool.ExpectQuery(`FROM application AS a`).
+			filter := `v.employer_id = \$1`
+			if tt.byVacancy {
+				filter = `a.vacancy_id = \$1`
+			}
+			mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+			mockPool.ExpectQuery(`SELECT COUNT\(\*\).*WHERE ` + filter).
 				WithArgs(int64(1)).
+				WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int64(8)))
+			mockPool.ExpectQuery(`WHERE `+filter+` ORDER BY a.created_at DESC, a.application_id DESC LIMIT \$2 OFFSET \$3`).
+				WithArgs(int64(1), 4, int64(4)).
 				WillReturnRows(rows)
+			mockPool.ExpectCommit()
+			mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 			var applicants []models.Applicant
+			var total int64
 
 			if tt.byVacancy {
-				applicants, err = repo.ListByVacancyID(
-					context.Background(), 1,
+				applicants, total, err = repo.ListByVacancyID(
+					context.Background(), 1, 2, 4,
 				)
 			} else {
-				applicants, err = repo.ListByEmployerID(
-					context.Background(), 1,
+				applicants, total, err = repo.ListByEmployerID(
+					context.Background(), 1, 2, 4,
 				)
 			}
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if total != 8 {
+				t.Fatalf("total = %d, want 8", total)
 			}
 
 			if len(applicants) != 1 {

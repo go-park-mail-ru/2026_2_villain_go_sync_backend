@@ -15,14 +15,14 @@ import (
 
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=vacancy
 type VacancyUsecase interface {
-	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
+	ListVacancies(ctx context.Context, page int, limit int) ([]models.Vacancy, int64, error)
 	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
-	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
+	ListByEmployer(ctx context.Context, employerID int64, page, limit int) ([]models.Vacancy, int64, error)
 	Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
-	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error)
-	ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error)
+	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64, page, limit int) ([]models.Applicant, int64, error)
+	ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, page, limit int) ([]models.Applicant, int64, error)
 }
 
 type Handler struct {
@@ -34,13 +34,18 @@ func NewHandler(vacancy VacancyUsecase) *Handler {
 }
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
-	vacancies, err := h.vacancy.ListVacancies(r.Context())
+	page, limit, ok := httputil.ReadPagination(w, r)
+	if !ok {
+		return
+	}
+
+	vacancies, total, err := h.vacancy.ListVacancies(r.Context(), page, limit)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancies)
+	httputil.WritePage(w, vacancies, page, limit, total)
 }
 
 func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
@@ -108,13 +113,17 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	vacancies, err := h.vacancy.ListByEmployer(r.Context(), userID)
+	page, limit, ok := httputil.ReadPagination(w, r)
+	if !ok {
+		return
+	}
+	vacancies, total, err := h.vacancy.ListByEmployer(r.Context(), userID, page, limit)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list vacancies")
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancies)
+	httputil.WritePage(w, vacancies, page, limit, total)
 }
 
 func parseOptionalSalary(raw json.RawMessage) (dto.OptionalSalary, error) {
@@ -228,13 +237,17 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	applicants, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID)
+	page, limit, ok := httputil.ReadPagination(w, r)
+	if !ok {
+		return
+	}
+	applicants, total, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID, page, limit)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applicants")
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, applicants)
+	httputil.WritePage(w, applicants, page, limit, total)
 }
 
 func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request) {
@@ -249,11 +262,15 @@ func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	applicants, err := h.vacancy.ListEmployerApplicants(r.Context(), userID, role)
+	page, limit, ok := httputil.ReadPagination(w, r)
+	if !ok {
+		return
+	}
+	applicants, total, err := h.vacancy.ListEmployerApplicants(r.Context(), userID, role, page, limit)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applicants")
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, applicants)
+	httputil.WritePage(w, applicants, page, limit, total)
 }

@@ -21,6 +21,7 @@ func TestVacancyListExtra(t *testing.T) {
 	}{
 		{name: "list all success"},
 		{name: "list all error", repoErr: errors.New("db failure")},
+		{name: "list all count error", repoErr: errors.New("count failure")},
 		{name: "list employer success", employer: true},
 		{name: "list employer repo error", employer: true, repoErr: errors.New("db failure")},
 		{name: "list employer forbidden", employer: true, forbid: true},
@@ -46,22 +47,29 @@ func TestVacancyListExtra(t *testing.T) {
 					).Return("employer", nil)
 
 					vr.EXPECT().ListByEmployer(
-						gomock.Any(), int64(10),
-					).Return(expected, tt.repoErr)
+						gomock.Any(), int64(10), 2, 12,
+					).Return(expected, int64(13), tt.repoErr)
 				}
 			} else {
-				vr.EXPECT().ListVacancies(
-					gomock.Any(),
-				).Return(expected, tt.repoErr)
+				vr.EXPECT().ListVacancies(gomock.Any(), 2, 12).
+					Return(expected, int64(13), tt.repoErr)
 			}
 
 			var got []models.Vacancy
 			var err error
 
 			if tt.employer {
-				got, err = uc.ListByEmployer(context.Background(), 10)
+				var total int64
+				got, total, err = uc.ListByEmployer(context.Background(), 10, 2, 12)
+				if err == nil && total != 13 {
+					t.Errorf("total = %d, want 13", total)
+				}
 			} else {
-				got, err = uc.ListVacancies(context.Background())
+				var total int64
+				got, total, err = uc.ListVacancies(context.Background(), 2, 12)
+				if err == nil && total != 13 {
+					t.Errorf("total = %d, want 13", total)
+				}
 			}
 
 			switch {
@@ -247,13 +255,16 @@ func TestVacancyListEmployerApplicantsExtra(t *testing.T) {
 
 			if tt.role == models.RoleEmployer {
 				vr.EXPECT().ListByEmployerID(
-					gomock.Any(), int64(10),
-				).Return(want, tt.repoErr)
+					gomock.Any(), int64(10), 1, 12,
+				).Return(want, int64(1), tt.repoErr)
 			}
 
-			got, err := uc.ListEmployerApplicants(
-				context.Background(), 10, tt.role,
+			got, total, err := uc.ListEmployerApplicants(
+				context.Background(), 10, tt.role, 1, 12,
 			)
+			if err == nil && total != 1 {
+				t.Errorf("total = %d, want 1", total)
+			}
 
 			switch {
 			case tt.wantErr != nil:

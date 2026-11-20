@@ -26,7 +26,7 @@ func setupUsecase(t *testing.T) (*vacancyUsecase.VacancyUsecase, *vacancy.MockVa
 func TestVacancyUsecase_ListApplicants_NotEmployer(t *testing.T) {
 	uc, _, _ := setupUsecase(t)
 
-	_, err := uc.ListApplicants(context.Background(), 10, models.RoleSeeker, 1)
+	_, _, err := uc.ListApplicants(context.Background(), 10, models.RoleSeeker, 1, 2, 5)
 
 	if !errors.Is(err, apperrors.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
@@ -40,7 +40,7 @@ func TestVacancyUsecase_ListApplicants_NotOwner(t *testing.T) {
 		IsOwner(gomock.Any(), int64(1), int64(10)).
 		Return(false, nil)
 
-	_, err := uc.ListApplicants(context.Background(), 10, models.RoleEmployer, 1)
+	_, _, err := uc.ListApplicants(context.Background(), 10, models.RoleEmployer, 1, 2, 5)
 
 	if !errors.Is(err, apperrors.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
@@ -54,11 +54,14 @@ func TestVacancyUsecase_ListApplicants_Success(t *testing.T) {
 		IsOwner(gomock.Any(), int64(1), int64(10)).
 		Return(true, nil)
 	mockVacancyRepo.EXPECT().
-		ListByVacancyID(gomock.Any(), int64(1)).
-		Return([]models.Applicant{{FirstName: "Ivan"}}, nil)
+		ListByVacancyID(gomock.Any(), int64(1), 2, 5).
+		Return([]models.Applicant{{FirstName: "Ivan"}}, int64(6), nil)
 
-	res, err := uc.ListApplicants(context.Background(), 10, models.RoleEmployer, 1)
+	res, total, err := uc.ListApplicants(context.Background(), 10, models.RoleEmployer, 1, 2, 5)
 
+	if total != 6 {
+		t.Errorf("total = %d, want 6", total)
+	}
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

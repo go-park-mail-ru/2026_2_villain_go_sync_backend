@@ -66,16 +66,23 @@ func TestMoreVacancyHandler_ListByEmployer(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			uc := vacancy.NewMockVacancyUsecase(ctrl)
 			h := vacancy.NewHandler(uc)
-			req := httptest.NewRequest(http.MethodGet, "/api/employer/vacancies", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/employer/vacancies?page=2&limit=5", nil)
 			if tt.authorized {
 				req = req.WithContext(auth.WithUserID(req.Context(), 12))
-				uc.EXPECT().ListByEmployer(gomock.Any(), int64(12)).
-					Return([]models.Vacancy{{ID: 7, Title: "Go developer"}}, tt.err)
+				uc.EXPECT().ListByEmployer(gomock.Any(), int64(12), 2, 5).
+					Return([]models.Vacancy{{ID: 7, Title: "Go developer"}}, int64(6), tt.err)
 			}
 			rec := httptest.NewRecorder()
 			h.ListVacanciesByEmployer(rec, req)
 			if rec.Code != tt.status {
 				t.Fatalf("want %d, got %d: %s", tt.status, rec.Code, rec.Body.String())
+			}
+			if tt.status == http.StatusOK {
+				for _, part := range []string{`"items":[`, `"id":7`, `"page":2`, `"limit":5`, `"total":6`, `"total_pages":2`} {
+					if !bytes.Contains(rec.Body.Bytes(), []byte(part)) {
+						t.Errorf("missing %s in %s", part, rec.Body.String())
+					}
+				}
 			}
 		})
 	}
@@ -249,8 +256,8 @@ func TestMoreVacancyHandler_ListEmployerApplicants(t *testing.T) {
 				req = req.WithContext(ctx)
 			}
 			if tt.call {
-				uc.EXPECT().ListEmployerApplicants(gomock.Any(), int64(12), tt.role).
-					Return([]models.Applicant{{ApplicationID: 4, FirstName: "Ivan"}}, tt.err)
+				uc.EXPECT().ListEmployerApplicants(gomock.Any(), int64(12), tt.role, 1, 12).
+					Return([]models.Applicant{{ApplicationID: 4, FirstName: "Ivan"}}, int64(1), tt.err)
 			}
 			rec := httptest.NewRecorder()
 			h.ListEmployerApplicants(rec, req)
