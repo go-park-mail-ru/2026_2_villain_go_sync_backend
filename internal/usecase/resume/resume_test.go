@@ -58,13 +58,13 @@ func TestResumeUsecase_GetByID_Success(t *testing.T) {
 	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
-	expected := models.Resume{ID: 1, Title: "Go dev"}
+	expected := models.Resume{ID: 1, SeekerID: 10, Title: "Go dev"}
 
 	mockRepo.EXPECT().
 		GetByID(gomock.Any(), 1).
 		Return(expected, nil)
 
-	res, err := uc.GetByID(context.Background(), 1)
+	res, err := uc.GetByID(context.Background(), 1, 10, models.RoleSeeker)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -85,7 +85,7 @@ func TestResumeUsecase_GetByID_NotFound(t *testing.T) {
 		GetByID(gomock.Any(), 1).
 		Return(models.Resume{}, apperrors.ErrNotFound)
 
-	_, err := uc.GetByID(context.Background(), 1)
+	_, err := uc.GetByID(context.Background(), 1, 10, models.RoleSeeker)
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("expected ErrNotFound, got %v", err)
