@@ -25,7 +25,7 @@ const (
 
 type PgxPool interface {
 	QueryRow(context.Context, string, ...any) pgx.Row
-	Query(context.Context, string, ...any) (pgx.Rows, error)
+	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
@@ -124,17 +124,21 @@ func (r *PostgresRepository) UpdateStatus(ctx context.Context, input dto.UpdateS
 	return result, nil
 }
 
+const seekerApplicationsFrom = `
+	  FROM application AS a
+	  JOIN application_resume_snapshot AS snapshot ON snapshot.application_id = a.application_id
+	  JOIN vacancy_history AS vh ON vh.vacancy_id = a.vacancy_id AND vh.version = a.vacancy_version
+	  JOIN vacancy AS v ON v.vacancy_id = a.vacancy_id
+	  JOIN employer_profile AS ep ON ep.user_id = v.employer_id
+`
+
 const listBySeekerQuery = `
 	SELECT a.application_id, a.seeker_id, a.vacancy_id, a.vacancy_version,
 	       a.cover_letter, a.created_at, a.updated_at, snapshot.source_resume_id,
 	       vh.title, ep.company_name, snapshot.title,
 	       COALESCE(latest.status, 'created'),
 	       latest.reason_code, latest.comment, COALESCE(latest.changed_at, a.created_at)
-	  FROM application AS a
-	  JOIN application_resume_snapshot AS snapshot ON snapshot.application_id = a.application_id
-	  JOIN vacancy_history AS vh ON vh.vacancy_id = a.vacancy_id AND vh.version = a.vacancy_version
-	  JOIN vacancy AS v ON v.vacancy_id = a.vacancy_id
-	  JOIN employer_profile AS ep ON ep.user_id = v.employer_id
+` + seekerApplicationsFrom + `
 	  LEFT JOIN LATERAL (
 	      SELECT status, reason_code, comment, changed_at
 	        FROM application_status_history
@@ -144,10 +148,30 @@ const listBySeekerQuery = `
 	  ) AS latest ON TRUE
 	 WHERE a.seeker_id = $1
 	 ORDER BY a.created_at DESC, a.application_id DESC
+	 LIMIT $2 OFFSET $3
 `
 
-func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64) ([]models.SeekerApplication, error) {
-	rows, err := r.pool.Query(ctx, listBySeekerQuery, seekerID)
+const countBySeekerQuery = `SELECT COUNT(*)` + seekerApplicationsFrom + ` WHERE a.seeker_id = $1`
+
+func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64, page, limit int) ([]models.SeekerApplication, int64, error) {
+	var applications []models.SeekerApplication
+	var total int64
+	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, countBySeekerQuery, seekerID).Scan(&total); err != nil {
+			return fmt.Errorf("count seeker applications: %w", err)
+		}
+		var err error
+		applications, err = querySeekerApplications(ctx, tx, seekerID, limit, int64(page-1)*int64(limit))
+		return err
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return applications, total, nil
+}
+
+func querySeekerApplications(ctx context.Context, tx pgx.Tx, seekerID int64, limit int, offset int64) ([]models.SeekerApplication, error) {
+	rows, err := tx.Query(ctx, listBySeekerQuery, seekerID, limit, offset)
 	if err != nil {
 		return nil, fmt.Errorf("list seeker applications: %w", err)
 	}

@@ -18,7 +18,7 @@ import (
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=application
 type ApplicationUsecase interface {
 	UpdateStatus(ctx context.Context, role models.Role, input dto.UpdateStatusInput) (models.ApplicationStatusUpdate, error)
-	ListBySeeker(ctx context.Context, seekerID int64, role models.Role) ([]models.SeekerApplication, error)
+	ListBySeeker(ctx context.Context, seekerID int64, role models.Role, page int, limit int) ([]models.SeekerApplication, int64, error)
 	Create(ctx context.Context, input dto.CreateApplicationInput) (models.Application, error)
 }
 
@@ -133,10 +133,14 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	}
 	role, _ := auth.RoleFromContext(r.Context())
 
-	applications, err := h.applications.ListBySeeker(r.Context(), userID, role)
+	page, limit, ok := httputil.ReadPagination(w, r)
+	if !ok {
+		return
+	}
+	applications, total, err := h.applications.ListBySeeker(r.Context(), userID, role, page, limit)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applications")
 		return
 	}
-	httputil.WriteOK(w, http.StatusOK, applications)
+	httputil.WritePage(w, applications, page, limit, total)
 }

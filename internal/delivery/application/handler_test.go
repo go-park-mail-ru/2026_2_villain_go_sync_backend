@@ -89,3 +89,21 @@ func TestHandler_Create_InvalidVacancyID(t *testing.T) {
 		t.Errorf("expected 400, got %d", rec.Code)
 	}
 }
+
+func TestListMinePagination(t *testing.T) {
+	mockUC := application.NewMockApplicationUsecase(gomock.NewController(t))
+	mockUC.EXPECT().ListBySeeker(gomock.Any(), int64(10), models.RoleSeeker, 3, 5).
+		Return(nil, int64(6), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/seeker/applications?page=3&limit=5", nil)
+	ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
+	rec := httptest.NewRecorder()
+	application.NewHandler(mockUC).ListMine(rec, req.WithContext(ctx))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	for _, part := range []string{`"items":[]`, `"page":3`, `"limit":5`, `"total":6`, `"total_pages":2`} {
+		if !bytes.Contains(rec.Body.Bytes(), []byte(part)) {
+			t.Errorf("missing %s in %s", part, rec.Body.String())
+		}
+	}
+}
