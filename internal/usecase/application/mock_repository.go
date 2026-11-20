@@ -58,18 +58,19 @@ func (mr *MockApplicationRepositoryMockRecorder) Create(ctx, input any) *gomock.
 }
 
 // ListBySeeker mocks base method.
-func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID int64) ([]models.SeekerApplication, error) {
+func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID int64, page, limit int) ([]models.SeekerApplication, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID)
+	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID, page, limit)
 	ret0, _ := ret[0].([]models.SeekerApplication)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ListBySeeker indicates an expected call of ListBySeeker.
-func (mr *MockApplicationRepositoryMockRecorder) ListBySeeker(ctx, seekerID any) *gomock.Call {
+func (mr *MockApplicationRepositoryMockRecorder) ListBySeeker(ctx, seekerID, page, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationRepository)(nil).ListBySeeker), ctx, seekerID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationRepository)(nil).ListBySeeker), ctx, seekerID, page, limit)
 }
 
 // UpdateStatus mocks base method.

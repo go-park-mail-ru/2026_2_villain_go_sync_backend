@@ -7,18 +7,18 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
-func (u *VacancyUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64) ([]models.Applicant, error) {
+func (u *VacancyUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64, page int, limit int) ([]models.Applicant, int64, error) {
 	if !role.IsEmployer() {
-		return nil, apperrors.ErrForbidden
+		return nil, 0, apperrors.ErrForbidden
 	}
 
 	owned, err := u.vacancies.IsOwner(ctx, vacancyID, userID)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !owned {
-		return nil, apperrors.ErrForbidden
+		return nil, 0, apperrors.ErrForbidden
 	}
 
-	return u.vacancies.ListByVacancyID(ctx, vacancyID)
+	return u.vacancies.ListByVacancyID(ctx, vacancyID, page, limit)
 }

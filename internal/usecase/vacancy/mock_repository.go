@@ -101,63 +101,67 @@ func (mr *MockVacancyRepositoryMockRecorder) IsOwner(ctx, vacancyID, employerID 
 }
 
 // ListByEmployer mocks base method.
-func (m *MockVacancyRepository) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
+func (m *MockVacancyRepository) ListByEmployer(ctx context.Context, employerID int64, page, limit int) ([]models.Vacancy, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByEmployer", ctx, employerID)
+	ret := m.ctrl.Call(m, "ListByEmployer", ctx, employerID, page, limit)
 	ret0, _ := ret[0].([]models.Vacancy)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ListByEmployer indicates an expected call of ListByEmployer.
-func (mr *MockVacancyRepositoryMockRecorder) ListByEmployer(ctx, employerID any) *gomock.Call {
+func (mr *MockVacancyRepositoryMockRecorder) ListByEmployer(ctx, employerID, page, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployer", reflect.TypeOf((*MockVacancyRepository)(nil).ListByEmployer), ctx, employerID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployer", reflect.TypeOf((*MockVacancyRepository)(nil).ListByEmployer), ctx, employerID, page, limit)
 }
 
 // ListByEmployerID mocks base method.
-func (m *MockVacancyRepository) ListByEmployerID(ctx context.Context, employerID int64) ([]models.Applicant, error) {
+func (m *MockVacancyRepository) ListByEmployerID(ctx context.Context, employerID int64, page, limit int) ([]models.Applicant, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByEmployerID", ctx, employerID)
+	ret := m.ctrl.Call(m, "ListByEmployerID", ctx, employerID, page, limit)
 	ret0, _ := ret[0].([]models.Applicant)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ListByEmployerID indicates an expected call of ListByEmployerID.
-func (mr *MockVacancyRepositoryMockRecorder) ListByEmployerID(ctx, employerID any) *gomock.Call {
+func (mr *MockVacancyRepositoryMockRecorder) ListByEmployerID(ctx, employerID, page, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployerID", reflect.TypeOf((*MockVacancyRepository)(nil).ListByEmployerID), ctx, employerID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployerID", reflect.TypeOf((*MockVacancyRepository)(nil).ListByEmployerID), ctx, employerID, page, limit)
 }
 
 // ListByVacancyID mocks base method.
-func (m *MockVacancyRepository) ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error) {
+func (m *MockVacancyRepository) ListByVacancyID(ctx context.Context, vacancyID int64, page, limit int) ([]models.Applicant, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByVacancyID", ctx, vacancyID)
+	ret := m.ctrl.Call(m, "ListByVacancyID", ctx, vacancyID, page, limit)
 	ret0, _ := ret[0].([]models.Applicant)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ListByVacancyID indicates an expected call of ListByVacancyID.
-func (mr *MockVacancyRepositoryMockRecorder) ListByVacancyID(ctx, vacancyID any) *gomock.Call {
+func (mr *MockVacancyRepositoryMockRecorder) ListByVacancyID(ctx, vacancyID, page, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByVacancyID", reflect.TypeOf((*MockVacancyRepository)(nil).ListByVacancyID), ctx, vacancyID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByVacancyID", reflect.TypeOf((*MockVacancyRepository)(nil).ListByVacancyID), ctx, vacancyID, page, limit)
 }
 
 // ListVacancies mocks base method.
-func (m *MockVacancyRepository) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
+func (m *MockVacancyRepository) ListVacancies(ctx context.Context, page, limit int) ([]models.Vacancy, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVacancies", ctx)
+	ret := m.ctrl.Call(m, "ListVacancies", ctx, page, limit)
 	ret0, _ := ret[0].([]models.Vacancy)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // ListVacancies indicates an expected call of ListVacancies.
-func (mr *MockVacancyRepositoryMockRecorder) ListVacancies(ctx any) *gomock.Call {
+func (mr *MockVacancyRepositoryMockRecorder) ListVacancies(ctx, page, limit any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVacancies", reflect.TypeOf((*MockVacancyRepository)(nil).ListVacancies), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVacancies", reflect.TypeOf((*MockVacancyRepository)(nil).ListVacancies), ctx, page, limit)
 }
 
 // Update mocks base method.
