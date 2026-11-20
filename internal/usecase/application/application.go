@@ -13,7 +13,7 @@ import (
 type ApplicationRepository interface {
 	GetVacancyEmployerID(ctx context.Context, applicationID int64) (int64, error)
 	UpdateStatus(ctx context.Context, input dto.UpdateStatusInput) (models.ApplicationStatusUpdate, error)
-	ListBySeeker(ctx context.Context, seekerID int64) ([]models.SeekerApplication, error)
+	ListBySeeker(ctx context.Context, seekerID int64, page int, limit int) ([]models.SeekerApplication, int64, error)
 	Create(ctx context.Context, input models.Application) (models.Application, error)
 }
 
@@ -121,9 +121,9 @@ func (u *ApplicationUsecase) UpdateStatus(ctx context.Context, role models.Role,
 	return u.applications.UpdateStatus(ctx, input)
 }
 
-func (u *ApplicationUsecase) ListBySeeker(ctx context.Context, seekerID int64, role models.Role) ([]models.SeekerApplication, error) {
+func (u *ApplicationUsecase) ListBySeeker(ctx context.Context, seekerID int64, role models.Role, page int, limit int) ([]models.SeekerApplication, int64, error) {
 	if !role.IsSeeker() {
-		return nil, apperrors.ErrForbidden
+		return nil, 0, apperrors.ErrForbidden
 	}
-	return u.applications.ListBySeeker(ctx, seekerID)
+	return u.applications.ListBySeeker(ctx, seekerID, page, limit)
 }

@@ -136,7 +136,7 @@ func TestUpdateStatusValidation(t *testing.T) {
 func TestListBySeekerRequiresSeekerRole(t *testing.T) {
 	repo := uc.NewMockApplicationRepository(gomock.NewController(t))
 	usecase := uc.NewApplicationUsecase(repo, nil, nil, nil)
-	if _, err := usecase.ListBySeeker(context.Background(), 1, models.RoleEmployer); !errors.Is(err, apperrors.ErrForbidden) {
+	if _, _, err := usecase.ListBySeeker(context.Background(), 1, models.RoleEmployer, 1, 12); !errors.Is(err, apperrors.ErrForbidden) {
 		t.Fatalf("expected forbidden, got %v", err)
 	}
 }

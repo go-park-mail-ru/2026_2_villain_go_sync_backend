@@ -19,6 +19,7 @@ const (
 
 type PgxPool interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
+	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
 	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
 	QueryRow(ctx context.Context, sql string, args ...any) pgx.Row
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
@@ -87,6 +88,15 @@ const (
 
 	deleteVacancyQuery = `DELETE FROM vacancy
 		 WHERE vacancy_id = $1 AND employer_id = $2`
+	vacancyCountQuery = `
+    SELECT COUNT(*)
+    FROM vacancy v
+    JOIN employer_profile ep ON ep.user_id = v.employer_id
+    WHERE EXISTS (
+        SELECT 1
+        FROM vacancy_history vh
+        WHERE vh.vacancy_id = v.vacancy_id
+    )`
 )
 
 func NewPostgresRepository(pool PgxPool) *PostgresRepository {
@@ -252,12 +262,49 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	return vacancy, nil
 }
 
-func (r *PostgresRepository) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
-	rows, err := r.pool.Query(ctx, vacancySelectQuery)
+func (r *PostgresRepository) ListVacancies(ctx context.Context, page, limit int) ([]models.Vacancy, int64, error) {
+	offset := int64(page-1) * int64(limit)
+
+	const query = vacancySelectQuery +
+		` ORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT $1 OFFSET $2`
+
+	var vacancies []models.Vacancy
+	var total int64
+
+	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{
+		IsoLevel:   pgx.RepeatableRead,
+		AccessMode: pgx.ReadOnly,
+	}, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, vacancyCountQuery).Scan(&total); err != nil {
+			return err
+		}
+
+		rows, err := tx.Query(ctx, query, limit, offset)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+
+		vacancies = make([]models.Vacancy, 0, limit)
+
+		for rows.Next() {
+			vacancy, err := scanVacancy(rows)
+			if err != nil {
+				return err
+			}
+			vacancies = append(vacancies, vacancy)
+		}
+
+		return rows.Err()
+	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
+	return vacancies, total, nil
+}
+
+func scanVacancies(rows pgx.Rows) ([]models.Vacancy, error) {
 	defer rows.Close()
 
 	vacancies := make([]models.Vacancy, 0)
@@ -293,32 +340,30 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vaca
 	return vacancy, nil
 }
 
-func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
-	const query = vacancySelectQuery + "\nAND v.employer_id = $1"
-	rows, err := r.pool.Query(ctx, query, employerID)
-	if err != nil {
-		return nil, err
-	}
+func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64, page, limit int) ([]models.Vacancy, int64, error) {
+	const employerFilter = "\nAND v.employer_id = $1"
+	const countQuery = vacancyCountQuery + employerFilter
+	const query = vacancySelectQuery + employerFilter +
+		"\nORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT $2 OFFSET $3"
+	offset := int64(page-1) * int64(limit)
 
-	defer rows.Close()
-
-	vacancies := make([]models.Vacancy, 0)
-
-	for rows.Next() {
-		var vacancy models.Vacancy
-
-		vacancy, err = scanVacancy(rows)
-		if err != nil {
-			return nil, err
+	var vacancies []models.Vacancy
+	var total int64
+	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, countQuery, employerID).Scan(&total); err != nil {
+			return fmt.Errorf("count employer vacancies: %w", err)
 		}
-
-		vacancies = append(vacancies, vacancy)
+		rows, err := tx.Query(ctx, query, employerID, limit, offset)
+		if err != nil {
+			return fmt.Errorf("list employer vacancies: %w", err)
+		}
+		vacancies, err = scanVacancies(rows)
+		return err
+	})
+	if err != nil {
+		return nil, 0, err
 	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return vacancies, nil
+	return vacancies, total, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error) {

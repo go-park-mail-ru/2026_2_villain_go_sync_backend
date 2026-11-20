@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v5"
 )
 
@@ -204,5 +205,31 @@ func TestPostgresRepository_Update_ReturnsCategoryNames(t *testing.T) {
 				t.Fatal(err)
 			}
 		})
+	}
+}
+
+func TestPostgresRepository_ListByEmployer_EmptyPage(t *testing.T) {
+	mockPool, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mockPool.Close()
+
+	mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+	mockPool.ExpectQuery(`SELECT COUNT\(\*\).*AND v.employer_id = \$1`).
+		WithArgs(int64(10)).
+		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int64(6)))
+	mockPool.ExpectQuery(`AND v.employer_id = \$1 ORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT \$2 OFFSET \$3`).
+		WithArgs(int64(10), 5, int64(10)).
+		WillReturnRows(pgxmock.NewRows(nil))
+	mockPool.ExpectCommit()
+	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
+
+	items, total, err := vacancy.NewPostgresRepository(mockPool).ListByEmployer(context.Background(), 10, 3, 5)
+	if err != nil || total != 6 || items == nil || len(items) != 0 {
+		t.Fatalf("items = %v, total = %d, err = %v", items, total, err)
+	}
+	if err := mockPool.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }
