@@ -44,14 +44,20 @@ const vacancySelectQuery = `
         vh.currency,
         v.created_at,
         COALESCE(ep.logo_key, '')
+		COALESCE(array_agg(c.name) FILTER (WHERE c.name IS NOT NULL), '{}') AS categories
     FROM vacancy v
     JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
     JOIN employer_profile ep ON ep.user_id = v.employer_id
+	LEFT JOIN vacancy_category vc ON v.vacancy_id = vc.vacancy_id         
+	LEFT JOIN category c ON vc.category_id = c.category_id 	
     WHERE vh.version = (
         SELECT MAX(version)
         FROM vacancy_history
         WHERE vacancy_id = v.vacancy_id
-    )`
+    )
+	GROUP BY v.vacancy_id, vh.version, v.employer_id, ep.company_name, vh.title, vh.description, 
+	vh.salary_from, vh.salary_to, vh.currency, v.created_at, ep.logo_key
+	`
 
 func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	var vacancy models.Vacancy
@@ -69,6 +75,7 @@ func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 		&vacancy.Currency,
 		&vacancy.CreatedAt,
 		&logoKey,
+		&vacancy.Categories,
 	)
 	if err != nil {
 		return models.Vacancy{}, err

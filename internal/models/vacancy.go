@@ -17,6 +17,7 @@ type Vacancy struct {
 	Currency    string    `json:"currency"`
 	CreatedAt   time.Time `json:"created_at"`
 	LogoURL     *string   `json:"logo_url"`
+	Categories  []string  `json:"categories"`
 }
 
 func (v *Vacancy) SetLogoURL(logoKey string) {
