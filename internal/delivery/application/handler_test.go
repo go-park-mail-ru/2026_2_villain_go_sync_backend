@@ -10,6 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/application"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -92,16 +93,16 @@ func TestHandler_Create_InvalidVacancyID(t *testing.T) {
 
 func TestListMinePagination(t *testing.T) {
 	mockUC := application.NewMockApplicationUsecase(gomock.NewController(t))
-	mockUC.EXPECT().ListBySeeker(gomock.Any(), int64(10), models.RoleSeeker, 3, 5).
+	mockUC.EXPECT().ListBySeeker(gomock.Any(), int64(10), models.RoleSeeker, pagination.Params{Limit: 6}).
 		Return(nil, int64(6), nil)
-	req := httptest.NewRequest(http.MethodGet, "/api/seeker/applications?page=3&limit=5", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/seeker/applications?limit=5", nil)
 	ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
 	rec := httptest.NewRecorder()
 	application.NewHandler(mockUC).ListMine(rec, req.WithContext(ctx))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 	}
-	for _, part := range []string{`"items":[]`, `"page":3`, `"limit":5`, `"total":6`, `"total_pages":2`} {
+	for _, part := range []string{`"items":[]`, `"limit":5`, `"total":6`, `"next_cursor":null`} {
 		if !bytes.Contains(rec.Body.Bytes(), []byte(part)) {
 			t.Errorf("missing %s in %s", part, rec.Body.String())
 		}

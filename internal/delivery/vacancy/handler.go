@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	applicationdto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -16,14 +17,14 @@ import (
 
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=vacancy
 type VacancyUsecase interface {
-	ListVacancies(ctx context.Context, page int, limit int) ([]models.Vacancy, int64, error)
+	ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error)
 	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
-	ListByEmployer(ctx context.Context, employerID int64, page, limit int) ([]models.Vacancy, int64, error)
+	ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error)
 	Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
-	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64, page, limit int) ([]models.Applicant, int64, error)
-	ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, page, limit int) ([]models.Applicant, int64, error)
+	ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64, params pagination.Params) ([]models.Applicant, int64, error)
+	ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, params pagination.Params) ([]models.Applicant, int64, error)
 	ListCategories(ctx context.Context) ([]models.Category, error)
 }
 
@@ -36,18 +37,18 @@ func NewHandler(vacancy VacancyUsecase) *Handler {
 }
 
 func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
-	page, limit, ok := httputil.ReadPagination(w, r)
+	params, ok := httputil.ReadPagination(w, r)
 	if !ok {
 		return
 	}
 
-	vacancies, total, err := h.vacancy.ListVacancies(r.Context(), page, limit)
+	vacancies, total, err := h.vacancy.ListVacancies(r.Context(), params.WithLookahead())
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
-	httputil.WritePage(w, dto.NewVacancyListResponse(vacancies), page, limit, total)
+	httputil.WritePage(w, dto.NewVacancyListResponse(vacancies), params.Limit, total, vacancyPosition)
 }
 
 func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
@@ -115,17 +116,17 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	page, limit, ok := httputil.ReadPagination(w, r)
+	params, ok := httputil.ReadPagination(w, r)
 	if !ok {
 		return
 	}
-	vacancies, total, err := h.vacancy.ListByEmployer(r.Context(), userID, page, limit)
+	vacancies, total, err := h.vacancy.ListByEmployer(r.Context(), userID, params.WithLookahead())
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list vacancies")
 		return
 	}
 
-	httputil.WritePage(w, dto.NewVacancyListResponse(vacancies), page, limit, total)
+	httputil.WritePage(w, dto.NewVacancyListResponse(vacancies), params.Limit, total, vacancyPosition)
 }
 
 func parseOptionalSalary(raw json.RawMessage) (dto.OptionalSalary, error) {
@@ -239,17 +240,17 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, limit, ok := httputil.ReadPagination(w, r)
+	params, ok := httputil.ReadPagination(w, r)
 	if !ok {
 		return
 	}
-	applicants, total, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID, page, limit)
+	applicants, total, err := h.vacancy.ListApplicants(r.Context(), userID, role, vacancyID, params.WithLookahead())
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applicants")
 		return
 	}
 
-	httputil.WritePage(w, applicationdto.NewApplicantListResponse(applicants), page, limit, total)
+	httputil.WritePage(w, applicationdto.NewApplicantListResponse(applicants), params.Limit, total, applicantPosition)
 }
 
 func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request) {
@@ -264,17 +265,25 @@ func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	page, limit, ok := httputil.ReadPagination(w, r)
+	params, ok := httputil.ReadPagination(w, r)
 	if !ok {
 		return
 	}
-	applicants, total, err := h.vacancy.ListEmployerApplicants(r.Context(), userID, role, page, limit)
+	applicants, total, err := h.vacancy.ListEmployerApplicants(r.Context(), userID, role, params.WithLookahead())
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applicants")
 		return
 	}
 
-	httputil.WritePage(w, applicationdto.NewApplicantListResponse(applicants), page, limit, total)
+	httputil.WritePage(w, applicationdto.NewApplicantListResponse(applicants), params.Limit, total, applicantPosition)
+}
+
+func vacancyPosition(v dto.VacancyResponse) pagination.Cursor {
+	return pagination.Cursor{CreatedAt: v.CreatedAt, ID: v.ID}
+}
+
+func applicantPosition(app applicationdto.ApplicantResponse) pagination.Cursor {
+	return pagination.Cursor{CreatedAt: app.CreatedAt, ID: app.ApplicationID}
 }
 
 func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {

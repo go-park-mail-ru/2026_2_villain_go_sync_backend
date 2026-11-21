@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 )
@@ -35,11 +36,12 @@ const (
 		       ORDER BY application_id, changed_at DESC, status_history_id DESC
 		  ) AS latest_status ON latest_status.application_id = a.application_id
 	`
-	applicantsPage               = ` ORDER BY a.created_at DESC, a.application_id DESC LIMIT $2 OFFSET $3`
+	applicantsOrder              = ` ORDER BY a.created_at DESC, a.application_id DESC`
+	applicantsAfter              = ` AND (a.created_at, a.application_id) < ($2, $3)`
 	vacancyApplicantsFilter      = ` WHERE a.vacancy_id = $1`
 	employerApplicantsFilter     = ` WHERE v.employer_id = $1`
-	vacancyApplicantsQuery       = applicantsSelectQuery + vacancyApplicantsFilter + applicantsPage
-	employerApplicantsQuery      = applicantsSelectQuery + employerApplicantsFilter + applicantsPage
+	vacancyApplicantsQuery       = applicantsSelectQuery + vacancyApplicantsFilter
+	employerApplicantsQuery      = applicantsSelectQuery + employerApplicantsFilter
 	countVacancyApplicantsQuery  = `SELECT COUNT(*)` + applicantsFrom + vacancyApplicantsFilter
 	countEmployerApplicantsQuery = `SELECT COUNT(*)` + applicantsFrom + employerApplicantsFilter
 )
@@ -53,15 +55,23 @@ func (r *PostgresRepository) IsOwner(ctx context.Context, vacancyID int64, emplo
 	return exists, nil
 }
 
-func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int64, page, limit int) ([]models.Applicant, int64, error) {
-	return r.listApplicants(ctx, vacancyApplicantsQuery, countVacancyApplicantsQuery, vacancyID, page, limit)
+func (r *PostgresRepository) ListByVacancyID(ctx context.Context, vacancyID int64, params pagination.Params) ([]models.Applicant, int64, error) {
+	return r.listApplicants(ctx, vacancyApplicantsQuery, countVacancyApplicantsQuery, vacancyID, params)
 }
 
-func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID int64, page, limit int) ([]models.Applicant, int64, error) {
-	return r.listApplicants(ctx, employerApplicantsQuery, countEmployerApplicantsQuery, employerID, page, limit)
+func (r *PostgresRepository) ListByEmployerID(ctx context.Context, employerID int64, params pagination.Params) ([]models.Applicant, int64, error) {
+	return r.listApplicants(ctx, employerApplicantsQuery, countEmployerApplicantsQuery, employerID, params)
 }
 
-func (r *PostgresRepository) listApplicants(ctx context.Context, query, countQuery string, id int64, page, limit int) ([]models.Applicant, int64, error) {
+func (r *PostgresRepository) listApplicants(ctx context.Context, query, countQuery string, id int64, params pagination.Params) ([]models.Applicant, int64, error) {
+	args := []any{id, params.Limit}
+	if params.Cursor == nil {
+		query += applicantsOrder + " LIMIT $2"
+	} else {
+		query += applicantsAfter + applicantsOrder + " LIMIT $4"
+		args = []any{id, params.Cursor.CreatedAt, params.Cursor.ID, params.Limit}
+	}
+
 	var applicants []models.Applicant
 	var total int64
 	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
@@ -69,7 +79,7 @@ func (r *PostgresRepository) listApplicants(ctx context.Context, query, countQue
 			return fmt.Errorf("count applicants: %w", err)
 		}
 		var err error
-		applicants, err = queryApplicants(ctx, tx, query, id, limit, int64(page-1)*int64(limit))
+		applicants, err = queryApplicants(ctx, tx, query, args...)
 		return err
 	})
 	if err != nil {
@@ -78,8 +88,8 @@ func (r *PostgresRepository) listApplicants(ctx context.Context, query, countQue
 	return applicants, total, nil
 }
 
-func queryApplicants(ctx context.Context, tx pgx.Tx, query string, id int64, limit int, offset int64) ([]models.Applicant, error) {
-	rows, err := tx.Query(ctx, query, id, limit, offset)
+func queryApplicants(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]models.Applicant, error) {
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("select applicants: %w", err)
 	}

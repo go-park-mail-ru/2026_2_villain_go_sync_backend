@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -166,13 +167,23 @@ const listBySeekerQuery = `
 	       LIMIT 1
 	  ) AS latest ON TRUE
 	 WHERE a.seeker_id = $1
-	 ORDER BY a.created_at DESC, a.application_id DESC
-	 LIMIT $2 OFFSET $3
 `
+
+const seekerApplicationsOrder = ` ORDER BY a.created_at DESC, a.application_id DESC`
+const firstSeekerApplicationsQuery = listBySeekerQuery + seekerApplicationsOrder + " LIMIT $2"
+const nextSeekerApplicationsQuery = listBySeekerQuery +
+	` AND (a.created_at, a.application_id) < ($2, $3)` + seekerApplicationsOrder + " LIMIT $4"
 
 const countBySeekerQuery = `SELECT COUNT(*)` + seekerApplicationsFrom + ` WHERE a.seeker_id = $1`
 
-func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64, page, limit int) ([]models.SeekerApplication, int64, error) {
+func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64, params pagination.Params) ([]models.SeekerApplication, int64, error) {
+	query := firstSeekerApplicationsQuery
+	args := []any{seekerID, params.Limit}
+	if params.Cursor != nil {
+		query = nextSeekerApplicationsQuery
+		args = []any{seekerID, params.Cursor.CreatedAt, params.Cursor.ID, params.Limit}
+	}
+
 	var applications []models.SeekerApplication
 	var total int64
 	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
@@ -180,7 +191,7 @@ func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64, p
 			return fmt.Errorf("count seeker applications: %w", err)
 		}
 		var err error
-		applications, err = querySeekerApplications(ctx, tx, seekerID, limit, int64(page-1)*int64(limit))
+		applications, err = querySeekerApplications(ctx, tx, query, args...)
 		return err
 	})
 	if err != nil {
@@ -189,8 +200,8 @@ func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64, p
 	return applications, total, nil
 }
 
-func querySeekerApplications(ctx context.Context, tx pgx.Tx, seekerID int64, limit int, offset int64) ([]models.SeekerApplication, error) {
-	rows, err := tx.Query(ctx, listBySeekerQuery, seekerID, limit, offset)
+func querySeekerApplications(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]models.SeekerApplication, error) {
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list seeker applications: %w", err)
 	}

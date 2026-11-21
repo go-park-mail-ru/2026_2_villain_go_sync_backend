@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
@@ -13,7 +14,7 @@ import (
 type ApplicationRepository interface {
 	GetVacancyEmployerID(ctx context.Context, applicationID int64) (int64, error)
 	UpdateStatus(ctx context.Context, input dto.UpdateStatusInput) (models.ApplicationStatusUpdate, error)
-	ListBySeeker(ctx context.Context, seekerID int64, page int, limit int) ([]models.SeekerApplication, int64, error)
+	ListBySeeker(ctx context.Context, seekerID int64, params pagination.Params) ([]models.SeekerApplication, int64, error)
 	Create(ctx context.Context, input models.Application) (models.Application, error)
 }
 
@@ -121,9 +122,9 @@ func (u *ApplicationUsecase) UpdateStatus(ctx context.Context, role models.Role,
 	return u.applications.UpdateStatus(ctx, input)
 }
 
-func (u *ApplicationUsecase) ListBySeeker(ctx context.Context, seekerID int64, role models.Role, page int, limit int) ([]models.SeekerApplication, int64, error) {
+func (u *ApplicationUsecase) ListBySeeker(ctx context.Context, seekerID int64, role models.Role, params pagination.Params) ([]models.SeekerApplication, int64, error) {
 	if !role.IsSeeker() {
 		return nil, 0, apperrors.ErrForbidden
 	}
-	return u.applications.ListBySeeker(ctx, seekerID, page, limit)
+	return u.applications.ListBySeeker(ctx, seekerID, params)
 }

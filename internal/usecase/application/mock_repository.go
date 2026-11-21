@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	application "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	pagination "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -73,9 +74,9 @@ func (mr *MockApplicationRepositoryMockRecorder) GetVacancyEmployerID(ctx, appli
 }
 
 // ListBySeeker mocks base method.
-func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID int64, page, limit int) ([]models.SeekerApplication, int64, error) {
+func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID int64, params pagination.Params) ([]models.SeekerApplication, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID, page, limit)
+	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID, params)
 	ret0, _ := ret[0].([]models.SeekerApplication)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -83,9 +84,9 @@ func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID i
 }
 
 // ListBySeeker indicates an expected call of ListBySeeker.
-func (mr *MockApplicationRepositoryMockRecorder) ListBySeeker(ctx, seekerID, page, limit any) *gomock.Call {
+func (mr *MockApplicationRepositoryMockRecorder) ListBySeeker(ctx, seekerID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationRepository)(nil).ListBySeeker), ctx, seekerID, page, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationRepository)(nil).ListBySeeker), ctx, seekerID, params)
 }
 
 // UpdateStatus mocks base method.

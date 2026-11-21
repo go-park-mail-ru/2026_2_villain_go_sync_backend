@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	pagination "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	vacancy "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
@@ -87,9 +88,9 @@ func (mr *MockVacancyUsecaseMockRecorder) GetByID(ctx, id any) *gomock.Call {
 }
 
 // ListApplicants mocks base method.
-func (m *MockVacancyUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64, page, limit int) ([]models.Applicant, int64, error) {
+func (m *MockVacancyUsecase) ListApplicants(ctx context.Context, userID int64, role models.Role, vacancyID int64, params pagination.Params) ([]models.Applicant, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListApplicants", ctx, userID, role, vacancyID, page, limit)
+	ret := m.ctrl.Call(m, "ListApplicants", ctx, userID, role, vacancyID, params)
 	ret0, _ := ret[0].([]models.Applicant)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -97,15 +98,15 @@ func (m *MockVacancyUsecase) ListApplicants(ctx context.Context, userID int64, r
 }
 
 // ListApplicants indicates an expected call of ListApplicants.
-func (mr *MockVacancyUsecaseMockRecorder) ListApplicants(ctx, userID, role, vacancyID, page, limit any) *gomock.Call {
+func (mr *MockVacancyUsecaseMockRecorder) ListApplicants(ctx, userID, role, vacancyID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplicants", reflect.TypeOf((*MockVacancyUsecase)(nil).ListApplicants), ctx, userID, role, vacancyID, page, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListApplicants", reflect.TypeOf((*MockVacancyUsecase)(nil).ListApplicants), ctx, userID, role, vacancyID, params)
 }
 
 // ListByEmployer mocks base method.
-func (m *MockVacancyUsecase) ListByEmployer(ctx context.Context, employerID int64, page, limit int) ([]models.Vacancy, int64, error) {
+func (m *MockVacancyUsecase) ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListByEmployer", ctx, employerID, page, limit)
+	ret := m.ctrl.Call(m, "ListByEmployer", ctx, employerID, params)
 	ret0, _ := ret[0].([]models.Vacancy)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -113,9 +114,9 @@ func (m *MockVacancyUsecase) ListByEmployer(ctx context.Context, employerID int6
 }
 
 // ListByEmployer indicates an expected call of ListByEmployer.
-func (mr *MockVacancyUsecaseMockRecorder) ListByEmployer(ctx, employerID, page, limit any) *gomock.Call {
+func (mr *MockVacancyUsecaseMockRecorder) ListByEmployer(ctx, employerID, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployer", reflect.TypeOf((*MockVacancyUsecase)(nil).ListByEmployer), ctx, employerID, page, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByEmployer", reflect.TypeOf((*MockVacancyUsecase)(nil).ListByEmployer), ctx, employerID, params)
 }
 
 // ListCategories mocks base method.
@@ -134,9 +135,9 @@ func (mr *MockVacancyUsecaseMockRecorder) ListCategories(ctx any) *gomock.Call {
 }
 
 // ListEmployerApplicants mocks base method.
-func (m *MockVacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, page, limit int) ([]models.Applicant, int64, error) {
+func (m *MockVacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, params pagination.Params) ([]models.Applicant, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListEmployerApplicants", ctx, userID, role, page, limit)
+	ret := m.ctrl.Call(m, "ListEmployerApplicants", ctx, userID, role, params)
 	ret0, _ := ret[0].([]models.Applicant)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -144,15 +145,15 @@ func (m *MockVacancyUsecase) ListEmployerApplicants(ctx context.Context, userID 
 }
 
 // ListEmployerApplicants indicates an expected call of ListEmployerApplicants.
-func (mr *MockVacancyUsecaseMockRecorder) ListEmployerApplicants(ctx, userID, role, page, limit any) *gomock.Call {
+func (mr *MockVacancyUsecaseMockRecorder) ListEmployerApplicants(ctx, userID, role, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEmployerApplicants", reflect.TypeOf((*MockVacancyUsecase)(nil).ListEmployerApplicants), ctx, userID, role, page, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListEmployerApplicants", reflect.TypeOf((*MockVacancyUsecase)(nil).ListEmployerApplicants), ctx, userID, role, params)
 }
 
 // ListVacancies mocks base method.
-func (m *MockVacancyUsecase) ListVacancies(ctx context.Context, page, limit int) ([]models.Vacancy, int64, error) {
+func (m *MockVacancyUsecase) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVacancies", ctx, page, limit)
+	ret := m.ctrl.Call(m, "ListVacancies", ctx, params)
 	ret0, _ := ret[0].([]models.Vacancy)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -160,9 +161,9 @@ func (m *MockVacancyUsecase) ListVacancies(ctx context.Context, page, limit int)
 }
 
 // ListVacancies indicates an expected call of ListVacancies.
-func (mr *MockVacancyUsecaseMockRecorder) ListVacancies(ctx, page, limit any) *gomock.Call {
+func (mr *MockVacancyUsecaseMockRecorder) ListVacancies(ctx, params any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVacancies", reflect.TypeOf((*MockVacancyUsecase)(nil).ListVacancies), ctx, page, limit)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVacancies", reflect.TypeOf((*MockVacancyUsecase)(nil).ListVacancies), ctx, params)
 }
 
 // Update mocks base method.

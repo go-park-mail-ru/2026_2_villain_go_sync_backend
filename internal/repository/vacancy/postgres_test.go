@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
 	"github.com/jackc/pgx/v5"
@@ -215,17 +216,18 @@ func TestPostgresRepository_ListByEmployer_EmptyPage(t *testing.T) {
 	}
 	defer mockPool.Close()
 
+	cursor := &pagination.Cursor{CreatedAt: time.Now(), ID: 10}
 	mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
 	mockPool.ExpectQuery(`SELECT COUNT\(\*\).*AND v.employer_id = \$1`).
 		WithArgs(int64(10)).
 		WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int64(6)))
-	mockPool.ExpectQuery(`AND v.employer_id = \$1 ORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT \$2 OFFSET \$3`).
-		WithArgs(int64(10), 5, int64(10)).
+	mockPool.ExpectQuery(`AND v.employer_id = \$1 AND \(v.created_at, v.vacancy_id\) > \(\$2, \$3\) ORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT \$4`).
+		WithArgs(int64(10), cursor.CreatedAt, cursor.ID, 5).
 		WillReturnRows(pgxmock.NewRows(nil))
 	mockPool.ExpectCommit()
 	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
-	items, total, err := vacancy.NewPostgresRepository(mockPool).ListByEmployer(context.Background(), 10, 3, 5)
+	items, total, err := vacancy.NewPostgresRepository(mockPool).ListByEmployer(context.Background(), 10, pagination.Params{Cursor: cursor, Limit: 5})
 	if err != nil || total != 6 || items == nil || len(items) != 0 {
 		t.Fatalf("items = %v, total = %d, err = %v", items, total, err)
 	}

@@ -1,13 +1,19 @@
 package pagination
 
+import "time"
+
 type Metadata struct {
-	Page       int   `json:"page"`
-	Limit      int   `json:"limit"`
-	Total      int64 `json:"total"`
-	TotalPages int64 `json:"total_pages"`
+	Limit      int     `json:"limit"`
+	Total      int64   `json:"total"`
+	NextCursor *string `json:"next_cursor"`
 }
 
 type Response[T any] struct {
 	Items      []T      `json:"items"`
 	Pagination Metadata `json:"pagination"`
+}
+
+type Cursor struct {
+	CreatedAt time.Time `json:"created_at"`
+	ID        int64     `json:"id"`
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -262,15 +263,24 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	return vacancy, nil
 }
 
-func (r *PostgresRepository) ListVacancies(ctx context.Context, page, limit int) ([]models.Vacancy, int64, error) {
-	offset := int64(page-1) * int64(limit)
+func (r *PostgresRepository) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
+	const firstPageQuery = vacancySelectQuery + `
+		ORDER BY v.created_at ASC, v.vacancy_id ASC
+		LIMIT $1`
+	const nextPageQuery = vacancySelectQuery + `
+		AND (v.created_at, v.vacancy_id) > ($1, $2)
+		ORDER BY v.created_at ASC, v.vacancy_id ASC
+		LIMIT $3`
 
-	const query = vacancySelectQuery +
-		` ORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT $1 OFFSET $2`
+	query := firstPageQuery
+	args := []any{params.Limit}
+	if params.Cursor != nil {
+		query = nextPageQuery
+		args = []any{params.Cursor.CreatedAt, params.Cursor.ID, params.Limit}
+	}
 
 	var vacancies []models.Vacancy
 	var total int64
-
 	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
@@ -279,23 +289,12 @@ func (r *PostgresRepository) ListVacancies(ctx context.Context, page, limit int)
 			return err
 		}
 
-		rows, err := tx.Query(ctx, query, limit, offset)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err
 		}
-		defer rows.Close()
-
-		vacancies = make([]models.Vacancy, 0, limit)
-
-		for rows.Next() {
-			vacancy, err := scanVacancy(rows)
-			if err != nil {
-				return err
-			}
-			vacancies = append(vacancies, vacancy)
-		}
-
-		return rows.Err()
+		vacancies, err = scanVacancies(rows)
+		return err
 	})
 	if err != nil {
 		return nil, 0, err
@@ -340,12 +339,20 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int64) (models.Vaca
 	return vacancy, nil
 }
 
-func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64, page, limit int) ([]models.Vacancy, int64, error) {
+func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error) {
 	const employerFilter = "\nAND v.employer_id = $1"
 	const countQuery = vacancyCountQuery + employerFilter
-	const query = vacancySelectQuery + employerFilter +
-		"\nORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT $2 OFFSET $3"
-	offset := int64(page-1) * int64(limit)
+	const order = "\nORDER BY v.created_at ASC, v.vacancy_id ASC"
+	const firstPageQuery = vacancySelectQuery + employerFilter + order + " LIMIT $2"
+	const nextPageQuery = vacancySelectQuery + employerFilter +
+		" AND (v.created_at, v.vacancy_id) > ($2, $3)" + order + " LIMIT $4"
+
+	query := firstPageQuery
+	args := []any{employerID, params.Limit}
+	if params.Cursor != nil {
+		query = nextPageQuery
+		args = []any{employerID, params.Cursor.CreatedAt, params.Cursor.ID, params.Limit}
+	}
 
 	var vacancies []models.Vacancy
 	var total int64
@@ -353,7 +360,7 @@ func (r *PostgresRepository) ListByEmployer(ctx context.Context, employerID int6
 		if err := tx.QueryRow(ctx, countQuery, employerID).Scan(&total); err != nil {
 			return fmt.Errorf("count employer vacancies: %w", err)
 		}
-		rows, err := tx.Query(ctx, query, employerID, limit, offset)
+		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return fmt.Errorf("list employer vacancies: %w", err)
 		}
@@ -469,8 +476,16 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	return vacancy, nil
 }
 
-const touchVacancyQuery = `UPDATE vacancy SET updated_at = NOW() WHERE vacancy_id = $1
-	RETURNING updated_at, to_char(apply_until, 'YYYY-MM-DD')`
+const touchVacancyQuery = `
+		UPDATE
+		vacancy
+		SET
+		updated_at = NOW()
+		WHERE
+		vacancy_id = $1
+		RETURNING
+		updated_at, to_char(apply_until, 'YYYY-MM-DD')
+		`
 
 func (r *PostgresRepository) Delete(ctx context.Context, vacancyID, employerID int64) error {
 	commandTag, err := r.pool.Exec(ctx,

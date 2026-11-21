@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
@@ -47,11 +48,11 @@ func TestVacancyListExtra(t *testing.T) {
 					).Return(models.RoleEmployer, nil)
 
 					vr.EXPECT().ListByEmployer(
-						gomock.Any(), int64(10), 2, 12,
+						gomock.Any(), int64(10), pagination.Params{Limit: 12},
 					).Return(expected, int64(13), tt.repoErr)
 				}
 			} else {
-				vr.EXPECT().ListVacancies(gomock.Any(), 2, 12).
+				vr.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Limit: 12}).
 					Return(expected, int64(13), tt.repoErr)
 			}
 
@@ -60,13 +61,13 @@ func TestVacancyListExtra(t *testing.T) {
 
 			if tt.employer {
 				var total int64
-				got, total, err = uc.ListByEmployer(context.Background(), 10, 2, 12)
+				got, total, err = uc.ListByEmployer(context.Background(), 10, pagination.Params{Limit: 12})
 				if err == nil && total != 13 {
 					t.Errorf("total = %d, want 13", total)
 				}
 			} else {
 				var total int64
-				got, total, err = uc.ListVacancies(context.Background(), 2, 12)
+				got, total, err = uc.ListVacancies(context.Background(), pagination.Params{Limit: 12})
 				if err == nil && total != 13 {
 					t.Errorf("total = %d, want 13", total)
 				}
@@ -255,12 +256,12 @@ func TestVacancyListEmployerApplicantsExtra(t *testing.T) {
 
 			if tt.role == models.RoleEmployer {
 				vr.EXPECT().ListByEmployerID(
-					gomock.Any(), int64(10), 1, 12,
+					gomock.Any(), int64(10), pagination.Params{Limit: 12},
 				).Return(want, int64(1), tt.repoErr)
 			}
 
 			got, total, err := uc.ListEmployerApplicants(
-				context.Background(), 10, tt.role, 1, 12,
+				context.Background(), 10, tt.role, pagination.Params{Limit: 12},
 			)
 			if err == nil && total != 1 {
 				t.Errorf("total = %d, want 1", total)
