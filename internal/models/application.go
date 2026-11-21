@@ -3,39 +3,48 @@ package models
 import "time"
 
 type Application struct {
-	SeekerID       int64     `json:"seeker_id"`
-	ID             int64     `json:"id"`
-	VacancyID      int64     `json:"vacancy_id"`
-	VacancyVersion int       `json:"vacancy_version"`
-	ResumeID       int64     `json:"resume_id"`
-	CoverLetter    *string   `json:"cover_letter"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	SeekerID       int64
+	ID             int64
+	VacancyID      int64
+	VacancyVersion int
+	ResumeID       int64
+	CoverLetter    *string
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
 }
 
 type ApplicationStatus struct {
-	Status          string    `json:"status"`
-	ReasonCode      *string   `json:"reason_code"`
-	StatusComment   *string   `json:"status_comment"`
-	StatusChangedAt time.Time `json:"status_changed_at"`
+	Value           string
+	ReasonCode      *string
+	StatusComment   *string
+	StatusChangedAt time.Time
 }
 
 type ApplicationStatusUpdate struct {
-	ApplicationID int64 `json:"application_id"`
+	ApplicationID int64
 	ApplicationStatus
 }
 
 type SeekerApplication struct {
-	ID             int64     `json:"id"`
-	SeekerID       int64     `json:"seeker_id"`
-	VacancyID      int64     `json:"vacancy_id"`
-	VacancyVersion int       `json:"vacancy_version"`
-	CoverLetter    *string   `json:"cover_letter"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
-	ResumeID       *int64    `json:"resume_id"`
-	VacancyTitle   string    `json:"vacancy_title"`
-	CompanyName    string    `json:"company_name"`
-	ResumeTitle    string    `json:"resume_title"`
-	ApplicationStatus
+	ID          int64
+	SeekerID    int64
+	CoverLetter *string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+
+	Vacancy ApplicationVacancyInfo
+	Resume  ApplicationResumeInfo
+	Status  ApplicationStatus
+}
+
+type ApplicationVacancyInfo struct {
+	VacancyID      int64
+	VacancyVersion int
+	VacancyTitle   string
+	CompanyName    string
+}
+
+type ApplicationResumeInfo struct {
+	ResumeID    *int64
+	ResumeTitle string
 }

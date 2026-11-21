@@ -59,7 +59,7 @@ func TestListApplicants_Success(t *testing.T) {
 	// Настраиваем ожидание мока
 	mockUC.EXPECT().
 		ListApplicants(gomock.Any(), int64(10), models.RoleEmployer, int64(1)).
-		Return([]models.Applicant{{FirstName: "Ivan"}}, nil)
+		Return([]models.Applicant{{Seeker: models.ApplicantSeeker{FirstName: "Ivan"}}}, nil)
 
 	// Создаем запрос
 	req := httptest.NewRequest(http.MethodGet, "/api/vacancies/1/applicants", nil)

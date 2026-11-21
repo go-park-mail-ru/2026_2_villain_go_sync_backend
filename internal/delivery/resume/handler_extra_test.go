@@ -1,6 +1,7 @@
 package resume_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/resume"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -119,6 +121,38 @@ func TestResumeHandlers_Table(t *testing.T) {
 			if tt.wantBody != "" && !strings.Contains(rec.Body.String(), tt.wantBody) {
 				t.Errorf("expected body to contain %q, got %s",
 					tt.wantBody, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestUpdateResumeSalary(t *testing.T) {
+	for _, tc := range []struct {
+		name, salaryJSON string
+		clear, hasSalary bool
+	}{
+		{name: "omitted"},
+		{name: "clear", salaryJSON: `,"salary_from":null`, clear: true},
+		{name: "set", salaryJSON: `,"salary_from":100.25`, hasSalary: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mockUC := resume.NewMockResumeUsecase(gomock.NewController(t))
+			mockUC.EXPECT().Update(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int, _ models.Role, input dto.UpdateInput) (models.Resume, error) {
+					salary := input.Resume.Preferences.SalaryFrom
+					if input.ClearSalaryFrom != tc.clear || (salary != nil) != tc.hasSalary || (salary != nil && *salary != 100.25) {
+						t.Fatalf("unexpected salary update: %+v", input)
+					}
+					return input.Resume, nil
+				})
+			body := `{"title":"CV","target_position":"Engineer"` + tc.salaryJSON + "}"
+			req := httptest.NewRequest(http.MethodPut, "/api/resumes/7", strings.NewReader(body))
+			req.SetPathValue("id", "7")
+			ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
+			rec := httptest.NewRecorder()
+			resume.NewHandler(mockUC).Update(rec, req.WithContext(ctx))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 			}
 		})
 	}

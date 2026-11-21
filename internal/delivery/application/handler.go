@@ -71,7 +71,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusCreated, created)
+	httputil.WriteOK(w, http.StatusCreated, dto.NewApplicationResponse(created))
 }
 
 type UpdateStatusRequest struct {
@@ -122,7 +122,7 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAppError(w, err, "failed to update application status")
 		return
 	}
-	httputil.WriteOK(w, http.StatusOK, updated)
+	httputil.WriteOK(w, http.StatusOK, dto.NewApplicationStatusUpdateResponse(updated))
 }
 
 func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
@@ -138,5 +138,5 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAppError(w, err, "failed to list applications")
 		return
 	}
-	httputil.WriteOK(w, http.StatusOK, applications)
+	httputil.WriteOK(w, http.StatusOK, dto.NewSeekerApplicationListResponse(applications))
 }

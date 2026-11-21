@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
@@ -16,7 +17,7 @@ type ResumeUsecase interface {
 	Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error)
 	GetByID(ctx context.Context, id int) (models.Resume, error)
 	ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error)
-	Update(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error)
+	Update(ctx context.Context, userID int, role models.Role, input dto.UpdateInput) (models.Resume, error)
 	Delete(ctx context.Context, userID int, role models.Role, id int) error
 }
 
@@ -53,7 +54,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusCreated, res)
+	httputil.WriteOK(w, http.StatusCreated, dto.NewResumeResponse(res))
 }
 
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -69,7 +70,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, res)
+	httputil.WriteOK(w, http.StatusOK, dto.NewResumeResponse(res))
 }
 
 func (h *Handler) ListBySeekerID(w http.ResponseWriter, r *http.Request) {
@@ -90,7 +91,7 @@ func (h *Handler) ListBySeekerID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, resumes)
+	httputil.WriteOK(w, http.StatusOK, dto.NewResumeListResponse(resumes))
 }
 
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
@@ -112,20 +113,19 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid request")
 		return
 	}
-	input, err := req.resume()
+	input, err := req.update(id)
 	if err != nil {
 		httputil.WriteError(w, http.StatusUnprocessableEntity, err.Error())
 		return
 	}
 
-	input.ID = id
 	res, err := h.resumes.Update(r.Context(), int(userID), role, input)
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update resume")
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, res)
+	httputil.WriteOK(w, http.StatusOK, dto.NewResumeResponse(res))
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {

@@ -55,7 +55,7 @@ func TestVacancyUsecase_ListApplicants_Success(t *testing.T) {
 		Return(true, nil)
 	mockVacancyRepo.EXPECT().
 		ListByVacancyID(gomock.Any(), int64(1)).
-		Return([]models.Applicant{{FirstName: "Ivan"}}, nil)
+		Return([]models.Applicant{{Seeker: models.ApplicantSeeker{FirstName: "Ivan"}}}, nil)
 
 	res, err := uc.ListApplicants(context.Background(), 10, models.RoleEmployer, 1)
 
@@ -163,7 +163,7 @@ func TestVacancyUsecase_Update_WrongOwner(t *testing.T) {
 
 	mockVacancyRepo.EXPECT().
 		GetByID(gomock.Any(), int64(1)).
-		Return(models.Vacancy{ID: 1, EmployerID: 99}, nil)
+		Return(models.Vacancy{ID: 1, Company: models.VacancyCompany{EmployerID: 99}}, nil)
 
 	_, err := uc.Update(context.Background(), dto.UpdateVacancyInput{
 		VacancyID:  1,

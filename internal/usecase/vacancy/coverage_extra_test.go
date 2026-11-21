@@ -113,44 +113,44 @@ func TestVacancyUpdateExtra(t *testing.T) {
 		{
 			name:    "not owner",
 			input:   dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7},
-			old:     models.Vacancy{EmployerID: 99, Title: "Go", Currency: "RUB", Responsibilities: "Develop services", Requirements: "Know Go"},
+			old:     models.Vacancy{Title: "Go", Company: models.VacancyCompany{EmployerID: 99}, Salary: models.VacancySalary{Currency: "RUB"}, Content: models.VacancyContent{Responsibilities: "Develop services"}, Requirements: models.VacancyRequirements{Description: "Know Go"}},
 			wantErr: apperrors.ErrForbidden,
 		},
 		{
 			name:    "empty title",
 			input:   dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7, Title: &emptyTitle},
-			old:     models.Vacancy{EmployerID: 10, Title: "Go", Currency: "RUB", Responsibilities: "Develop services", Requirements: "Know Go"},
+			old:     models.Vacancy{Title: "Go", Company: models.VacancyCompany{EmployerID: 10}, Salary: models.VacancySalary{Currency: "RUB"}, Content: models.VacancyContent{Responsibilities: "Develop services"}, Requirements: models.VacancyRequirements{Description: "Know Go"}},
 			wantErr: apperrors.ErrInvalidInput,
 		},
 		{
 			name:    "legacy vacancy missing mandatory fields",
 			input:   dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7, Title: &title},
-			old:     models.Vacancy{ID: 7, EmployerID: 10, Title: "Go", Currency: "RUB"},
+			old:     models.Vacancy{ID: 7, Title: "Go", Company: models.VacancyCompany{EmployerID: 10}, Salary: models.VacancySalary{Currency: "RUB"}},
 			wantErr: apperrors.ErrInvalidInput,
 		},
 		{
 			name:    "invalid currency",
 			input:   dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7, Currency: &invalidCurrency},
-			old:     models.Vacancy{EmployerID: 10, Title: "Go", Currency: "RUB", Responsibilities: "Develop services", Requirements: "Know Go"},
+			old:     models.Vacancy{Title: "Go", Company: models.VacancyCompany{EmployerID: 10}, Salary: models.VacancySalary{Currency: "RUB"}, Content: models.VacancyContent{Responsibilities: "Develop services"}, Requirements: models.VacancyRequirements{Description: "Know Go"}},
 			wantErr: apperrors.ErrInvalidInput,
 		},
 		{
 			name:       "success",
 			input:      dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7, Title: &title},
-			old:        models.Vacancy{ID: 7, EmployerID: 10, Title: "Go", Currency: "RUB", Responsibilities: "Develop services", Requirements: "Know Go"},
+			old:        models.Vacancy{ID: 7, Title: "Go", Company: models.VacancyCompany{EmployerID: 10}, Salary: models.VacancySalary{Currency: "RUB"}, Content: models.VacancyContent{Responsibilities: "Develop services"}, Requirements: models.VacancyRequirements{Description: "Know Go"}},
 			callUpdate: true,
 		},
 		{
 			name:       "repository error",
 			input:      dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7, Title: &title},
-			old:        models.Vacancy{ID: 7, EmployerID: 10, Title: "Go", Currency: "RUB", Responsibilities: "Develop services", Requirements: "Know Go"},
+			old:        models.Vacancy{ID: 7, Title: "Go", Company: models.VacancyCompany{EmployerID: 10}, Salary: models.VacancySalary{Currency: "RUB"}, Content: models.VacancyContent{Responsibilities: "Develop services"}, Requirements: models.VacancyRequirements{Description: "Know Go"}},
 			callUpdate: true,
 			updateErr:  errors.New("update failed"),
 		},
 		{
 			name:       "category not found",
 			input:      dto.UpdateVacancyInput{EmployerID: 10, VacancyID: 7, Title: &title},
-			old:        models.Vacancy{ID: 7, EmployerID: 10, Title: "Go", Currency: "RUB", Responsibilities: "Develop services", Requirements: "Know Go"},
+			old:        models.Vacancy{ID: 7, Title: "Go", Company: models.VacancyCompany{EmployerID: 10}, Salary: models.VacancySalary{Currency: "RUB"}, Content: models.VacancyContent{Responsibilities: "Develop services"}, Requirements: models.VacancyRequirements{Description: "Know Go"}},
 			callUpdate: true,
 			updateErr:  apperrors.ErrCategoryNotFound,
 			wantErr:    apperrors.ErrInvalidInput,
@@ -242,7 +242,7 @@ func TestVacancyListEmployerApplicantsExtra(t *testing.T) {
 			uc := vacancy.NewVacancyUsecase(vr, ur)
 
 			want := []models.Applicant{
-				{ApplicationID: 3, FirstName: "Ivan"},
+				{ApplicationID: 3, Seeker: models.ApplicantSeeker{FirstName: "Ivan"}},
 			}
 
 			if tt.role == models.RoleEmployer {

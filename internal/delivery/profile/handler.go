@@ -78,20 +78,26 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, err := h.profiles.UpdateSeeker(r.Context(), int(userID), role, models.SeekerProfile{
-		CareerDetails: details,
+		Career: details,
 		Profile: models.Profile{
 			UserID:      int(userID),
 			Description: req.Description.String(),
 		},
-		FirstName:         req.FirstName.String(),
-		LastName:          req.LastName.String(),
-		Phone:             req.Phone.String(),
-		City:              sanitizer.Ptr(req.City),
-		Messenger:         sanitizer.Ptr(req.Messenger),
-		ContactEmail:      sanitizer.Ptr(req.ContactEmail),
-		PreferredPosition: sanitizer.Ptr(req.PreferredPosition),
-		PreferredCities:   sanitizer.Ptr(req.PreferredCities),
-		WorkFormat:        sanitizer.Ptr(req.WorkFormat),
+		PersonalInfo: models.SeekerPersonalInfo{
+			FirstName: req.FirstName.String(),
+			LastName:  req.LastName.String(),
+			City:      sanitizer.Ptr(req.City),
+		},
+		Contacts: models.SeekerContacts{
+			Phone:        req.Phone.String(),
+			Messenger:    sanitizer.Ptr(req.Messenger),
+			ContactEmail: sanitizer.Ptr(req.ContactEmail),
+		},
+		Preferences: models.SeekerPreferences{
+			PreferredPosition: sanitizer.Ptr(req.PreferredPosition),
+			PreferredCities:   sanitizer.Ptr(req.PreferredCities),
+			WorkFormat:        sanitizer.Ptr(req.WorkFormat),
+		},
 	})
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update seeker profile")
@@ -143,19 +149,25 @@ func (h *Handler) UpdateEmployer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	profile, err := h.profiles.UpdateEmployer(r.Context(), int(userID), role, models.EmployerProfile{
-		CompanyDetails: details,
+		Details: details,
 		Profile: models.Profile{
 			UserID:      int(userID),
 			Description: req.Description.String(),
 		},
-		CompanyName:   req.CompanyName.String(),
-		Website:       req.Website.String(),
-		Industry:      sanitizer.Ptr(req.Industry),
-		TeamSize:      sanitizer.Ptr(req.TeamSize),
-		MainCity:      sanitizer.Ptr(req.MainCity),
-		Benefits:      sanitizer.Ptr(req.Benefits),
-		HiringEmail:   sanitizer.Ptr(req.HiringEmail),
-		OfficeAddress: sanitizer.Ptr(req.OfficeAddress),
+		Company: models.EmployerCompanyInfo{
+			CompanyName: req.CompanyName.String(),
+			Industry:    sanitizer.Ptr(req.Industry),
+			TeamSize:    sanitizer.Ptr(req.TeamSize),
+			Benefits:    sanitizer.Ptr(req.Benefits),
+		},
+		Contacts: models.EmployerContacts{
+			Website:     req.Website.String(),
+			HiringEmail: sanitizer.Ptr(req.HiringEmail),
+		},
+		Location: models.EmployerLocation{
+			MainCity:      sanitizer.Ptr(req.MainCity),
+			OfficeAddress: sanitizer.Ptr(req.OfficeAddress),
+		},
 	})
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to update employer profile")

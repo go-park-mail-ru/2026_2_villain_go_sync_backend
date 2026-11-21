@@ -47,12 +47,20 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 	mockPool.ExpectCommit()
 
 	v := models.Vacancy{
-		EmployerID:       10,
-		Title:            "Go dev",
-		Description:      "desc",
-		Responsibilities: "Develop services",
-		Requirements:     "Know Go",
-		Currency:         "RUB",
+		Title: "Go dev",
+		Company: models.VacancyCompany{
+			EmployerID: 10,
+		},
+		Content: models.VacancyContent{
+			Description:      "desc",
+			Responsibilities: "Develop services",
+		},
+		Requirements: models.VacancyRequirements{
+			Description: "Know Go",
+		},
+		Salary: models.VacancySalary{
+			Currency: "RUB",
+		},
 	}
 
 	res, err := repo.Create(context.Background(), v, []int64{1, 2})
@@ -64,12 +72,12 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 		t.Errorf("expected ID 1, got %d", res.ID)
 	}
 
-	if res.CompanyName != "Test Company" {
-		t.Errorf("expected Test Company, got %s", res.CompanyName)
+	if res.Company.Name != "Test Company" {
+		t.Errorf("expected Test Company, got %s", res.Company.Name)
 	}
 
-	if res.LogoURL == nil || *res.LogoURL != "/api/employers/10/logo" {
-		t.Errorf("unexpected logo URL: %v", res.LogoURL)
+	if res.Company.LogoURL == nil || *res.Company.LogoURL != "/api/employers/10/logo" {
+		t.Errorf("unexpected logo URL: %v", res.Company.LogoURL)
 	}
 
 	if err := mockPool.ExpectationsWereMet(); err != nil {
@@ -108,7 +116,7 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 	if res.Title != "Go dev" {
 		t.Errorf("expected Go dev, got %s", res.Title)
 	}
-	if res.LogoURL != nil {
-		t.Errorf("expected nil logo URL, got %v", res.LogoURL)
+	if res.Company.LogoURL != nil {
+		t.Errorf("expected nil logo URL, got %v", res.Company.LogoURL)
 	}
 }

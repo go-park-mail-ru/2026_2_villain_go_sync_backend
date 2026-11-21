@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	applicationdto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -40,7 +41,7 @@ func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancies)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyListResponse(vacancies))
 }
 
 func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
@@ -82,7 +83,7 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAppError(w, err, "failed to create vacancy")
 		return
 	}
-	httputil.WriteOK(w, http.StatusCreated, createdVacancy)
+	httputil.WriteOK(w, http.StatusCreated, dto.NewVacancyResponse(createdVacancy))
 }
 
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +98,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancy)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyResponse(vacancy))
 
 }
 
@@ -114,7 +115,7 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancies)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyListResponse(vacancies))
 }
 
 func parseOptionalSalary(raw json.RawMessage) (dto.OptionalSalary, error) {
@@ -190,7 +191,7 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAppError(w, err, "failed to update vacancy")
 		return
 	}
-	httputil.WriteOK(w, http.StatusOK, updatedVacancy)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyResponse(updatedVacancy))
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -234,7 +235,7 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, applicants)
+	httputil.WriteOK(w, http.StatusOK, applicationdto.NewApplicantListResponse(applicants))
 }
 
 func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request) {
@@ -255,5 +256,5 @@ func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, applicants)
+	httputil.WriteOK(w, http.StatusOK, applicationdto.NewApplicantListResponse(applicants))
 }

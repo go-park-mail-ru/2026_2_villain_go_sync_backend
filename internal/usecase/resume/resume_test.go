@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
 	resumeUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
@@ -99,7 +100,7 @@ func TestResumeUsecase_Update_Success(t *testing.T) {
 	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
-	input := models.Resume{ID: 1, Title: "Updated"}
+	input := dto.UpdateInput{Resume: models.Resume{ID: 1, Title: "Updated"}, ClearSalaryFrom: true}
 	expected := models.Resume{ID: 1, SeekerID: 10, Title: "Updated"}
 
 	mockRepo.EXPECT().
@@ -123,7 +124,7 @@ func TestResumeUsecase_Update_Forbidden(t *testing.T) {
 	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
-	_, err := uc.Update(context.Background(), 10, models.RoleEmployer, models.Resume{ID: 1})
+	_, err := uc.Update(context.Background(), 10, models.RoleEmployer, dto.UpdateInput{Resume: models.Resume{ID: 1}})
 
 	if !errors.Is(err, apperrors.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)

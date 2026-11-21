@@ -101,8 +101,8 @@ func (r *PostgresRepository) GetSeekerByID(ctx context.Context, userID int) (mod
 	var p models.SeekerProfile
 	err := structured.ReadTransaction(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, seekerByIDQuery, userID).Scan(
-			&p.UserID, &p.FirstName, &p.LastName, &p.Phone, &p.Description, &p.AvatarKey, &p.CreatedAt, &p.UpdatedAt,
-			&p.City, &p.Messenger, &p.ContactEmail, &p.PreferredPosition, &p.PreferredCities, &p.WorkFormat,
+			&p.Profile.UserID, &p.PersonalInfo.FirstName, &p.PersonalInfo.LastName, &p.Contacts.Phone, &p.Profile.Description, &p.PersonalInfo.AvatarKey, &p.Profile.CreatedAt, &p.Profile.UpdatedAt,
+			&p.PersonalInfo.City, &p.Contacts.Messenger, &p.Contacts.ContactEmail, &p.Preferences.PreferredPosition, &p.Preferences.PreferredCities, &p.Preferences.WorkFormat,
 		)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -110,7 +110,7 @@ func (r *PostgresRepository) GetSeekerByID(ctx context.Context, userID int) (mod
 		if err != nil {
 			return err
 		}
-		return structured.Seeker.Load(ctx, tx, map[int64]*models.CareerDetails{int64(p.UserID): &p.CareerDetails})
+		return structured.Seeker.Load(ctx, tx, map[int64]*models.CareerDetails{int64(p.Profile.UserID): &p.Career})
 	})
 	if err != nil {
 		return models.SeekerProfile{}, err
@@ -121,19 +121,19 @@ func (r *PostgresRepository) GetSeekerByID(ctx context.Context, userID int) (mod
 func (r *PostgresRepository) UpsertSeeker(ctx context.Context, p models.SeekerProfile) (models.SeekerProfile, error) {
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(
-			ctx, upsertSeekerQuery, p.UserID, p.FirstName, p.LastName, p.Phone, p.Description,
-			p.City, p.Messenger, p.ContactEmail, p.PreferredPosition, p.PreferredCities, p.WorkFormat,
+			ctx, upsertSeekerQuery, p.Profile.UserID, p.PersonalInfo.FirstName, p.PersonalInfo.LastName, p.Contacts.Phone, p.Profile.Description,
+			p.PersonalInfo.City, p.Contacts.Messenger, p.Contacts.ContactEmail, p.Preferences.PreferredPosition, p.Preferences.PreferredCities, p.Preferences.WorkFormat,
 		).Scan(
-			&p.CreatedAt, &p.UpdatedAt, &p.AvatarKey,
-			&p.City, &p.Messenger, &p.ContactEmail, &p.PreferredPosition, &p.PreferredCities, &p.WorkFormat,
+			&p.Profile.CreatedAt, &p.Profile.UpdatedAt, &p.PersonalInfo.AvatarKey,
+			&p.PersonalInfo.City, &p.Contacts.Messenger, &p.Contacts.ContactEmail, &p.Preferences.PreferredPosition, &p.Preferences.PreferredCities, &p.Preferences.WorkFormat,
 		)
 		if err != nil {
 			return fmt.Errorf("upsert seeker: %w", err)
 		}
-		if err := structured.Seeker.Replace(ctx, tx, p.UserID, p.CareerDetails); err != nil {
+		if err := structured.Seeker.Replace(ctx, tx, p.Profile.UserID, p.Career); err != nil {
 			return err
 		}
-		return structured.Seeker.Load(ctx, tx, map[int64]*models.CareerDetails{int64(p.UserID): &p.CareerDetails})
+		return structured.Seeker.Load(ctx, tx, map[int64]*models.CareerDetails{int64(p.Profile.UserID): &p.Career})
 	})
 	if err != nil {
 		return models.SeekerProfile{}, err
@@ -145,8 +145,8 @@ func (r *PostgresRepository) GetEmployerByID(ctx context.Context, userID int) (m
 	var p models.EmployerProfile
 	err := structured.ReadTransaction(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, employerByIDQuery, userID).Scan(
-			&p.UserID, &p.CompanyName, &p.Description, &p.Website, &p.LogoKey, &p.CreatedAt, &p.UpdatedAt,
-			&p.Industry, &p.TeamSize, &p.MainCity, &p.Benefits, &p.HiringEmail, &p.OfficeAddress,
+			&p.Profile.UserID, &p.Company.CompanyName, &p.Profile.Description, &p.Contacts.Website, &p.Company.LogoKey, &p.Profile.CreatedAt, &p.Profile.UpdatedAt,
+			&p.Company.Industry, &p.Company.TeamSize, &p.Location.MainCity, &p.Company.Benefits, &p.Contacts.HiringEmail, &p.Location.OfficeAddress,
 		)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -154,7 +154,7 @@ func (r *PostgresRepository) GetEmployerByID(ctx context.Context, userID int) (m
 		if err != nil {
 			return err
 		}
-		return structured.LoadCompany(ctx, tx, p.UserID, &p.CompanyDetails)
+		return structured.LoadCompany(ctx, tx, p.Profile.UserID, &p.Details)
 	})
 	if err != nil {
 		return models.EmployerProfile{}, err
@@ -165,19 +165,19 @@ func (r *PostgresRepository) GetEmployerByID(ctx context.Context, userID int) (m
 func (r *PostgresRepository) UpsertEmployer(ctx context.Context, p models.EmployerProfile) (models.EmployerProfile, error) {
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(
-			ctx, upsertEmployerQuery, p.UserID, p.CompanyName, p.Description, p.Website,
-			p.Industry, p.TeamSize, p.MainCity, p.Benefits, p.HiringEmail, p.OfficeAddress,
+			ctx, upsertEmployerQuery, p.Profile.UserID, p.Company.CompanyName, p.Profile.Description, p.Contacts.Website,
+			p.Company.Industry, p.Company.TeamSize, p.Location.MainCity, p.Company.Benefits, p.Contacts.HiringEmail, p.Location.OfficeAddress,
 		).Scan(
-			&p.CreatedAt, &p.UpdatedAt, &p.LogoKey,
-			&p.Industry, &p.TeamSize, &p.MainCity, &p.Benefits, &p.HiringEmail, &p.OfficeAddress,
+			&p.Profile.CreatedAt, &p.Profile.UpdatedAt, &p.Company.LogoKey,
+			&p.Company.Industry, &p.Company.TeamSize, &p.Location.MainCity, &p.Company.Benefits, &p.Contacts.HiringEmail, &p.Location.OfficeAddress,
 		)
 		if err != nil {
 			return fmt.Errorf("upsert employer: %w", err)
 		}
-		if err := structured.ReplaceCompany(ctx, tx, p.UserID, p.CompanyDetails); err != nil {
+		if err := structured.ReplaceCompany(ctx, tx, p.Profile.UserID, p.Details); err != nil {
 			return err
 		}
-		return structured.LoadCompany(ctx, tx, p.UserID, &p.CompanyDetails)
+		return structured.LoadCompany(ctx, tx, p.Profile.UserID, &p.Details)
 	})
 	if err != nil {
 		return models.EmployerProfile{}, err

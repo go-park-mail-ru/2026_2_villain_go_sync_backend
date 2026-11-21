@@ -95,22 +95,34 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 	}
 
 	vacancy := models.Vacancy{
-		EmployerID:       input.EmployerID,
-		Title:            input.Title,
-		Description:      input.Description,
-		Responsibilities: input.Responsibilities,
-		Requirements:     input.Requirements,
-		SalaryFrom:       input.SalaryFrom,
-		SalaryTo:         input.SalaryTo,
-		Currency:         input.Currency,
-		Offer:            input.Offer,
-		ExperienceLevel:  input.ExperienceLevel,
-		EmploymentType:   input.EmploymentType,
-		WorkFormat:       input.WorkFormat,
-		WorkSchedule:     input.WorkSchedule,
-		WorkHours:        input.WorkHours,
-		City:             input.City,
-		OfficeAddress:    input.OfficeAddress,
+		Title: input.Title,
+		Company: models.VacancyCompany{
+			EmployerID: input.EmployerID,
+		},
+		Content: models.VacancyContent{
+			Description:      input.Description,
+			Responsibilities: input.Responsibilities,
+		},
+		Requirements: models.VacancyRequirements{
+			Description:     input.Requirements,
+			ExperienceLevel: input.ExperienceLevel,
+		},
+		Salary: models.VacancySalary{
+			SalaryFrom: input.SalaryFrom,
+			SalaryTo:   input.SalaryTo,
+			Currency:   input.Currency,
+		},
+		Conditions: models.VacancyConditions{
+			Offer:          input.Offer,
+			EmploymentType: input.EmploymentType,
+			WorkFormat:     input.WorkFormat,
+			WorkSchedule:   input.WorkSchedule,
+			WorkHours:      input.WorkHours,
+		},
+		Location: models.VacancyLocation{
+			City:          input.City,
+			OfficeAddress: input.OfficeAddress,
+		},
 	}
 
 	if err := validateVacancyOptions(vacancy); err != nil {
@@ -155,7 +167,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
-	if vacancy.EmployerID != input.EmployerID {
+	if vacancy.Company.EmployerID != input.EmployerID {
 		return models.Vacancy{}, apperrors.ErrForbidden
 	}
 
@@ -163,66 +175,66 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		vacancy.Title = *input.Title
 	}
 	if input.Description != nil {
-		vacancy.Description = *input.Description
+		vacancy.Content.Description = *input.Description
 	}
 	if input.Responsibilities != nil {
-		vacancy.Responsibilities = *input.Responsibilities
+		vacancy.Content.Responsibilities = *input.Responsibilities
 	}
 	if input.Requirements != nil {
-		vacancy.Requirements = *input.Requirements
+		vacancy.Requirements.Description = *input.Requirements
 	}
 	if input.SalaryFrom.Provided {
-		vacancy.SalaryFrom = input.SalaryFrom.Value
+		vacancy.Salary.SalaryFrom = input.SalaryFrom.Value
 	}
 	if input.SalaryTo.Provided {
-		vacancy.SalaryTo = input.SalaryTo.Value
+		vacancy.Salary.SalaryTo = input.SalaryTo.Value
 	}
 	if input.Currency != nil {
-		vacancy.Currency = *input.Currency
+		vacancy.Salary.Currency = *input.Currency
 	}
 
 	if input.Offer != nil {
-		vacancy.Offer = input.Offer
+		vacancy.Conditions.Offer = input.Offer
 	}
 	if input.ExperienceLevel != nil {
-		vacancy.ExperienceLevel = input.ExperienceLevel
+		vacancy.Requirements.ExperienceLevel = input.ExperienceLevel
 	}
 	if input.EmploymentType != nil {
-		vacancy.EmploymentType = input.EmploymentType
+		vacancy.Conditions.EmploymentType = input.EmploymentType
 	}
 	if input.WorkFormat != nil {
-		vacancy.WorkFormat = input.WorkFormat
+		vacancy.Conditions.WorkFormat = input.WorkFormat
 	}
 	if input.WorkSchedule != nil {
-		vacancy.WorkSchedule = input.WorkSchedule
+		vacancy.Conditions.WorkSchedule = input.WorkSchedule
 	}
 	if input.WorkHours != nil {
-		vacancy.WorkHours = input.WorkHours
+		vacancy.Conditions.WorkHours = input.WorkHours
 	}
 	if input.City != nil {
-		vacancy.City = input.City
+		vacancy.Location.City = input.City
 	}
 	if input.OfficeAddress != nil {
-		vacancy.OfficeAddress = input.OfficeAddress
+		vacancy.Location.OfficeAddress = input.OfficeAddress
 	}
 
 	if err := validateVacancyOptions(vacancy); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	if err := validateVacancyText(vacancy.Title, vacancy.Description); err != nil {
+	if err := validateVacancyText(vacancy.Title, vacancy.Content.Description); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	if err := validateVacancyDetails(vacancy.Responsibilities, vacancy.Requirements); err != nil {
+	if err := validateVacancyDetails(vacancy.Content.Responsibilities, vacancy.Requirements.Description); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	if err := validateSalary(vacancy.SalaryFrom, vacancy.SalaryTo); err != nil {
+	if err := validateSalary(vacancy.Salary.SalaryFrom, vacancy.Salary.SalaryTo); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	switch vacancy.Currency {
+	switch vacancy.Salary.Currency {
 	case "RUB", "USD", "EUR":
 	default:
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)

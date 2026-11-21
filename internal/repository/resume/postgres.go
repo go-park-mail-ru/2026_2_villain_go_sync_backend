@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/structured"
 	"github.com/jackc/pgx/v5"
@@ -106,13 +107,13 @@ func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 func (r *PostgresRepository) Create(ctx context.Context, resume models.Resume) (models.Resume, error) {
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(
-			ctx, createQuery, resume.SeekerID, resume.Title, resume.Description, resume.Experience, resume.Education,
-			resume.TargetPosition, resume.City, resume.EmploymentType, resume.WorkFormat,
-			resume.WorkSchedule, resume.SalaryFrom, resume.PortfolioURL, resume.Languages,
+			ctx, createQuery, resume.SeekerID, resume.Title, resume.Content.Description, resume.Content.Experience, resume.Content.Education,
+			resume.Preferences.TargetPosition, resume.Preferences.City, resume.Preferences.EmploymentType, resume.Preferences.WorkFormat,
+			resume.Preferences.WorkSchedule, resume.Preferences.SalaryFrom, resume.Content.PortfolioURL, resume.Content.Languages,
 		).Scan(
 			&resume.ID, &resume.CreatedAt, &resume.UpdatedAt,
-			&resume.TargetPosition, &resume.City, &resume.EmploymentType, &resume.WorkFormat,
-			&resume.WorkSchedule, &resume.SalaryFrom, &resume.PortfolioURL, &resume.Languages,
+			&resume.Preferences.TargetPosition, &resume.Preferences.City, &resume.Preferences.EmploymentType, &resume.Preferences.WorkFormat,
+			&resume.Preferences.WorkSchedule, &resume.Preferences.SalaryFrom, &resume.Content.PortfolioURL, &resume.Content.Languages,
 		)
 
 		if err != nil {
@@ -125,10 +126,10 @@ func (r *PostgresRepository) Create(ctx context.Context, resume models.Resume) (
 			}
 			return fmt.Errorf("insert resume: %w", err)
 		}
-		if err := structured.Resume.Replace(ctx, tx, resume.ID, resume.CareerDetails); err != nil {
+		if err := structured.Resume.Replace(ctx, tx, resume.ID, resume.Career); err != nil {
 			return err
 		}
-		return structured.Resume.Load(ctx, tx, map[int64]*models.CareerDetails{int64(resume.ID): &resume.CareerDetails})
+		return structured.Resume.Load(ctx, tx, map[int64]*models.CareerDetails{int64(resume.ID): &resume.Career})
 	})
 	if err != nil {
 		return models.Resume{}, err
@@ -141,9 +142,9 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int) (models.Resume
 	err := structured.ReadTransaction(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, getByIDQuery, id).
 			Scan(
-				&res.ID, &res.SeekerID, &res.Title, &res.Description, &res.Experience, &res.Education, &res.CreatedAt, &res.UpdatedAt,
-				&res.TargetPosition, &res.City, &res.EmploymentType, &res.WorkFormat,
-				&res.WorkSchedule, &res.SalaryFrom, &res.PortfolioURL, &res.Languages,
+				&res.ID, &res.SeekerID, &res.Title, &res.Content.Description, &res.Content.Experience, &res.Content.Education, &res.CreatedAt, &res.UpdatedAt,
+				&res.Preferences.TargetPosition, &res.Preferences.City, &res.Preferences.EmploymentType, &res.Preferences.WorkFormat,
+				&res.Preferences.WorkSchedule, &res.Preferences.SalaryFrom, &res.Content.PortfolioURL, &res.Content.Languages,
 			)
 
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -152,7 +153,7 @@ func (r *PostgresRepository) GetByID(ctx context.Context, id int) (models.Resume
 		if err != nil {
 			return fmt.Errorf("select resume: %w", err)
 		}
-		return structured.Resume.Load(ctx, tx, map[int64]*models.CareerDetails{int64(res.ID): &res.CareerDetails})
+		return structured.Resume.Load(ctx, tx, map[int64]*models.CareerDetails{int64(res.ID): &res.Career})
 	})
 	if err != nil {
 		return models.Resume{}, err
@@ -172,9 +173,9 @@ func (r *PostgresRepository) ListBySeekerID(ctx context.Context, seekerID int) (
 		for rows.Next() {
 			var res models.Resume
 			err := rows.Scan(
-				&res.ID, &res.SeekerID, &res.Title, &res.Description, &res.Experience, &res.Education, &res.CreatedAt, &res.UpdatedAt,
-				&res.TargetPosition, &res.City, &res.EmploymentType, &res.WorkFormat,
-				&res.WorkSchedule, &res.SalaryFrom, &res.PortfolioURL, &res.Languages,
+				&res.ID, &res.SeekerID, &res.Title, &res.Content.Description, &res.Content.Experience, &res.Content.Education, &res.CreatedAt, &res.UpdatedAt,
+				&res.Preferences.TargetPosition, &res.Preferences.City, &res.Preferences.EmploymentType, &res.Preferences.WorkFormat,
+				&res.Preferences.WorkSchedule, &res.Preferences.SalaryFrom, &res.Content.PortfolioURL, &res.Content.Languages,
 			)
 			if err != nil {
 				return fmt.Errorf("scan resume: %w", err)
@@ -189,7 +190,7 @@ func (r *PostgresRepository) ListBySeekerID(ctx context.Context, seekerID int) (
 		rows.Close()
 		targets := make(map[int64]*models.CareerDetails, len(resumes))
 		for i := range resumes {
-			targets[int64(resumes[i].ID)] = &resumes[i].CareerDetails
+			targets[int64(resumes[i].ID)] = &resumes[i].Career
 		}
 		return structured.Resume.Load(ctx, tx, targets)
 	})
@@ -199,16 +200,17 @@ func (r *PostgresRepository) ListBySeekerID(ctx context.Context, seekerID int) (
 	return resumes, nil
 }
 
-func (r *PostgresRepository) Update(ctx context.Context, resume models.Resume, seekerID int) (models.Resume, error) {
+func (r *PostgresRepository) Update(ctx context.Context, input dto.UpdateInput, seekerID int) (models.Resume, error) {
+	resume := input.Resume
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(
-			ctx, updateQuery, resume.Title, resume.Description, resume.Experience, resume.Education, resume.ID, seekerID,
-			resume.TargetPosition, resume.City, resume.EmploymentType, resume.WorkFormat,
-			resume.WorkSchedule, resume.SalaryFrom, resume.PortfolioURL, resume.Languages, resume.ClearSalaryFrom,
+			ctx, updateQuery, resume.Title, resume.Content.Description, resume.Content.Experience, resume.Content.Education, resume.ID, seekerID,
+			resume.Preferences.TargetPosition, resume.Preferences.City, resume.Preferences.EmploymentType, resume.Preferences.WorkFormat,
+			resume.Preferences.WorkSchedule, resume.Preferences.SalaryFrom, resume.Content.PortfolioURL, resume.Content.Languages, input.ClearSalaryFrom,
 		).Scan(
 			&resume.SeekerID, &resume.CreatedAt, &resume.UpdatedAt,
-			&resume.TargetPosition, &resume.City, &resume.EmploymentType, &resume.WorkFormat,
-			&resume.WorkSchedule, &resume.SalaryFrom, &resume.PortfolioURL, &resume.Languages,
+			&resume.Preferences.TargetPosition, &resume.Preferences.City, &resume.Preferences.EmploymentType, &resume.Preferences.WorkFormat,
+			&resume.Preferences.WorkSchedule, &resume.Preferences.SalaryFrom, &resume.Content.PortfolioURL, &resume.Content.Languages,
 		)
 
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -217,10 +219,10 @@ func (r *PostgresRepository) Update(ctx context.Context, resume models.Resume, s
 		if err != nil {
 			return fmt.Errorf("update resume: %w", err)
 		}
-		if err := structured.Resume.Replace(ctx, tx, resume.ID, resume.CareerDetails); err != nil {
+		if err := structured.Resume.Replace(ctx, tx, resume.ID, resume.Career); err != nil {
 			return err
 		}
-		return structured.Resume.Load(ctx, tx, map[int64]*models.CareerDetails{int64(resume.ID): &resume.CareerDetails})
+		return structured.Resume.Load(ctx, tx, map[int64]*models.CareerDetails{int64(resume.ID): &resume.Career})
 	})
 	if err != nil {
 		return models.Resume{}, err

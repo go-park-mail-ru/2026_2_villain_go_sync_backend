@@ -113,20 +113,20 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 
 			app := applicants[0]
 
-			if app.ApplicationID != 5 || app.VacancyVersion != 2 || !app.CreatedAt.Equal(now) || !app.UpdatedAt.Equal(now) || app.ResumeID == nil || *app.ResumeID != 7 {
+			if app.ApplicationID != 5 || app.Vacancy.VacancyVersion != 2 || !app.CreatedAt.Equal(now) || !app.UpdatedAt.Equal(now) || app.Resume.ResumeID == nil || *app.Resume.ResumeID != 7 {
 				t.Fatalf("unexpected applicant IDs: %+v", app)
 			}
 
 			if tt.wantURL == "" {
-				if app.AvatarURL != nil {
-					t.Errorf("expected nil avatar URL, got %q", *app.AvatarURL)
+				if app.Seeker.AvatarURL != nil {
+					t.Errorf("expected nil avatar URL, got %q", *app.Seeker.AvatarURL)
 				}
 			} else {
-				if app.AvatarURL == nil {
+				if app.Seeker.AvatarURL == nil {
 					t.Fatal("expected avatar URL, got nil")
 				}
-				if *app.AvatarURL != tt.wantURL {
-					t.Errorf("got %q, want %q", *app.AvatarURL, tt.wantURL)
+				if *app.Seeker.AvatarURL != tt.wantURL {
+					t.Errorf("got %q, want %q", *app.Seeker.AvatarURL, tt.wantURL)
 				}
 			}
 

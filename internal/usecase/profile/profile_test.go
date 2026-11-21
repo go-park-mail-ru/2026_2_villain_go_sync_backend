@@ -19,7 +19,7 @@ func TestProfileUsecase_UpdateSeeker_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.SeekerProfile{FirstName: "Ivan"}
+	p := models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan"}}
 
 	mockRepo.EXPECT().
 		UpsertSeeker(gomock.Any(), p).
@@ -30,8 +30,8 @@ func TestProfileUsecase_UpdateSeeker_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.FirstName != "Ivan" {
-		t.Errorf("expected Ivan, got %v", res.FirstName)
+	if res.PersonalInfo.FirstName != "Ivan" {
+		t.Errorf("expected Ivan, got %v", res.PersonalInfo.FirstName)
 	}
 }
 
@@ -56,7 +56,7 @@ func TestProfileUsecase_GetSeekerByID_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.SeekerProfile{FirstName: "Ivan"}
+	p := models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan"}}
 
 	mockRepo.EXPECT().
 		GetSeekerByID(gomock.Any(), 1).
@@ -67,8 +67,8 @@ func TestProfileUsecase_GetSeekerByID_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.FirstName != "Ivan" {
-		t.Errorf("expected Ivan, got %v", res.FirstName)
+	if res.PersonalInfo.FirstName != "Ivan" {
+		t.Errorf("expected Ivan, got %v", res.PersonalInfo.FirstName)
 	}
 }
 
@@ -97,7 +97,7 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.EmployerProfile{CompanyName: "Yandex"}
+	p := models.EmployerProfile{Company: models.EmployerCompanyInfo{CompanyName: "Yandex"}}
 
 	mockRepo.EXPECT().
 		UpsertEmployer(gomock.Any(), p).
@@ -108,8 +108,8 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.CompanyName != "Yandex" {
-		t.Errorf("expected Yandex, got %v", res.CompanyName)
+	if res.Company.CompanyName != "Yandex" {
+		t.Errorf("expected Yandex, got %v", res.Company.CompanyName)
 	}
 }
 
@@ -134,7 +134,7 @@ func TestProfileUsecase_GetEmployerByID_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.EmployerProfile{CompanyName: "Yandex"}
+	p := models.EmployerProfile{Company: models.EmployerCompanyInfo{CompanyName: "Yandex"}}
 
 	mockRepo.EXPECT().
 		GetEmployerByID(gomock.Any(), 1).
@@ -145,7 +145,7 @@ func TestProfileUsecase_GetEmployerByID_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.CompanyName != "Yandex" {
-		t.Errorf("expected Yandex, got %v", res.CompanyName)
+	if res.Company.CompanyName != "Yandex" {
+		t.Errorf("expected Yandex, got %v", res.Company.CompanyName)
 	}
 }

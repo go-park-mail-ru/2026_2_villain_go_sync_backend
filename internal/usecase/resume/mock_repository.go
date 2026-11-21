@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	resume "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -42,18 +43,18 @@ func (m *MockResumeRepository) EXPECT() *MockResumeRepositoryMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockResumeRepository) Create(ctx context.Context, resume models.Resume) (models.Resume, error) {
+func (m *MockResumeRepository) Create(ctx context.Context, arg1 models.Resume) (models.Resume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, resume)
+	ret := m.ctrl.Call(m, "Create", ctx, arg1)
 	ret0, _ := ret[0].(models.Resume)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockResumeRepositoryMockRecorder) Create(ctx, resume any) *gomock.Call {
+func (mr *MockResumeRepositoryMockRecorder) Create(ctx, arg1 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockResumeRepository)(nil).Create), ctx, resume)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockResumeRepository)(nil).Create), ctx, arg1)
 }
 
 // Delete mocks base method.
@@ -101,16 +102,16 @@ func (mr *MockResumeRepositoryMockRecorder) ListBySeekerID(ctx, seekerID any) *g
 }
 
 // Update mocks base method.
-func (m *MockResumeRepository) Update(ctx context.Context, resume models.Resume, seekerID int) (models.Resume, error) {
+func (m *MockResumeRepository) Update(ctx context.Context, input resume.UpdateInput, seekerID int) (models.Resume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, resume, seekerID)
+	ret := m.ctrl.Call(m, "Update", ctx, input, seekerID)
 	ret0, _ := ret[0].(models.Resume)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockResumeRepositoryMockRecorder) Update(ctx, resume, seekerID any) *gomock.Call {
+func (mr *MockResumeRepositoryMockRecorder) Update(ctx, input, seekerID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResumeRepository)(nil).Update), ctx, resume, seekerID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResumeRepository)(nil).Update), ctx, input, seekerID)
 }

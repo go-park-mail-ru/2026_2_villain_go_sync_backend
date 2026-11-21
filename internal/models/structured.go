@@ -1,45 +1,45 @@
 package models
 
 type ExperienceItem struct {
-	CompanyName   *string `json:"company_name"`
-	PositionTitle *string `json:"position_title"`
-	StartedOn     *string `json:"started_on"`
-	EndedOn       *string `json:"ended_on"`
-	IsCurrent     bool    `json:"is_current"`
-	Achievements  *string `json:"achievements"`
+	CompanyName   *string
+	PositionTitle *string
+	StartedOn     *string
+	EndedOn       *string
+	IsCurrent     bool
+	Achievements  *string
 }
 
 type EducationItem struct {
-	RecordType     *string `json:"record_type"`
-	Institution    *string `json:"institution"`
-	CompletionYear *int16  `json:"completion_year"`
-	Specialization *string `json:"specialization"`
+	RecordType     *string
+	Institution    *string
+	CompletionYear *int16
+	Specialization *string
 }
 
 type NamedItem struct {
-	Name string `json:"name"`
+	Name string
 }
 
 type ProjectItem struct {
-	Title       *string `json:"title"`
-	URL         *string `json:"url"`
-	Description *string `json:"description"`
+	Title       *string
+	URL         *string
+	Description *string
 }
 
 type CultureItem struct {
-	Title            *string `json:"title"`
-	ShortDescription *string `json:"short_description"`
-	Description      *string `json:"description"`
+	Title            *string
+	ShortDescription *string
+	Description      *string
 }
 
 type CareerDetails struct {
-	ExperienceItems []ExperienceItem `json:"experience_items"`
-	EducationItems  []EducationItem  `json:"education_items"`
-	Skills          []NamedItem      `json:"skills"`
-	Projects        []ProjectItem    `json:"projects"`
+	ExperienceItems []ExperienceItem
+	EducationItems  []EducationItem
+	Skills          []NamedItem
+	Projects        []ProjectItem
 }
 
 type CompanyDetails struct {
-	Technologies []NamedItem   `json:"technologies"`
-	Culture      []CultureItem `json:"culture"`
+	Technologies []NamedItem
+	Culture      []CultureItem
 }

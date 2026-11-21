@@ -93,29 +93,29 @@ func validateVacancyDetails(responsibilities, requirements string) error {
 }
 
 func validateVacancyOptions(vacancy models.Vacancy) error {
-	if vacancy.ExperienceLevel != nil {
-		switch *vacancy.ExperienceLevel {
+	if vacancy.Requirements.ExperienceLevel != nil {
+		switch *vacancy.Requirements.ExperienceLevel {
 		case "", "no_experience", "1_3", "3_6", "6_plus":
 		default:
 			return fmt.Errorf("%w: invalid experience_level", apperrors.ErrInvalidInput)
 		}
 	}
-	if vacancy.EmploymentType != nil {
-		switch *vacancy.EmploymentType {
+	if vacancy.Conditions.EmploymentType != nil {
+		switch *vacancy.Conditions.EmploymentType {
 		case "", "full", "part":
 		default:
 			return fmt.Errorf("%w: invalid employment_type", apperrors.ErrInvalidInput)
 		}
 	}
-	if vacancy.WorkFormat != nil {
-		switch *vacancy.WorkFormat {
+	if vacancy.Conditions.WorkFormat != nil {
+		switch *vacancy.Conditions.WorkFormat {
 		case "", "office", "hybrid", "remote":
 		default:
 			return fmt.Errorf("%w: invalid work_format", apperrors.ErrInvalidInput)
 		}
 	}
-	if vacancy.WorkSchedule != nil {
-		switch *vacancy.WorkSchedule {
+	if vacancy.Conditions.WorkSchedule != nil {
+		switch *vacancy.Conditions.WorkSchedule {
 		case "", "5_2", "2_2", "flexible", "shift":
 		default:
 			return fmt.Errorf("%w: invalid work_schedule", apperrors.ErrInvalidInput)

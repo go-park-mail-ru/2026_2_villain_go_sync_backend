@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/resume"
 	"github.com/jackc/pgx/v5"
@@ -33,11 +34,14 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	res, err := repo.Create(context.Background(), models.Resume{
-		TargetPosition: &targetPosition, SeekerID: 10,
+		SeekerID:    10,
 		Title:       "Go dev",
-		Description: "desc",
-		Experience:  "exp",
-		Education:   "edu",
+		Preferences: models.ResumePreferences{TargetPosition: &targetPosition},
+		Content: models.ResumeContent{
+			Description: "desc",
+			Experience:  "exp",
+			Education:   "edu",
+		},
 	})
 
 	if err != nil {
@@ -143,19 +147,22 @@ func TestPostgresRepository_Update_Success(t *testing.T) {
 
 	mockPool.ExpectBegin()
 	mockPool.ExpectQuery(`UPDATE resume`).
-		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10, &targetPosition, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*float64)(nil), (*string)(nil), (*string)(nil), false).
+		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10, &targetPosition, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*float64)(nil), (*string)(nil), (*string)(nil), true).
 		WillReturnRows(rows)
 	expectCareerDetails(mockPool, "resume")
 	mockPool.ExpectCommit()
 	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
-	res, err := repo.Update(context.Background(), models.Resume{
-		TargetPosition: &targetPosition, ID: 1,
+	res, err := repo.Update(context.Background(), dto.UpdateInput{Resume: models.Resume{
+		ID:          1,
 		Title:       "Updated Title",
-		Description: "desc",
-		Experience:  "exp",
-		Education:   "edu",
-	}, 10)
+		Preferences: models.ResumePreferences{TargetPosition: &targetPosition},
+		Content: models.ResumeContent{
+			Description: "desc",
+			Experience:  "exp",
+			Education:   "edu",
+		},
+	}, ClearSalaryFrom: true}, 10)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

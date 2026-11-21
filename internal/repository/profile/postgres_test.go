@@ -42,8 +42,8 @@ func TestPostgresRepository_GetSeekerByID_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if p.FirstName != "Ivan" {
-		t.Errorf("expected Ivan, got %s", p.FirstName)
+	if p.PersonalInfo.FirstName != "Ivan" {
+		t.Errorf("expected Ivan, got %s", p.PersonalInfo.FirstName)
 	}
 
 	if err := mockPool.ExpectationsWereMet(); err != nil {
@@ -91,10 +91,9 @@ func TestPostgresRepository_UpsertSeeker_Success(t *testing.T) {
 	mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 	p := models.SeekerProfile{
-		Profile:   models.Profile{UserID: 1, Description: "About me"},
-		FirstName: "Ivan",
-		LastName:  "Ivanov",
-		Phone:     "12345",
+		Profile:      models.Profile{UserID: 1, Description: "About me"},
+		PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan", LastName: "Ivanov"},
+		Contacts:     models.SeekerContacts{Phone: "12345"},
 	}
 
 	res, err := repo.UpsertSeeker(context.Background(), p)
@@ -102,8 +101,8 @@ func TestPostgresRepository_UpsertSeeker_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.UserID != 1 {
-		t.Errorf("expected UserID 1, got %d", res.UserID)
+	if res.Profile.UserID != 1 {
+		t.Errorf("expected UserID 1, got %d", res.Profile.UserID)
 	}
 	if err := mockPool.ExpectationsWereMet(); err != nil {
 		t.Errorf("unfulfilled expectations: %v", err)

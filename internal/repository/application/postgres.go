@@ -110,7 +110,7 @@ func (r *PostgresRepository) UpdateStatus(ctx context.Context, input dto.UpdateS
 	var result models.ApplicationStatusUpdate
 	err := r.pool.QueryRow(ctx, updateStatusQuery,
 		input.ApplicationID, input.EmployerID, input.Status, input.ReasonCode, input.Comment,
-	).Scan(&result.ApplicationID, &result.Status, &result.ReasonCode, &result.StatusComment, &result.StatusChangedAt)
+	).Scan(&result.ApplicationID, &result.Value, &result.ReasonCode, &result.StatusComment, &result.StatusChangedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return models.ApplicationStatusUpdate{}, apperrors.ErrNotFound
 	}
@@ -157,10 +157,10 @@ func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64) (
 	for rows.Next() {
 		var app models.SeekerApplication
 		if err := rows.Scan(
-			&app.ID, &app.SeekerID, &app.VacancyID, &app.VacancyVersion,
-			&app.CoverLetter, &app.CreatedAt, &app.UpdatedAt, &app.ResumeID,
-			&app.VacancyTitle, &app.CompanyName, &app.ResumeTitle,
-			&app.Status, &app.ReasonCode, &app.StatusComment, &app.StatusChangedAt,
+			&app.ID, &app.SeekerID, &app.Vacancy.VacancyID, &app.Vacancy.VacancyVersion,
+			&app.CoverLetter, &app.CreatedAt, &app.UpdatedAt, &app.Resume.ResumeID,
+			&app.Vacancy.VacancyTitle, &app.Vacancy.CompanyName, &app.Resume.ResumeTitle,
+			&app.Status.Value, &app.Status.ReasonCode, &app.Status.StatusComment, &app.Status.StatusChangedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan seeker application: %w", err)
 		}

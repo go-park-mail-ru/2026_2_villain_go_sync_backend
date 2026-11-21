@@ -6,38 +6,63 @@ import (
 )
 
 type Vacancy struct {
-	ID               int64     `json:"id"`
-	Version          int       `json:"version"`
-	EmployerID       int64     `json:"employer_id"`
-	CompanyName      string    `json:"company_name"`
-	Title            string    `json:"title"`
-	Description      string    `json:"description"`
-	Responsibilities string    `json:"responsibilities"`
-	Requirements     string    `json:"requirements"`
-	SalaryFrom       *float64  `json:"salary_from"`
-	SalaryTo         *float64  `json:"salary_to"`
-	Currency         string    `json:"currency"`
-	Offer            *string   `json:"offer"`
-	ExperienceLevel  *string   `json:"experience_level"`
-	EmploymentType   *string   `json:"employment_type"`
-	WorkFormat       *string   `json:"work_format"`
-	WorkSchedule     *string   `json:"work_schedule"`
-	WorkHours        *string   `json:"work_hours"`
-	City             *string   `json:"city"`
-	OfficeAddress    *string   `json:"office_address"`
-	ApplyUntil       *string   `json:"apply_until"`
-	UpdatedAt        time.Time `json:"updated_at"`
-	ChangedAt        time.Time `json:"changed_at"`
-	CreatedAt        time.Time `json:"created_at"`
-	LogoURL          *string   `json:"logo_url"`
+	ID         int64
+	Version    int
+	Title      string
+	ApplyUntil *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ChangedAt  time.Time
+
+	Company      VacancyCompany
+	Content      VacancyContent
+	Requirements VacancyRequirements
+	Salary       VacancySalary
+	Conditions   VacancyConditions
+	Location     VacancyLocation
+}
+
+type VacancyCompany struct {
+	EmployerID int64
+	Name       string
+	LogoURL    *string
+}
+
+type VacancyContent struct {
+	Description      string
+	Responsibilities string
+}
+
+type VacancyRequirements struct {
+	Description     string
+	ExperienceLevel *string
+}
+
+type VacancySalary struct {
+	SalaryFrom *float64
+	SalaryTo   *float64
+	Currency   string
+}
+
+type VacancyConditions struct {
+	Offer          *string
+	EmploymentType *string
+	WorkFormat     *string
+	WorkSchedule   *string
+	WorkHours      *string
+}
+
+type VacancyLocation struct {
+	City          *string
+	OfficeAddress *string
 }
 
 func (v *Vacancy) SetLogoURL(logoKey string) {
 	if logoKey == "" {
-		v.LogoURL = nil
+		v.Company.LogoURL = nil
 		return
 	}
 
-	url := fmt.Sprintf("/api/employers/%d/logo", v.EmployerID)
-	v.LogoURL = &url
+	url := fmt.Sprintf("/api/employers/%d/logo", v.Company.EmployerID)
+	v.Company.LogoURL = &url
 }

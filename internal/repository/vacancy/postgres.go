@@ -127,20 +127,20 @@ func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	err := row.Scan(
 		&vacancy.ID,
 		&vacancy.Version,
-		&vacancy.EmployerID,
-		&vacancy.CompanyName,
+		&vacancy.Company.EmployerID,
+		&vacancy.Company.Name,
 		&vacancy.Title,
-		&vacancy.Description,
-		&vacancy.SalaryFrom,
-		&vacancy.SalaryTo,
-		&vacancy.Currency,
+		&vacancy.Content.Description,
+		&vacancy.Salary.SalaryFrom,
+		&vacancy.Salary.SalaryTo,
+		&vacancy.Salary.Currency,
 		&vacancy.CreatedAt,
 		&logoKey,
-		&vacancy.Responsibilities,
-		&vacancy.Requirements,
+		&vacancy.Content.Responsibilities,
+		&vacancy.Requirements.Description,
 		&vacancy.UpdatedAt, &vacancy.ChangedAt, &vacancy.ApplyUntil,
-		&vacancy.Offer, &vacancy.ExperienceLevel, &vacancy.EmploymentType, &vacancy.WorkFormat,
-		&vacancy.WorkSchedule, &vacancy.WorkHours, &vacancy.City, &vacancy.OfficeAddress,
+		&vacancy.Conditions.Offer, &vacancy.Requirements.ExperienceLevel, &vacancy.Conditions.EmploymentType, &vacancy.Conditions.WorkFormat,
+		&vacancy.Conditions.WorkSchedule, &vacancy.Conditions.WorkHours, &vacancy.Location.City, &vacancy.Location.OfficeAddress,
 	)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -161,7 +161,7 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	err = tx.QueryRow(
 		ctx,
 		insertVacancyQuery,
-		vacancy.EmployerID,
+		vacancy.Company.EmployerID,
 	).Scan(&vacancy.ID, &vacancy.CreatedAt, &vacancy.UpdatedAt, &vacancy.ApplyUntil)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -170,13 +170,13 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	err = tx.QueryRow(
 		ctx,
 		insertVacancyHistoryQuery,
-		vacancy.ID, vacancy.Title, vacancy.Description, vacancy.SalaryFrom, vacancy.SalaryTo, vacancy.Currency,
-		strings.TrimSpace(vacancy.Responsibilities), strings.TrimSpace(vacancy.Requirements),
-		vacancy.Offer, vacancy.ExperienceLevel, vacancy.EmploymentType, vacancy.WorkFormat,
-		vacancy.WorkSchedule, vacancy.WorkHours, vacancy.City, vacancy.OfficeAddress,
+		vacancy.ID, vacancy.Title, vacancy.Content.Description, vacancy.Salary.SalaryFrom, vacancy.Salary.SalaryTo, vacancy.Salary.Currency,
+		strings.TrimSpace(vacancy.Content.Responsibilities), strings.TrimSpace(vacancy.Requirements.Description),
+		vacancy.Conditions.Offer, vacancy.Requirements.ExperienceLevel, vacancy.Conditions.EmploymentType, vacancy.Conditions.WorkFormat,
+		vacancy.Conditions.WorkSchedule, vacancy.Conditions.WorkHours, vacancy.Location.City, vacancy.Location.OfficeAddress,
 	).Scan(
-		&vacancy.ChangedAt, &vacancy.Offer, &vacancy.ExperienceLevel, &vacancy.EmploymentType, &vacancy.WorkFormat,
-		&vacancy.WorkSchedule, &vacancy.WorkHours, &vacancy.City, &vacancy.OfficeAddress,
+		&vacancy.ChangedAt, &vacancy.Conditions.Offer, &vacancy.Requirements.ExperienceLevel, &vacancy.Conditions.EmploymentType, &vacancy.Conditions.WorkFormat,
+		&vacancy.Conditions.WorkSchedule, &vacancy.Conditions.WorkHours, &vacancy.Location.City, &vacancy.Location.OfficeAddress,
 	)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -202,8 +202,8 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 
 	var logoKey string
 
-	err = tx.QueryRow(ctx, companyDetailsQuery, vacancy.EmployerID).
-		Scan(&vacancy.CompanyName, &logoKey)
+	err = tx.QueryRow(ctx, companyDetailsQuery, vacancy.Company.EmployerID).
+		Scan(&vacancy.Company.Name, &logoKey)
 	if err != nil {
 		return models.Vacancy{}, fmt.Errorf("get company name: %w", err)
 	}
@@ -310,7 +310,7 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 		return models.Vacancy{}, err
 	}
 
-	if employerID != vacancy.EmployerID {
+	if employerID != vacancy.Company.EmployerID {
 		return models.Vacancy{}, apperrors.ErrForbidden
 	}
 
@@ -334,13 +334,13 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 	err = tx.QueryRow(
 		ctx,
 		updateVacancyHistoryQuery,
-		vacancy.ID, vacancy.Version, vacancy.Title, vacancy.Description, vacancy.SalaryFrom, vacancy.SalaryTo, vacancy.Currency,
-		strings.TrimSpace(vacancy.Responsibilities), strings.TrimSpace(vacancy.Requirements),
-		vacancy.Offer, vacancy.ExperienceLevel, vacancy.EmploymentType, vacancy.WorkFormat,
-		vacancy.WorkSchedule, vacancy.WorkHours, vacancy.City, vacancy.OfficeAddress,
+		vacancy.ID, vacancy.Version, vacancy.Title, vacancy.Content.Description, vacancy.Salary.SalaryFrom, vacancy.Salary.SalaryTo, vacancy.Salary.Currency,
+		strings.TrimSpace(vacancy.Content.Responsibilities), strings.TrimSpace(vacancy.Requirements.Description),
+		vacancy.Conditions.Offer, vacancy.Requirements.ExperienceLevel, vacancy.Conditions.EmploymentType, vacancy.Conditions.WorkFormat,
+		vacancy.Conditions.WorkSchedule, vacancy.Conditions.WorkHours, vacancy.Location.City, vacancy.Location.OfficeAddress,
 	).Scan(
-		&vacancy.ChangedAt, &vacancy.Offer, &vacancy.ExperienceLevel, &vacancy.EmploymentType, &vacancy.WorkFormat,
-		&vacancy.WorkSchedule, &vacancy.WorkHours, &vacancy.City, &vacancy.OfficeAddress,
+		&vacancy.ChangedAt, &vacancy.Conditions.Offer, &vacancy.Requirements.ExperienceLevel, &vacancy.Conditions.EmploymentType, &vacancy.Conditions.WorkFormat,
+		&vacancy.Conditions.WorkSchedule, &vacancy.Conditions.WorkHours, &vacancy.Location.City, &vacancy.Location.OfficeAddress,
 	)
 	if err != nil {
 		return models.Vacancy{}, err

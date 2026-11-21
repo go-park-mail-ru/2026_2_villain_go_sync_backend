@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
@@ -13,7 +14,7 @@ type ResumeRepository interface {
 	Create(ctx context.Context, resume models.Resume) (models.Resume, error)
 	GetByID(ctx context.Context, id int) (models.Resume, error)
 	ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error)
-	Update(ctx context.Context, resume models.Resume, seekerID int) (models.Resume, error)
+	Update(ctx context.Context, input dto.UpdateInput, seekerID int) (models.Resume, error)
 	Delete(ctx context.Context, id int, seekerID int) error
 }
 
@@ -48,12 +49,12 @@ func (u *ResumeUsecase) ListBySeekerID(ctx context.Context, seekerID int) ([]mod
 	return u.resumes.ListBySeekerID(ctx, seekerID)
 }
 
-func (u *ResumeUsecase) Update(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
+func (u *ResumeUsecase) Update(ctx context.Context, userID int, role models.Role, input dto.UpdateInput) (models.Resume, error) {
 	if !role.IsSeeker() {
 		return models.Resume{}, apperrors.ErrForbidden
 	}
 
-	res, err := u.resumes.Update(ctx, resume, userID)
+	res, err := u.resumes.Update(ctx, input, userID)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return models.Resume{}, apperrors.ErrNotFound
