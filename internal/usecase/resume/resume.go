@@ -37,9 +37,6 @@ func (u *ResumeUsecase) Create(ctx context.Context, userID int, role models.Role
 func (u *ResumeUsecase) GetByID(ctx context.Context, resumeID int, userID int, role models.Role) (models.Resume, error) {
 	res, err := u.resumes.GetByID(ctx, resumeID)
 	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return models.Resume{}, apperrors.ErrNotFound
-		}
 		return models.Resume{}, err
 	}
 
