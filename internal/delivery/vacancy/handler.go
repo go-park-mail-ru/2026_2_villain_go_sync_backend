@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
+	applicationdto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
@@ -41,7 +42,7 @@ func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancies)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyListResponse(vacancies))
 }
 
 func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
@@ -59,13 +60,23 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := dto.CreateVacancyInput{
-		EmployerID:  userID,
-		Title:       request.Title.String(),
-		Description: request.Description.String(),
-		SalaryFrom:  request.SalaryFrom,
-		SalaryTo:    request.SalaryTo,
-		Currency:    request.Currency.String(),
-		CategoryIDs: request.CategoryIDs,
+		EmployerID:       userID,
+		Title:            request.Title.String(),
+		Description:      request.Description.String(),
+		Responsibilities: request.Responsibilities.String(),
+		Requirements:     request.Requirements.String(),
+		SalaryFrom:       request.SalaryFrom,
+		SalaryTo:         request.SalaryTo,
+		Currency:         request.Currency.String(),
+		Offer:            sanitizer.Ptr(request.Offer),
+		ExperienceLevel:  sanitizer.Ptr(request.ExperienceLevel),
+		EmploymentType:   sanitizer.Ptr(request.EmploymentType),
+		WorkFormat:       sanitizer.Ptr(request.WorkFormat),
+		WorkSchedule:     sanitizer.Ptr(request.WorkSchedule),
+		WorkHours:        sanitizer.Ptr(request.WorkHours),
+		City:             sanitizer.Ptr(request.City),
+		OfficeAddress:    sanitizer.Ptr(request.OfficeAddress),
+		CategoryIDs:      request.CategoryIDs,
 	}
 
 	createdVacancy, err := h.vacancy.Create(r.Context(), input)
@@ -73,7 +84,7 @@ func (h *Handler) CreateVacancy(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAppError(w, err, "failed to create vacancy")
 		return
 	}
-	httputil.WriteOK(w, http.StatusCreated, createdVacancy)
+	httputil.WriteOK(w, http.StatusCreated, dto.NewVacancyResponse(createdVacancy))
 }
 
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +99,7 @@ func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancy)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyResponse(vacancy))
 
 }
 
@@ -105,7 +116,7 @@ func (h *Handler) ListVacanciesByEmployer(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, vacancies)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyListResponse(vacancies))
 }
 
 func parseOptionalSalary(raw json.RawMessage) (dto.OptionalSalary, error) {
@@ -156,14 +167,24 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	input := dto.UpdateVacancyInput{
-		VacancyID:   vacancyID,
-		EmployerID:  userID,
-		Title:       sanitizer.Ptr(request.Title),
-		Description: sanitizer.Ptr(request.Description),
-		SalaryFrom:  salaryFrom,
-		SalaryTo:    salaryTo,
-		Currency:    sanitizer.Ptr(request.Currency),
-		CategoryIDs: request.CategoryIDs,
+		VacancyID:        vacancyID,
+		EmployerID:       userID,
+		Title:            sanitizer.Ptr(request.Title),
+		Description:      sanitizer.Ptr(request.Description),
+		Responsibilities: sanitizer.Ptr(request.Responsibilities),
+		Requirements:     sanitizer.Ptr(request.Requirements),
+		SalaryFrom:       salaryFrom,
+		SalaryTo:         salaryTo,
+		Currency:         sanitizer.Ptr(request.Currency),
+		Offer:            sanitizer.Ptr(request.Offer),
+		ExperienceLevel:  sanitizer.Ptr(request.ExperienceLevel),
+		EmploymentType:   sanitizer.Ptr(request.EmploymentType),
+		WorkFormat:       sanitizer.Ptr(request.WorkFormat),
+		WorkSchedule:     sanitizer.Ptr(request.WorkSchedule),
+		WorkHours:        sanitizer.Ptr(request.WorkHours),
+		City:             sanitizer.Ptr(request.City),
+		OfficeAddress:    sanitizer.Ptr(request.OfficeAddress),
+		CategoryIDs:      request.CategoryIDs,
 	}
 
 	updatedVacancy, err := h.vacancy.Update(r.Context(), input)
@@ -171,7 +192,7 @@ func (h *Handler) UpdateVacancy(w http.ResponseWriter, r *http.Request) {
 		httputil.WriteAppError(w, err, "failed to update vacancy")
 		return
 	}
-	httputil.WriteOK(w, http.StatusOK, updatedVacancy)
+	httputil.WriteOK(w, http.StatusOK, dto.NewVacancyResponse(updatedVacancy))
 }
 
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
@@ -215,7 +236,7 @@ func (h *Handler) ListApplicants(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, applicants)
+	httputil.WriteOK(w, http.StatusOK, applicationdto.NewApplicantListResponse(applicants))
 }
 
 func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +257,7 @@ func (h *Handler) ListEmployerApplicants(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	httputil.WriteOK(w, http.StatusOK, applicants)
+	httputil.WriteOK(w, http.StatusOK, applicationdto.NewApplicantListResponse(applicants))
 }
 
 func (h *Handler) ListCategories(w http.ResponseWriter, r *http.Request) {

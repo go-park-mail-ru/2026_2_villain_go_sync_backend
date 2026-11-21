@@ -250,7 +250,7 @@ func TestMoreVacancyHandler_ListEmployerApplicants(t *testing.T) {
 			}
 			if tt.call {
 				uc.EXPECT().ListEmployerApplicants(gomock.Any(), int64(12), tt.role).
-					Return([]models.Applicant{{ApplicationID: 4, FirstName: "Ivan"}}, tt.err)
+					Return([]models.Applicant{{ApplicationID: 4, Seeker: models.ApplicantSeeker{FirstName: "Ivan"}}}, tt.err)
 			}
 			rec := httptest.NewRecorder()
 			h.ListEmployerApplicants(rec, req)

@@ -56,3 +56,33 @@ func (mr *MockApplicationUsecaseMockRecorder) Create(ctx, input any) *gomock.Cal
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockApplicationUsecase)(nil).Create), ctx, input)
 }
+
+// ListBySeeker mocks base method.
+func (m *MockApplicationUsecase) ListBySeeker(ctx context.Context, seekerID int64, role models.Role) ([]models.SeekerApplication, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID, role)
+	ret0, _ := ret[0].([]models.SeekerApplication)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListBySeeker indicates an expected call of ListBySeeker.
+func (mr *MockApplicationUsecaseMockRecorder) ListBySeeker(ctx, seekerID, role any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationUsecase)(nil).ListBySeeker), ctx, seekerID, role)
+}
+
+// UpdateStatus mocks base method.
+func (m *MockApplicationUsecase) UpdateStatus(ctx context.Context, role models.Role, input application.UpdateStatusInput) (models.ApplicationStatusUpdate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, role, input)
+	ret0, _ := ret[0].(models.ApplicationStatusUpdate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockApplicationUsecaseMockRecorder) UpdateStatus(ctx, role, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockApplicationUsecase)(nil).UpdateStatus), ctx, role, input)
+}

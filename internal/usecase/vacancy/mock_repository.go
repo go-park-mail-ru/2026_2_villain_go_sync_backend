@@ -215,10 +215,10 @@ func (m *MockUserRepository) EXPECT() *MockUserRepositoryMockRecorder {
 }
 
 // GetRoleByID mocks base method.
-func (m *MockUserRepository) GetRoleByID(ctx context.Context, userID int64) (string, error) {
+func (m *MockUserRepository) GetRoleByID(ctx context.Context, userID int64) (models.Role, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRoleByID", ctx, userID)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(models.Role)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

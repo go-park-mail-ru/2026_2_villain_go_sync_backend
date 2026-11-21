@@ -68,3 +68,7 @@ func (p *LoggingPool) Exec(ctx context.Context, sql string, args ...any) (pgconn
 func (p *LoggingPool) Begin(ctx context.Context) (pgx.Tx, error) {
 	return p.next.Begin(ctx)
 }
+
+func (p *LoggingPool) BeginTx(ctx context.Context, options pgx.TxOptions) (pgx.Tx, error) {
+	return p.next.BeginTx(ctx, options)
+}

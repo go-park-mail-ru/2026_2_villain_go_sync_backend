@@ -117,6 +117,15 @@ func New() http.Handler {
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListEmployerApplicants)),
 	)
 
+	mux.Handle(
+		"PATCH /api/employer/applications/{id}/status",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.UpdateStatus)),
+	)
+	mux.Handle(
+		"GET /api/seeker/applications",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.ListMine)),
+	)
+
 	return middleware.RequestID(
 		middleware.AccessLog(
 			mux,

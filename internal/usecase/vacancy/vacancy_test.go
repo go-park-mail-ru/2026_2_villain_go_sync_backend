@@ -55,7 +55,7 @@ func TestVacancyUsecase_ListApplicants_Success(t *testing.T) {
 		Return(true, nil)
 	mockVacancyRepo.EXPECT().
 		ListByVacancyID(gomock.Any(), int64(1)).
-		Return([]models.Applicant{{FirstName: "Ivan"}}, nil)
+		Return([]models.Applicant{{Seeker: models.ApplicantSeeker{FirstName: "Ivan"}}}, nil)
 
 	res, err := uc.ListApplicants(context.Background(), 10, models.RoleEmployer, 1)
 
@@ -72,7 +72,7 @@ func TestVacancyUsecase_Create_NotEmployer(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("seeker", nil)
+		Return(models.RoleSeeker, nil)
 
 	_, err := uc.Create(context.Background(), dto.CreateVacancyInput{EmployerID: 10})
 
@@ -86,7 +86,7 @@ func TestVacancyUsecase_Create_NoProfile(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
@@ -104,7 +104,7 @@ func TestVacancyUsecase_Create_InvalidTitle(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
@@ -124,15 +124,17 @@ func TestVacancyUsecase_Create_Success(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
 
 	input := dto.CreateVacancyInput{
-		EmployerID: 10,
-		Title:      "Go dev",
-		Currency:   "RUB",
+		EmployerID:       10,
+		Title:            "Go dev",
+		Responsibilities: "Develop Go services",
+		Requirements:     "Know Go",
+		Currency:         "RUB",
 	}
 
 	mockVacancyRepo.EXPECT().
@@ -154,14 +156,14 @@ func TestVacancyUsecase_Update_WrongOwner(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
 
 	mockVacancyRepo.EXPECT().
 		GetByID(gomock.Any(), int64(1)).
-		Return(models.Vacancy{ID: 1, EmployerID: 99}, nil)
+		Return(models.Vacancy{ID: 1, Company: models.VacancyCompany{EmployerID: 99}}, nil)
 
 	_, err := uc.Update(context.Background(), dto.UpdateVacancyInput{
 		VacancyID:  1,
@@ -178,7 +180,7 @@ func TestVacancyUsecase_Delete_Success(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
@@ -191,5 +193,31 @@ func TestVacancyUsecase_Delete_Success(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("expected nil, got %v", err)
+	}
+}
+
+func TestVacancyUsecase_Create_RequiresResponsibilitiesAndRequirements(t *testing.T) {
+	for _, tc := range []struct {
+		name, responsibilities, requirements string
+	}{
+		{name: "both missing"},
+		{name: "responsibilities missing", requirements: "Know Go"},
+		{name: "requirements whitespace", responsibilities: "Develop Go services", requirements: "\t\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			uc, _, users := setupUsecase(t)
+			users.EXPECT().GetRoleByID(gomock.Any(), int64(10)).Return(models.RoleEmployer, nil)
+			users.EXPECT().HasEmployerProfile(gomock.Any(), int64(10)).Return(true, nil)
+
+			_, err := uc.Create(context.Background(), dto.CreateVacancyInput{
+				EmployerID:       10,
+				Title:            "Go dev",
+				Responsibilities: tc.responsibilities,
+				Requirements:     tc.requirements,
+			})
+			if !errors.Is(err, apperrors.ErrInvalidInput) {
+				t.Fatalf("expected ErrInvalidInput, got %v", err)
+			}
+		})
 	}
 }
