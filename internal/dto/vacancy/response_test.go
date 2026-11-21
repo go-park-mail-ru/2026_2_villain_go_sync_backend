@@ -15,6 +15,7 @@ func TestVacancyFlatJSON(t *testing.T) {
 	schedule := models.WorkScheduleFlexible
 	model := models.Vacancy{
 		ID:           12,
+		Categories:   []string{"Backend", "Go"},
 		Title:        "Go developer",
 		Company:      models.VacancyCompany{EmployerID: 5, Name: "Company"},
 		Content:      models.VacancyContent{Description: "Build APIs"},
@@ -34,7 +35,7 @@ func TestVacancyFlatJSON(t *testing.T) {
 	for key, want := range map[string]string{
 		"id": "12", "employer_id": "5", "company_name": `"Company"`, "description": `"Build APIs"`, "requirements": `"Go"`,
 		"currency": `"RUB"`, "employment_type": `"full"`, "work_format": `"remote"`, "city": `"Moscow"`,
-		"experience_level": `"3_6"`, "work_schedule": `"flexible"`,
+		"categories": `["Backend","Go"]`, "experience_level": `"3_6"`, "work_schedule": `"flexible"`,
 	} {
 		if got := string(fields[key]); got != want {
 			t.Errorf("%s = %s, want %s", key, got, want)
@@ -55,7 +56,7 @@ func TestVacancyOptionalWorkOptionsJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	for key, want := range map[string]string{
-		"employment_type": "null", "work_format": `""`, "work_schedule": "null", "experience_level": "null",
+		"categories": "[]", "employment_type": "null", "work_format": `""`, "work_schedule": "null", "experience_level": "null",
 	} {
 		if got := string(fields[key]); got != want {
 			t.Errorf("%s = %s, want %s", key, got, want)

@@ -93,6 +93,18 @@ func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
+const vacancyCategoriesArray = `ARRAY(
+            SELECT c.name
+            FROM vacancy_category vc
+            JOIN category c ON c.category_id = vc.category_id
+            WHERE vc.vacancy_id = v.vacancy_id
+            ORDER BY c.name
+        )`
+
+const selectVacancyCategoriesQuery = `SELECT ` + vacancyCategoriesArray + `
+    FROM vacancy v
+    WHERE v.vacancy_id = $1`
+
 const vacancySelectQuery = `
     SELECT
         v.vacancy_id,
@@ -108,9 +120,18 @@ const vacancySelectQuery = `
         COALESCE(ep.logo_key, ''),
         COALESCE(vh.responsibilities, ''),
         COALESCE(vh.requirements, ''),
-        v.updated_at, vh.changed_at, to_char(v.apply_until, 'YYYY-MM-DD'),
-        vh.offer, vh.experience_level, vh.employment_type, vh.work_format,
-        vh.work_schedule, vh.work_hours, vh.city, vh.office_address
+        v.updated_at,
+        vh.changed_at,
+        to_char(v.apply_until, 'YYYY-MM-DD'),
+        vh.offer,
+        vh.experience_level,
+        vh.employment_type,
+        vh.work_format,
+        vh.work_schedule,
+        vh.work_hours,
+        vh.city,
+        vh.office_address,
+        ` + vacancyCategoriesArray + ` AS categories
     FROM vacancy v
     JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
     JOIN employer_profile ep ON ep.user_id = v.employer_id
@@ -118,7 +139,8 @@ const vacancySelectQuery = `
         SELECT MAX(version)
         FROM vacancy_history
         WHERE vacancy_id = v.vacancy_id
-    )`
+    )
+`
 
 func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	var vacancy models.Vacancy
@@ -138,9 +160,18 @@ func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 		&logoKey,
 		&vacancy.Content.Responsibilities,
 		&vacancy.Requirements.Description,
-		&vacancy.UpdatedAt, &vacancy.ChangedAt, &vacancy.ApplyUntil,
-		&vacancy.Conditions.Offer, &vacancy.Requirements.ExperienceLevel, &vacancy.Conditions.EmploymentType, &vacancy.Conditions.WorkFormat,
-		&vacancy.Conditions.WorkSchedule, &vacancy.Conditions.WorkHours, &vacancy.Location.City, &vacancy.Location.OfficeAddress,
+		&vacancy.UpdatedAt,
+		&vacancy.ChangedAt,
+		&vacancy.ApplyUntil,
+		&vacancy.Conditions.Offer,
+		&vacancy.Requirements.ExperienceLevel,
+		&vacancy.Conditions.EmploymentType,
+		&vacancy.Conditions.WorkFormat,
+		&vacancy.Conditions.WorkSchedule,
+		&vacancy.Conditions.WorkHours,
+		&vacancy.Location.City,
+		&vacancy.Location.OfficeAddress,
+		&vacancy.Categories,
 	)
 	if err != nil {
 		return models.Vacancy{}, err
@@ -209,6 +240,10 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	}
 
 	vacancy.SetLogoURL(logoKey)
+
+	if err := tx.QueryRow(ctx, selectVacancyCategoriesQuery, vacancy.ID).Scan(&vacancy.Categories); err != nil {
+		return models.Vacancy{}, fmt.Errorf("get vacancy categories: %w", err)
+	}
 
 	err = tx.Commit(ctx)
 	if err != nil {
@@ -376,6 +411,10 @@ func (r *PostgresRepository) Update(ctx context.Context, vacancy models.Vacancy,
 
 	if err := tx.QueryRow(ctx, touchVacancyQuery, vacancy.ID).Scan(&vacancy.UpdatedAt, &vacancy.ApplyUntil); err != nil {
 		return models.Vacancy{}, err
+	}
+
+	if err := tx.QueryRow(ctx, selectVacancyCategoriesQuery, vacancy.ID).Scan(&vacancy.Categories); err != nil {
+		return models.Vacancy{}, fmt.Errorf("get vacancy categories: %w", err)
 	}
 
 	err = tx.Commit(ctx)

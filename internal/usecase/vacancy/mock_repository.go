@@ -145,6 +145,21 @@ func (mr *MockVacancyRepositoryMockRecorder) ListByVacancyID(ctx, vacancyID any)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByVacancyID", reflect.TypeOf((*MockVacancyRepository)(nil).ListByVacancyID), ctx, vacancyID)
 }
 
+// ListCategories mocks base method.
+func (m *MockVacancyRepository) ListCategories(ctx context.Context) ([]models.Category, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListCategories", ctx)
+	ret0, _ := ret[0].([]models.Category)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// ListCategories indicates an expected call of ListCategories.
+func (mr *MockVacancyRepositoryMockRecorder) ListCategories(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListCategories", reflect.TypeOf((*MockVacancyRepository)(nil).ListCategories), ctx)
+}
+
 // ListVacancies mocks base method.
 func (m *MockVacancyRepository) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
 	m.ctrl.T.Helper()

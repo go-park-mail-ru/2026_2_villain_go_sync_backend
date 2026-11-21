@@ -20,6 +20,8 @@ type Vacancy struct {
 	Salary       VacancySalary
 	Conditions   VacancyConditions
 	Location     VacancyLocation
+
+	Categories []string
 }
 
 type VacancyCompany struct {

@@ -31,9 +31,15 @@ type VacancyResponse struct {
 	WorkHours        *string   `json:"work_hours"`
 	City             *string   `json:"city"`
 	OfficeAddress    *string   `json:"office_address"`
+	Categories       []string  `json:"categories"`
 }
 
 func NewVacancyResponse(v models.Vacancy) VacancyResponse {
+	categories := v.Categories
+	if categories == nil {
+		categories = []string{}
+	}
+
 	return VacancyResponse{
 		ID:               v.ID,
 		Version:          v.Version,
@@ -59,6 +65,7 @@ func NewVacancyResponse(v models.Vacancy) VacancyResponse {
 		WorkHours:        v.Conditions.WorkHours,
 		City:             v.Location.City,
 		OfficeAddress:    v.Location.OfficeAddress,
+		Categories:       categories,
 	}
 }
 
