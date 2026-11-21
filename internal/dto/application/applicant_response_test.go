@@ -10,13 +10,13 @@ import (
 
 func TestApplicantFlatJSON(t *testing.T) {
 	resumeID := int64(9)
-	reason := "skills_mismatch"
+	reason := models.RejectionSkillsMismatch
 	applicant := models.Applicant{
 		ApplicationID: 12,
 		Seeker:        models.ApplicantSeeker{SeekerID: 5},
 		Vacancy:       models.ApplicantVacancy{VacancyID: 7},
 		Resume:        models.ApplicantResume{ResumeID: &resumeID},
-		Status:        models.ApplicantStatus{Value: "rejected", ReasonCode: &reason},
+		Status:        models.ApplicantStatus{Value: models.ApplicationRejected, ReasonCode: &reason},
 	}
 	raw, err := json.Marshal(application.NewApplicantResponse(applicant))
 	if err != nil {

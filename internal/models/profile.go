@@ -33,7 +33,7 @@ type SeekerContacts struct {
 type SeekerPreferences struct {
 	PreferredPosition *string
 	PreferredCities   *string
-	WorkFormat        *string
+	WorkFormat        *WorkFormat
 }
 
 type EmployerProfile struct {

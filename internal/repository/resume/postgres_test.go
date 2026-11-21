@@ -27,7 +27,7 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 
 	mockPool.ExpectBegin()
 	mockPool.ExpectQuery(`INSERT INTO resume`).
-		WithArgs(10, "Go dev", "desc", "exp", "edu", &targetPosition, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*float64)(nil), (*string)(nil), (*string)(nil)).
+		WithArgs(10, "Go dev", "desc", "exp", "edu", &targetPosition, (*string)(nil), (*models.EmploymentType)(nil), (*models.WorkFormat)(nil), (*models.WorkSchedule)(nil), (*float64)(nil), (*string)(nil), (*string)(nil)).
 		WillReturnRows(rows)
 	expectCareerDetails(mockPool, "resume")
 	mockPool.ExpectCommit()
@@ -147,7 +147,7 @@ func TestPostgresRepository_Update_Success(t *testing.T) {
 
 	mockPool.ExpectBegin()
 	mockPool.ExpectQuery(`UPDATE resume`).
-		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10, &targetPosition, (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*float64)(nil), (*string)(nil), (*string)(nil), true).
+		WithArgs("Updated Title", "desc", "exp", "edu", 1, 10, &targetPosition, (*string)(nil), (*models.EmploymentType)(nil), (*models.WorkFormat)(nil), (*models.WorkSchedule)(nil), (*float64)(nil), (*string)(nil), (*string)(nil), true).
 		WillReturnRows(rows)
 	expectCareerDetails(mockPool, "resume")
 	mockPool.ExpectCommit()

@@ -14,8 +14,8 @@ type Application struct {
 }
 
 type ApplicationStatus struct {
-	Value           string
-	ReasonCode      *string
+	Value           ApplicationStatusValue
+	ReasonCode      *RejectionReasonCode
 	StatusComment   *string
 	StatusChangedAt time.Time
 }

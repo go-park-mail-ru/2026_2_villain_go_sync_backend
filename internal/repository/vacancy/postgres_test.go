@@ -16,6 +16,7 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 
 	repo := vacancy.NewPostgresRepository(mockPool)
 	now := time.Now()
+	employment := models.EmploymentFull
 
 	mockPool.ExpectBegin()
 
@@ -25,13 +26,13 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 		WillReturnRows(rows)
 
 	mockPool.ExpectQuery(`INSERT INTO vacancy_history`).
-		WithArgs(int64(1), "Go dev", "desc", (*float64)(nil), (*float64)(nil), "RUB", "Develop services", "Know Go",
-			(*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil),
-			(*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil)).
+		WithArgs(int64(1), "Go dev", "desc", (*float64)(nil), (*float64)(nil), models.CurrencyRUB, "Develop services", "Know Go",
+			(*string)(nil), (*models.ExperienceLevel)(nil), &employment, (*models.WorkFormat)(nil),
+			(*models.WorkSchedule)(nil), (*string)(nil), (*string)(nil), (*string)(nil)).
 		WillReturnRows(pgxmock.NewRows([]string{
 			"changed_at", "offer", "experience_level", "employment_type", "work_format",
 			"work_schedule", "work_hours", "city", "office_address",
-		}).AddRow(now, nil, nil, nil, nil, nil, nil, nil, nil))
+		}).AddRow(now, nil, nil, &employment, nil, nil, nil, nil, nil))
 
 	mockPool.ExpectExec(`INSERT INTO vacancy_category`).
 		WithArgs(int64(1), []int64{1, 2}).
@@ -47,7 +48,8 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 	mockPool.ExpectCommit()
 
 	v := models.Vacancy{
-		Title: "Go dev",
+		Title:      "Go dev",
+		Conditions: models.VacancyConditions{EmploymentType: &employment},
 		Company: models.VacancyCompany{
 			EmployerID: 10,
 		},
@@ -59,7 +61,7 @@ func TestPostgresRepository_Create_Success(t *testing.T) {
 			Description: "Know Go",
 		},
 		Salary: models.VacancySalary{
-			Currency: "RUB",
+			Currency: models.CurrencyRUB,
 		},
 	}
 
@@ -100,7 +102,7 @@ func TestPostgresRepository_GetByID_Success(t *testing.T) {
 		"work_format", "work_schedule", "work_hours", "city", "office_address",
 	}).AddRow(
 		1, 1, 10, "Test Company",
-		"Go dev", "desc", nil, nil, "RUB", now, "", "", "",
+		"Go dev", "desc", nil, nil, models.CurrencyRUB, now, "", "", "",
 		now, now, nil, nil, nil, nil, nil, nil, nil, nil, nil,
 	)
 

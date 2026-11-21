@@ -37,12 +37,12 @@ type ApplicantResume struct {
 }
 
 type ApplicantStatus struct {
-	Value           string
+	Value           ApplicationStatusValue
 	StatusHistoryID *int64
 	StatusComment   *string
 	StatusChangedAt *time.Time
 	StatusChangedBy *int64
-	ReasonCode      *string
+	ReasonCode      *RejectionReasonCode
 }
 
 func (a *Applicant) SetAvatarURL(avatarKey string) {

@@ -87,8 +87,8 @@ func (r *PostgresRepository) GetByEmail(ctx context.Context, email string) (mode
 	return user, nil
 }
 
-func (r *PostgresRepository) GetRoleByID(ctx context.Context, userID int64) (string, error) {
-	var role string
+func (r *PostgresRepository) GetRoleByID(ctx context.Context, userID int64) (models.Role, error) {
+	var role models.Role
 	err := r.pool.QueryRow(
 		ctx,
 		userRoleQuery,

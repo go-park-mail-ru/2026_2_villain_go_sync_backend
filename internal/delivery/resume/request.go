@@ -36,22 +36,6 @@ func (r UpsertRequest) resume() (models.Resume, error) {
 		return models.Resume{}, errors.New("target_position is required")
 	}
 
-	switch r.EmploymentType.String() {
-	case "", "full", "part":
-	default:
-		return models.Resume{}, errors.New("employment_type must be full or part")
-	}
-	switch r.WorkFormat.String() {
-	case "", "office", "hybrid", "remote":
-	default:
-		return models.Resume{}, errors.New("work_format must be office, hybrid or remote")
-	}
-	switch r.WorkSchedule.String() {
-	case "", "5_2", "2_2", "flexible", "shift":
-	default:
-		return models.Resume{}, errors.New("invalid work_schedule")
-	}
-
 	var salary *float64
 	if r.SalaryFrom != nil {
 		if err := json.Unmarshal(r.SalaryFrom, &salary); err != nil {
@@ -78,9 +62,9 @@ func (r UpsertRequest) resume() (models.Resume, error) {
 		Preferences: models.ResumePreferences{
 			TargetPosition: &targetPosition,
 			City:           sanitizer.Ptr(r.City),
-			EmploymentType: sanitizer.Ptr(r.EmploymentType),
-			WorkFormat:     sanitizer.Ptr(r.WorkFormat),
-			WorkSchedule:   sanitizer.Ptr(r.WorkSchedule),
+			EmploymentType: (*models.EmploymentType)(sanitizer.Ptr(r.EmploymentType)),
+			WorkFormat:     (*models.WorkFormat)(sanitizer.Ptr(r.WorkFormat)),
+			WorkSchedule:   (*models.WorkSchedule)(sanitizer.Ptr(r.WorkSchedule)),
 			SalaryFrom:     salary,
 		},
 	}, nil

@@ -9,12 +9,12 @@ import (
 )
 
 func TestSeekerApplicationFlatJSON(t *testing.T) {
-	reason := "skills_mismatch"
+	reason := models.RejectionSkillsMismatch
 	app := models.SeekerApplication{
 		ID: 12, SeekerID: 5,
 		Vacancy: models.ApplicationVacancyInfo{VacancyID: 7, VacancyTitle: "Engineer"},
 		Resume:  models.ApplicationResumeInfo{ResumeTitle: "CV"},
-		Status:  models.ApplicationStatus{Value: "rejected", ReasonCode: &reason},
+		Status:  models.ApplicationStatus{Value: models.ApplicationRejected, ReasonCode: &reason},
 	}
 	raw, err := json.Marshal(application.NewSeekerApplicationResponse(app))
 	if err != nil {

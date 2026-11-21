@@ -96,7 +96,7 @@ func (h *Handler) UpdateSeeker(w http.ResponseWriter, r *http.Request) {
 		Preferences: models.SeekerPreferences{
 			PreferredPosition: sanitizer.Ptr(req.PreferredPosition),
 			PreferredCities:   sanitizer.Ptr(req.PreferredCities),
-			WorkFormat:        sanitizer.Ptr(req.WorkFormat),
+			WorkFormat:        (*models.WorkFormat)(sanitizer.Ptr(req.WorkFormat)),
 		},
 	})
 	if err != nil {

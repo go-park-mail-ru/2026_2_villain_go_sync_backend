@@ -80,7 +80,7 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 				"avatar_key", "updated_at", "vacancy_version", "status_history_id",
 				"status_comment", "status_changed_at", "status_changed_by", "reason_code",
 			}).AddRow(
-				"Ivan", "Ivanov", "created",
+				"Ivan", "Ivanov", models.ApplicationCreated,
 				now, "Go dev",
 				int64(5), int64(1), "Go dev",
 				int64(12), &resumeID, nil,

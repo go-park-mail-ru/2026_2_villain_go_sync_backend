@@ -93,6 +93,7 @@ const (
 type PgxPool interface {
 	Begin(context.Context) (pgx.Tx, error)
 	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
 	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
 }
 
@@ -198,6 +199,24 @@ func (r *PostgresRepository) ListBySeekerID(ctx context.Context, seekerID int) (
 		return nil, err
 	}
 	return resumes, nil
+}
+
+const getOwnerIDQuery = `
+	SELECT seeker_id
+	  FROM resume
+	 WHERE resume_id = $1 AND deleted_at IS NULL
+`
+
+func (r *PostgresRepository) GetOwnerID(ctx context.Context, id int) (int, error) {
+	var ownerID int
+	err := r.pool.QueryRow(ctx, getOwnerIDQuery, id).Scan(&ownerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("get resume owner: %w", err)
+	}
+	return ownerID, nil
 }
 
 func (r *PostgresRepository) Update(ctx context.Context, input dto.UpdateInput, seekerID int) (models.Resume, error) {

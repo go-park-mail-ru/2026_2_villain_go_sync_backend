@@ -45,12 +45,12 @@ func NewApplicantResponse(a models.Applicant) ApplicantResponse {
 		VacancyVersion:  a.Vacancy.VacancyVersion,
 		ResumeID:        a.Resume.ResumeID,
 		ResumeTitle:     a.Resume.ResumeTitle,
-		Status:          a.Status.Value,
+		Status:          string(a.Status.Value),
 		StatusHistoryID: a.Status.StatusHistoryID,
 		StatusComment:   a.Status.StatusComment,
 		StatusChangedAt: a.Status.StatusChangedAt,
 		StatusChangedBy: a.Status.StatusChangedBy,
-		ReasonCode:      a.Status.ReasonCode,
+		ReasonCode:      (*string)(a.Status.ReasonCode),
 	}
 }
 

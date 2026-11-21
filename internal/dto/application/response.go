@@ -39,8 +39,8 @@ type ApplicationStatusResponse struct {
 
 func NewApplicationStatusResponse(a models.ApplicationStatus) ApplicationStatusResponse {
 	return ApplicationStatusResponse{
-		Status:          a.Value,
-		ReasonCode:      a.ReasonCode,
+		Status:          string(a.Value),
+		ReasonCode:      (*string)(a.ReasonCode),
 		StatusComment:   a.StatusComment,
 		StatusChangedAt: a.StatusChangedAt,
 	}

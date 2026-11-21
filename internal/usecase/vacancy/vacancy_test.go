@@ -72,7 +72,7 @@ func TestVacancyUsecase_Create_NotEmployer(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("seeker", nil)
+		Return(models.RoleSeeker, nil)
 
 	_, err := uc.Create(context.Background(), dto.CreateVacancyInput{EmployerID: 10})
 
@@ -86,7 +86,7 @@ func TestVacancyUsecase_Create_NoProfile(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
@@ -104,7 +104,7 @@ func TestVacancyUsecase_Create_InvalidTitle(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
@@ -124,7 +124,7 @@ func TestVacancyUsecase_Create_Success(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
@@ -156,7 +156,7 @@ func TestVacancyUsecase_Update_WrongOwner(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
@@ -180,7 +180,7 @@ func TestVacancyUsecase_Delete_Success(t *testing.T) {
 
 	mockUserRepo.EXPECT().
 		GetRoleByID(gomock.Any(), int64(10)).
-		Return("employer", nil)
+		Return(models.RoleEmployer, nil)
 	mockUserRepo.EXPECT().
 		HasEmployerProfile(gomock.Any(), int64(10)).
 		Return(true, nil)
@@ -206,7 +206,7 @@ func TestVacancyUsecase_Create_RequiresResponsibilitiesAndRequirements(t *testin
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			uc, _, users := setupUsecase(t)
-			users.EXPECT().GetRoleByID(gomock.Any(), int64(10)).Return("employer", nil)
+			users.EXPECT().GetRoleByID(gomock.Any(), int64(10)).Return(models.RoleEmployer, nil)
 			users.EXPECT().HasEmployerProfile(gomock.Any(), int64(10)).Return(true, nil)
 
 			_, err := uc.Create(context.Background(), dto.CreateVacancyInput{

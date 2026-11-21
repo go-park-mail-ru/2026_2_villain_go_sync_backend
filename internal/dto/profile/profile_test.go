@@ -76,7 +76,7 @@ func TestProfileResponseJSON(t *testing.T) {
 		Profile:      models.Profile{UserID: 12},
 		PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan", AvatarKey: ptr("private/avatar")},
 		Contacts:     models.SeekerContacts{Phone: "123"},
-		Preferences:  models.SeekerPreferences{WorkFormat: ptr("remote")},
+		Preferences:  models.SeekerPreferences{WorkFormat: (*models.WorkFormat)(ptr("remote"))},
 		Career:       models.CareerDetails{Skills: []models.NamedItem{{Name: "Go"}}},
 	})
 	employer := profile.NewEmployerResponse(models.EmployerProfile{

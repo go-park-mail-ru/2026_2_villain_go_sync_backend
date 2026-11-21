@@ -35,20 +35,20 @@ type VacancyContent struct {
 
 type VacancyRequirements struct {
 	Description     string
-	ExperienceLevel *string
+	ExperienceLevel *ExperienceLevel
 }
 
 type VacancySalary struct {
 	SalaryFrom *float64
 	SalaryTo   *float64
-	Currency   string
+	Currency   Currency
 }
 
 type VacancyConditions struct {
 	Offer          *string
-	EmploymentType *string
-	WorkFormat     *string
-	WorkSchedule   *string
+	EmploymentType *EmploymentType
+	WorkFormat     *WorkFormat
+	WorkSchedule   *WorkSchedule
 	WorkHours      *string
 }
 

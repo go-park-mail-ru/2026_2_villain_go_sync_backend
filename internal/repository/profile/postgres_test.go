@@ -81,7 +81,7 @@ func TestPostgresRepository_UpsertSeeker_Success(t *testing.T) {
 
 	mockPool.ExpectBegin()
 	mockPool.ExpectQuery(`INSERT INTO seeker_profile`).
-		WithArgs(1, "Ivan", "Ivanov", "12345", "About me", (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil)).
+		WithArgs(1, "Ivan", "Ivanov", "12345", "About me", (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*string)(nil), (*models.WorkFormat)(nil)).
 		WillReturnRows(
 			pgxmock.NewRows([]string{"created_at", "updated_at", "avatar_key", "city", "messenger", "contact_email", "preferred_position", "preferred_cities", "work_format"}).
 				AddRow(now, now, nil, nil, nil, nil, nil, nil, nil),

@@ -29,16 +29,19 @@ func WriteError(w http.ResponseWriter, status int, msg string) {
 
 func WriteAppError(w http.ResponseWriter, err error, msg string) {
 	var maxErr *http.MaxBytesError
+	var validationErr apperrors.ValidationError
 
 	switch {
 	case errors.As(err, &maxErr):
 		WriteError(w, http.StatusRequestEntityTooLarge, msg)
+	case errors.As(err, &validationErr):
+		WriteError(w, http.StatusUnprocessableEntity, validationErr.Error())
 	case errors.Is(err, apperrors.ErrInvalidInput):
 		WriteError(w, http.StatusBadRequest, msg)
+	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrNotOwner):
+		WriteError(w, http.StatusNotFound, msg)
 	case errors.Is(err, apperrors.ErrForbidden):
 		WriteError(w, http.StatusForbidden, msg)
-	case errors.Is(err, apperrors.ErrNotFound):
-		WriteError(w, http.StatusNotFound, msg)
 	case errors.Is(err, apperrors.ErrConflict):
 		WriteError(w, http.StatusConflict, msg)
 	case errors.Is(err, apperrors.ErrNoContent):

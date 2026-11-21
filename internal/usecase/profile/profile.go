@@ -47,10 +47,14 @@ func (u *ProfileUsecase) GetSeekerByID(ctx context.Context, seekerID int) (model
 }
 
 func (u *ProfileUsecase) UpdateSeeker(ctx context.Context, userID int, role models.Role, p models.SeekerProfile) (models.SeekerProfile, error) {
-	if !role.IsSeeker() {
+	if !role.IsSeeker() || (p.Profile.UserID != 0 && p.Profile.UserID != userID) {
 		return models.SeekerProfile{}, apperrors.ErrForbidden
 	}
+	if value := p.Preferences.WorkFormat; value != nil && *value != "" && !value.IsValid() {
+		return models.SeekerProfile{}, apperrors.ValidationError("work_format must be office, hybrid or remote")
+	}
 
+	p.Profile.UserID = userID
 	return u.profiles.UpsertSeeker(ctx, p)
 }
 

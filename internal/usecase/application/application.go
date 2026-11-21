@@ -11,6 +11,7 @@ import (
 
 //go:generate mockgen -source=application.go -destination=mock_repository.go -package=application
 type ApplicationRepository interface {
+	GetVacancyEmployerID(ctx context.Context, applicationID int64) (int64, error)
 	UpdateStatus(ctx context.Context, input dto.UpdateStatusInput) (models.ApplicationStatusUpdate, error)
 	ListBySeeker(ctx context.Context, seekerID int64) ([]models.SeekerApplication, error)
 	Create(ctx context.Context, input models.Application) (models.Application, error)
@@ -25,7 +26,7 @@ type VacancyRepository interface {
 }
 
 type UserRepository interface {
-	GetRoleByID(ctx context.Context, id int64) (string, error)
+	GetRoleByID(ctx context.Context, id int64) (models.Role, error)
 }
 
 type ApplicationUsecase struct {
@@ -48,7 +49,7 @@ func (u *ApplicationUsecase) Create(
 	ctx context.Context,
 	input dto.CreateApplicationInput,
 ) (models.Application, error) {
-	if input.SeekerID <= 0 || input.VacancyID <= 0 || input.ResumeID <= 0 {
+	if input.SeekerID <= 0 {
 		return models.Application{}, apperrors.ErrInvalidInput
 	}
 
@@ -56,8 +57,12 @@ func (u *ApplicationUsecase) Create(
 	if err != nil {
 		return models.Application{}, fmt.Errorf("get user role: %w", err)
 	}
-	if role != "seeker" {
+	if !role.IsSeeker() {
 		return models.Application{}, apperrors.ErrForbidden
+	}
+
+	if input.VacancyID <= 0 || input.ResumeID <= 0 {
+		return models.Application{}, apperrors.ErrInvalidInput
 	}
 
 	resume, err := u.resumes.GetByID(ctx, input.ResumeID)
@@ -91,22 +96,26 @@ func (u *ApplicationUsecase) UpdateStatus(ctx context.Context, role models.Role,
 		return models.ApplicationStatusUpdate{}, apperrors.ErrInvalidInput
 	}
 
-	switch input.Status {
-	case "reviewing", "interview", "offer":
-		if input.ReasonCode != nil {
-			return models.ApplicationStatusUpdate{}, fmt.Errorf("%w: reason_code is only allowed for rejected", apperrors.ErrInvalidInput)
-		}
-	case "rejected":
+	ownerID, err := u.applications.GetVacancyEmployerID(ctx, input.ApplicationID)
+	if err != nil {
+		return models.ApplicationStatusUpdate{}, err
+	}
+	if ownerID != input.EmployerID {
+		return models.ApplicationStatusUpdate{}, apperrors.ErrNotOwner
+	}
+
+	if !input.Status.CanSetByEmployer() {
+		return models.ApplicationStatusUpdate{}, fmt.Errorf("%w: invalid status", apperrors.ErrInvalidInput)
+	}
+	if input.Status == models.ApplicationRejected {
 		if input.ReasonCode == nil {
 			return models.ApplicationStatusUpdate{}, fmt.Errorf("%w: reason_code is required for rejected", apperrors.ErrInvalidInput)
 		}
-		switch *input.ReasonCode {
-		case "insufficient_experience", "skills_mismatch", "salary_mismatch", "work_format_mismatch", "location_mismatch", "candidate_declined", "other":
-		default:
+		if !input.ReasonCode.IsValid() {
 			return models.ApplicationStatusUpdate{}, fmt.Errorf("%w: invalid reason_code", apperrors.ErrInvalidInput)
 		}
-	default:
-		return models.ApplicationStatusUpdate{}, fmt.Errorf("%w: invalid status", apperrors.ErrInvalidInput)
+	} else if input.ReasonCode != nil {
+		return models.ApplicationStatusUpdate{}, fmt.Errorf("%w: reason_code is only allowed for rejected", apperrors.ErrInvalidInput)
 	}
 
 	return u.applications.UpdateStatus(ctx, input)

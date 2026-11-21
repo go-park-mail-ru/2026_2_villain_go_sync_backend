@@ -41,9 +41,9 @@ func NewResumeResponse(r models.Resume) ResumeResponse {
 		Languages:             r.Content.Languages,
 		TargetPosition:        r.Preferences.TargetPosition,
 		City:                  r.Preferences.City,
-		EmploymentType:        r.Preferences.EmploymentType,
-		WorkFormat:            r.Preferences.WorkFormat,
-		WorkSchedule:          r.Preferences.WorkSchedule,
+		EmploymentType:        (*string)(r.Preferences.EmploymentType),
+		WorkFormat:            (*string)(r.Preferences.WorkFormat),
+		WorkSchedule:          (*string)(r.Preferences.WorkSchedule),
 		SalaryFrom:            r.Preferences.SalaryFrom,
 		CareerDetailsResponse: structured.NewCareerDetailsResponse(r.Career),
 	}

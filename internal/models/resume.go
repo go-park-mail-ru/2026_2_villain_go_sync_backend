@@ -25,8 +25,8 @@ type ResumeContent struct {
 type ResumePreferences struct {
 	TargetPosition *string
 	City           *string
-	EmploymentType *string
-	WorkFormat     *string
-	WorkSchedule   *string
+	EmploymentType *EmploymentType
+	WorkFormat     *WorkFormat
+	WorkSchedule   *WorkSchedule
 	SalaryFrom     *float64
 }

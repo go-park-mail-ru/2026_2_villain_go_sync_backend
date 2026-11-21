@@ -29,12 +29,7 @@ func (r UpdateSeekerRequest) IsValid() error {
 	if strings.TrimSpace(r.LastName.String()) == "" {
 		return errors.New("last_name is required")
 	}
-	switch r.WorkFormat.String() {
-	case "", "office", "hybrid", "remote":
-		return nil
-	default:
-		return errors.New("work_format must be office, hybrid or remote")
-	}
+	return nil
 }
 
 type UpdateEmployerRequest struct {

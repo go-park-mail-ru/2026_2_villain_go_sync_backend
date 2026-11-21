@@ -110,8 +110,8 @@ func (h *Handler) UpdateStatus(w http.ResponseWriter, r *http.Request) {
 	updated, err := h.applications.UpdateStatus(r.Context(), role, dto.UpdateStatusInput{
 		ApplicationID: id,
 		EmployerID:    employerID,
-		Status:        request.Status,
-		ReasonCode:    request.ReasonCode,
+		Status:        models.ApplicationStatusValue(request.Status),
+		ReasonCode:    (*models.RejectionReasonCode)(request.ReasonCode),
 		Comment:       sanitizer.Ptr(request.Comment),
 	})
 	if errors.Is(err, apperrors.ErrInvalidInput) {

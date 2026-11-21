@@ -45,7 +45,10 @@ func TestResumeUsecase_Create_Forbidden(t *testing.T) {
 	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
-	_, err := uc.Create(context.Background(), 10, models.RoleEmployer, models.Resume{Title: "Go dev"})
+	invalid := models.WorkFormat("unknown")
+	_, err := uc.Create(context.Background(), 10, models.RoleEmployer, models.Resume{
+		Title: "Go dev", Preferences: models.ResumePreferences{WorkFormat: &invalid},
+	})
 
 	if !errors.Is(err, apperrors.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
@@ -103,6 +106,7 @@ func TestResumeUsecase_Update_Success(t *testing.T) {
 	input := dto.UpdateInput{Resume: models.Resume{ID: 1, Title: "Updated"}, ClearSalaryFrom: true}
 	expected := models.Resume{ID: 1, SeekerID: 10, Title: "Updated"}
 
+	mockRepo.EXPECT().GetOwnerID(gomock.Any(), 1).Return(10, nil)
 	mockRepo.EXPECT().
 		Update(gomock.Any(), input, 10).
 		Return(expected, nil)
@@ -124,7 +128,10 @@ func TestResumeUsecase_Update_Forbidden(t *testing.T) {
 	mockRepo := resume.NewMockResumeRepository(ctrl)
 	uc := resumeUsecase.NewResumeUsecase(mockRepo)
 
-	_, err := uc.Update(context.Background(), 10, models.RoleEmployer, dto.UpdateInput{Resume: models.Resume{ID: 1}})
+	invalid := models.WorkFormat("unknown")
+	_, err := uc.Update(context.Background(), 10, models.RoleEmployer, dto.UpdateInput{Resume: models.Resume{
+		ID: 1, Preferences: models.ResumePreferences{WorkFormat: &invalid},
+	}})
 
 	if !errors.Is(err, apperrors.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
@@ -178,5 +185,65 @@ func TestResumeUsecase_Delete_NoContent(t *testing.T) {
 
 	if !errors.Is(err, apperrors.ErrNoContent) {
 		t.Errorf("expected ErrNoContent, got %v", err)
+	}
+}
+
+func TestResumePreferenceValidation(t *testing.T) {
+	empty := models.WorkFormat("")
+	remote := models.WorkFormatRemote
+	invalid := models.WorkFormat("unknown")
+	for _, tc := range []struct {
+		name       string
+		workFormat *models.WorkFormat
+		wantError  bool
+	}{
+		{"omitted", nil, false},
+		{"empty clears", &empty, false},
+		{"valid", &remote, false},
+		{"invalid", &invalid, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := resume.NewMockResumeRepository(gomock.NewController(t))
+			uc := resumeUsecase.NewResumeUsecase(repo)
+			input := dto.UpdateInput{Resume: models.Resume{
+				ID: 1, Preferences: models.ResumePreferences{WorkFormat: tc.workFormat},
+			}}
+			repo.EXPECT().GetOwnerID(gomock.Any(), 1).Return(10, nil)
+			if !tc.wantError {
+				repo.EXPECT().Update(gomock.Any(), input, 10).Return(input.Resume, nil)
+			}
+			_, err := uc.Update(context.Background(), 10, models.RoleSeeker, input)
+			if tc.wantError {
+				if !errors.Is(err, apperrors.ErrInvalidInput) {
+					t.Fatalf("expected validation error, got %v", err)
+				}
+			} else if err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
+}
+
+func TestResumeUpdateChecksOwnershipBeforePreferences(t *testing.T) {
+	invalid := models.WorkFormat("unknown")
+	for _, tc := range []struct {
+		name            string
+		ownerID         int
+		lookupErr, want error
+	}{
+		{"another seeker", 20, nil, apperrors.ErrForbidden},
+		{"missing resume", 0, apperrors.ErrNotFound, apperrors.ErrNotFound},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := resume.NewMockResumeRepository(gomock.NewController(t))
+			repo.EXPECT().GetOwnerID(gomock.Any(), 1).Return(tc.ownerID, tc.lookupErr)
+			input := dto.UpdateInput{Resume: models.Resume{
+				ID: 1, Preferences: models.ResumePreferences{WorkFormat: &invalid},
+			}}
+			_, err := resumeUsecase.NewResumeUsecase(repo).Update(context.Background(), 10, models.RoleSeeker, input)
+			if !errors.Is(err, tc.want) {
+				t.Fatalf("got %v, want %v", err, tc.want)
+			}
+		})
 	}
 }

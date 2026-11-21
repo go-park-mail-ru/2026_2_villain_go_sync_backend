@@ -24,7 +24,7 @@ type VacancyRepository interface {
 }
 
 type UserRepository interface {
-	GetRoleByID(ctx context.Context, userID int64) (string, error)
+	GetRoleByID(ctx context.Context, userID int64) (models.Role, error)
 	HasEmployerProfile(ctx context.Context, userID int64) (bool, error)
 }
 
@@ -49,7 +49,7 @@ func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64)
 	if err != nil {
 		return fmt.Errorf("get employer role: %w", err)
 	}
-	if role != "employer" {
+	if !role.IsEmployer() {
 		return apperrors.ErrForbidden
 	}
 
@@ -80,13 +80,11 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
-	if input.Currency == "" {
-		input.Currency = "RUB"
+	currency := models.Currency(input.Currency)
+	if currency == "" {
+		currency = models.CurrencyRUB
 	}
-
-	switch input.Currency {
-	case "RUB", "USD", "EUR":
-	default:
+	if !currency.IsValid() {
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 
@@ -105,18 +103,18 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		},
 		Requirements: models.VacancyRequirements{
 			Description:     input.Requirements,
-			ExperienceLevel: input.ExperienceLevel,
+			ExperienceLevel: (*models.ExperienceLevel)(input.ExperienceLevel),
 		},
 		Salary: models.VacancySalary{
 			SalaryFrom: input.SalaryFrom,
 			SalaryTo:   input.SalaryTo,
-			Currency:   input.Currency,
+			Currency:   currency,
 		},
 		Conditions: models.VacancyConditions{
 			Offer:          input.Offer,
-			EmploymentType: input.EmploymentType,
-			WorkFormat:     input.WorkFormat,
-			WorkSchedule:   input.WorkSchedule,
+			EmploymentType: (*models.EmploymentType)(input.EmploymentType),
+			WorkFormat:     (*models.WorkFormat)(input.WorkFormat),
+			WorkSchedule:   (*models.WorkSchedule)(input.WorkSchedule),
 			WorkHours:      input.WorkHours,
 		},
 		Location: models.VacancyLocation{
@@ -148,7 +146,7 @@ func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) (
 	if err != nil {
 		return nil, fmt.Errorf("get employer role: %w", err)
 	}
-	if role != "employer" {
+	if !role.IsEmployer() {
 		return nil, apperrors.ErrForbidden
 	}
 	return u.vacancies.ListByEmployer(ctx, employerID)
@@ -190,23 +188,23 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		vacancy.Salary.SalaryTo = input.SalaryTo.Value
 	}
 	if input.Currency != nil {
-		vacancy.Salary.Currency = *input.Currency
+		vacancy.Salary.Currency = models.Currency(*input.Currency)
 	}
 
 	if input.Offer != nil {
 		vacancy.Conditions.Offer = input.Offer
 	}
 	if input.ExperienceLevel != nil {
-		vacancy.Requirements.ExperienceLevel = input.ExperienceLevel
+		vacancy.Requirements.ExperienceLevel = (*models.ExperienceLevel)(input.ExperienceLevel)
 	}
 	if input.EmploymentType != nil {
-		vacancy.Conditions.EmploymentType = input.EmploymentType
+		vacancy.Conditions.EmploymentType = (*models.EmploymentType)(input.EmploymentType)
 	}
 	if input.WorkFormat != nil {
-		vacancy.Conditions.WorkFormat = input.WorkFormat
+		vacancy.Conditions.WorkFormat = (*models.WorkFormat)(input.WorkFormat)
 	}
 	if input.WorkSchedule != nil {
-		vacancy.Conditions.WorkSchedule = input.WorkSchedule
+		vacancy.Conditions.WorkSchedule = (*models.WorkSchedule)(input.WorkSchedule)
 	}
 	if input.WorkHours != nil {
 		vacancy.Conditions.WorkHours = input.WorkHours
@@ -234,9 +232,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
-	switch vacancy.Salary.Currency {
-	case "RUB", "USD", "EUR":
-	default:
+	if !vacancy.Salary.Currency.IsValid() {
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 

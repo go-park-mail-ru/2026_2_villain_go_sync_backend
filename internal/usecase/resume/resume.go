@@ -13,6 +13,7 @@ import (
 type ResumeRepository interface {
 	Create(ctx context.Context, resume models.Resume) (models.Resume, error)
 	GetByID(ctx context.Context, id int) (models.Resume, error)
+	GetOwnerID(ctx context.Context, id int) (int, error)
 	ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error)
 	Update(ctx context.Context, input dto.UpdateInput, seekerID int) (models.Resume, error)
 	Delete(ctx context.Context, id int, seekerID int) error
@@ -29,6 +30,9 @@ func NewResumeUsecase(resumes ResumeRepository) *ResumeUsecase {
 func (u *ResumeUsecase) Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
 	if !role.IsSeeker() {
 		return models.Resume{}, apperrors.ErrForbidden
+	}
+	if err := validatePreferences(resume.Preferences); err != nil {
+		return models.Resume{}, err
 	}
 	resume.SeekerID = userID
 	return u.resumes.Create(ctx, resume)
@@ -53,6 +57,16 @@ func (u *ResumeUsecase) Update(ctx context.Context, userID int, role models.Role
 	if !role.IsSeeker() {
 		return models.Resume{}, apperrors.ErrForbidden
 	}
+	ownerID, err := u.resumes.GetOwnerID(ctx, input.Resume.ID)
+	if err != nil {
+		return models.Resume{}, err
+	}
+	if ownerID != userID {
+		return models.Resume{}, apperrors.ErrNotOwner
+	}
+	if err := validatePreferences(input.Resume.Preferences); err != nil {
+		return models.Resume{}, err
+	}
 
 	res, err := u.resumes.Update(ctx, input, userID)
 	if err != nil {
@@ -75,6 +89,19 @@ func (u *ResumeUsecase) Delete(ctx context.Context, userID int, role models.Role
 			return apperrors.ErrNoContent
 		}
 		return err
+	}
+	return nil
+}
+
+func validatePreferences(preferences models.ResumePreferences) error {
+	if value := preferences.EmploymentType; value != nil && *value != "" && !value.IsValid() {
+		return apperrors.ValidationError("employment_type must be full or part")
+	}
+	if value := preferences.WorkFormat; value != nil && *value != "" && !value.IsValid() {
+		return apperrors.ValidationError("work_format must be office, hybrid or remote")
+	}
+	if value := preferences.WorkSchedule; value != nil && *value != "" && !value.IsValid() {
+		return apperrors.ValidationError("invalid work_schedule")
 	}
 	return nil
 }

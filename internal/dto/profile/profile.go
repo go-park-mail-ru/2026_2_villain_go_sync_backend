@@ -50,7 +50,7 @@ func NewSeekerResponse(p models.SeekerProfile) SeekerResponse {
 		ContactEmail:          p.Contacts.ContactEmail,
 		PreferredPosition:     p.Preferences.PreferredPosition,
 		PreferredCities:       p.Preferences.PreferredCities,
-		WorkFormat:            p.Preferences.WorkFormat,
+		WorkFormat:            (*string)(p.Preferences.WorkFormat),
 		CareerDetailsResponse: structured.NewCareerDetailsResponse(p.Career),
 	}
 	if p.PersonalInfo.AvatarKey != nil && *p.PersonalInfo.AvatarKey != "" {

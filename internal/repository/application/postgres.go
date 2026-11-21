@@ -88,6 +88,25 @@ func (r *PostgresRepository) Create(
 	return application, nil
 }
 
+const getVacancyEmployerIDQuery = `
+	SELECT v.employer_id
+	  FROM application AS a
+	  JOIN vacancy AS v ON v.vacancy_id = a.vacancy_id
+	 WHERE a.application_id = $1
+`
+
+func (r *PostgresRepository) GetVacancyEmployerID(ctx context.Context, applicationID int64) (int64, error) {
+	var ownerID int64
+	err := r.pool.QueryRow(ctx, getVacancyEmployerIDQuery, applicationID).Scan(&ownerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("get application vacancy employer: %w", err)
+	}
+	return ownerID, nil
+}
+
 const updateStatusQuery = `
 	WITH updated_application AS (
 	    UPDATE application AS a

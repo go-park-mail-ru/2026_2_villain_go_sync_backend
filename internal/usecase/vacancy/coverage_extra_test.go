@@ -39,11 +39,11 @@ func TestVacancyListExtra(t *testing.T) {
 				if tt.forbid {
 					ur.EXPECT().GetRoleByID(
 						gomock.Any(), int64(10),
-					).Return("seeker", nil)
+					).Return(models.RoleSeeker, nil)
 				} else {
 					ur.EXPECT().GetRoleByID(
 						gomock.Any(), int64(10),
-					).Return("employer", nil)
+					).Return(models.RoleEmployer, nil)
 
 					vr.EXPECT().ListByEmployer(
 						gomock.Any(), int64(10),
@@ -166,7 +166,7 @@ func TestVacancyUpdateExtra(t *testing.T) {
 
 			ur.EXPECT().GetRoleByID(
 				gomock.Any(), int64(10),
-			).Return("employer", nil)
+			).Return(models.RoleEmployer, nil)
 
 			ur.EXPECT().HasEmployerProfile(
 				gomock.Any(), int64(10),
