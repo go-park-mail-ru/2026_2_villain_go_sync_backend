@@ -86,6 +86,21 @@ func (mr *MockResumeRepositoryMockRecorder) GetByID(ctx, id any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResumeRepository)(nil).GetByID), ctx, id)
 }
 
+// GetOwnerID mocks base method.
+func (m *MockResumeRepository) GetOwnerID(ctx context.Context, id int) (int, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOwnerID", ctx, id)
+	ret0, _ := ret[0].(int)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOwnerID indicates an expected call of GetOwnerID.
+func (mr *MockResumeRepositoryMockRecorder) GetOwnerID(ctx, id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOwnerID", reflect.TypeOf((*MockResumeRepository)(nil).GetOwnerID), ctx, id)
+}
+
 // HasApplicantResume mocks base method.
 func (m *MockResumeRepository) HasApplicantResume(ctx context.Context, resumeID, employerID int) (bool, error) {
 	m.ctrl.T.Helper()
