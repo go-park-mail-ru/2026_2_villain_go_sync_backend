@@ -7,6 +7,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
 const maxSalary = 9999999999.99
@@ -77,6 +78,32 @@ func validateCategories(categoryIDs []int64) error {
 			return fmt.Errorf("%w: duplicate category id", apperrors.ErrInvalidInput)
 		}
 		seen[categoryID] = true
+	}
+	return nil
+}
+
+func validateVacancyDetails(responsibilities, requirements string) error {
+	if strings.TrimSpace(responsibilities) == "" {
+		return fmt.Errorf("%w: responsibilities are required", apperrors.ErrInvalidInput)
+	}
+	if strings.TrimSpace(requirements) == "" {
+		return fmt.Errorf("%w: requirements are required", apperrors.ErrInvalidInput)
+	}
+	return nil
+}
+
+func validateVacancyOptions(vacancy models.Vacancy) error {
+	if value := vacancy.Requirements.ExperienceLevel; value != nil && *value != "" && !value.IsValid() {
+		return fmt.Errorf("%w: invalid experience_level", apperrors.ErrInvalidInput)
+	}
+	if value := vacancy.Conditions.EmploymentType; value != nil && *value != "" && !value.IsValid() {
+		return fmt.Errorf("%w: invalid employment_type", apperrors.ErrInvalidInput)
+	}
+	if value := vacancy.Conditions.WorkFormat; value != nil && *value != "" && !value.IsValid() {
+		return fmt.Errorf("%w: invalid work_format", apperrors.ErrInvalidInput)
+	}
+	if value := vacancy.Conditions.WorkSchedule; value != nil && *value != "" && !value.IsValid() {
+		return fmt.Errorf("%w: invalid work_schedule", apperrors.ErrInvalidInput)
 	}
 	return nil
 }

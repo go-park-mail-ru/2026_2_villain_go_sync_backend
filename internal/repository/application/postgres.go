@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -13,24 +15,18 @@ import (
 
 const (
 	insertApplicationQuery = `
-		INSERT INTO application (
-			vacancy_id, vacancy_version, resume_id, cover_letter
-		)
-		VALUES ($1, $2, $3, $4)
-		RETURNING application_id, created_at, updated_at
-	`
-
-	insertInitialStatusQuery = `
-		INSERT INTO application_status_history (application_id, status)
-		VALUES ($1, 'created')
+		SELECT new_application_id, created_on, updated_on
+		FROM create_application($1, $2, $3, $4, $5)
 	`
 
 	uniqueViolationCode         = "23505"
 	foreignKeyViolationCode     = "23503"
-	applicationVacancyResumeKey = "application_vacancy_resume_unique"
+	applicationVacancySeekerKey = "application_vacancy_seeker_unique"
 )
 
 type PgxPool interface {
+	QueryRow(context.Context, string, ...any) pgx.Row
+	BeginTx(context.Context, pgx.TxOptions) (pgx.Tx, error)
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
@@ -58,6 +54,7 @@ func (r *PostgresRepository) Create(
 		application.VacancyID,
 		application.VacancyVersion,
 		application.ResumeID,
+		application.SeekerID,
 		application.CoverLetter,
 	).Scan(
 		&application.ID,
@@ -69,7 +66,11 @@ func (r *PostgresRepository) Create(
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == uniqueViolationCode &&
-				pgErr.ConstraintName == applicationVacancyResumeKey {
+				pgErr.ConstraintName == applicationVacancySeekerKey {
+				return models.Application{}, apperrors.ErrConflict
+			}
+
+			if pgErr.Code == "23514" {
 				return models.Application{}, apperrors.ErrConflict
 			}
 
@@ -81,14 +82,146 @@ func (r *PostgresRepository) Create(
 		return models.Application{}, fmt.Errorf("insert application: %w", err)
 	}
 
-	_, err = tx.Exec(ctx, insertInitialStatusQuery, application.ID)
-	if err != nil {
-		return models.Application{}, fmt.Errorf("insert initial application status: %w", err)
-	}
-
 	if err := tx.Commit(ctx); err != nil {
 		return models.Application{}, fmt.Errorf("commit application transaction: %w", err)
 	}
 
 	return application, nil
+}
+
+const getVacancyEmployerIDQuery = `
+	SELECT v.employer_id
+	  FROM application AS a
+	  JOIN vacancy AS v ON v.vacancy_id = a.vacancy_id
+	 WHERE a.application_id = $1
+`
+
+func (r *PostgresRepository) GetVacancyEmployerID(ctx context.Context, applicationID int64) (int64, error) {
+	var ownerID int64
+	err := r.pool.QueryRow(ctx, getVacancyEmployerIDQuery, applicationID).Scan(&ownerID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, apperrors.ErrNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("get application vacancy employer: %w", err)
+	}
+	return ownerID, nil
+}
+
+const updateStatusQuery = `
+	WITH updated_application AS (
+	    UPDATE application AS a
+	       SET updated_at = GREATEST(a.updated_at, clock_timestamp())
+	      FROM vacancy AS v
+	     WHERE a.application_id = $1
+	       AND v.vacancy_id = a.vacancy_id
+	       AND v.employer_id = $2
+	    RETURNING a.application_id, a.updated_at
+	)
+	INSERT INTO application_status_history (
+	    application_id, status, reason_code, comment, changed_by, changed_at
+	)
+	SELECT application_id, $3, $4, $5, $2, updated_at
+	  FROM updated_application
+	RETURNING application_id, status, reason_code, comment, changed_at
+`
+
+func (r *PostgresRepository) UpdateStatus(ctx context.Context, input dto.UpdateStatusInput) (models.ApplicationStatusUpdate, error) {
+	var result models.ApplicationStatusUpdate
+	err := r.pool.QueryRow(ctx, updateStatusQuery,
+		input.ApplicationID, input.EmployerID, input.Status, input.ReasonCode, input.Comment,
+	).Scan(&result.ApplicationID, &result.Value, &result.ReasonCode, &result.StatusComment, &result.StatusChangedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.ApplicationStatusUpdate{}, apperrors.ErrNotFound
+	}
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23514" {
+			return models.ApplicationStatusUpdate{}, apperrors.ErrInvalidInput
+		}
+		return models.ApplicationStatusUpdate{}, fmt.Errorf("record application status: %w", err)
+	}
+	return result, nil
+}
+
+const seekerApplicationsFrom = `
+	  FROM application AS a
+	  JOIN application_resume_snapshot AS snapshot ON snapshot.application_id = a.application_id
+	  JOIN vacancy_history AS vh ON vh.vacancy_id = a.vacancy_id AND vh.version = a.vacancy_version
+	  JOIN vacancy AS v ON v.vacancy_id = a.vacancy_id
+	  JOIN employer_profile AS ep ON ep.user_id = v.employer_id
+`
+
+const listBySeekerQuery = `
+	SELECT a.application_id, a.seeker_id, a.vacancy_id, a.vacancy_version,
+	       a.cover_letter, a.created_at, a.updated_at, snapshot.source_resume_id,
+	       vh.title, ep.company_name, snapshot.title,
+	       COALESCE(latest.status, 'created'),
+	       latest.reason_code, latest.comment, COALESCE(latest.changed_at, a.created_at)
+` + seekerApplicationsFrom + `
+	  LEFT JOIN LATERAL (
+	      SELECT status, reason_code, comment, changed_at
+	        FROM application_status_history
+	       WHERE application_id = a.application_id
+	       ORDER BY changed_at DESC, status_history_id DESC
+	       LIMIT 1
+	  ) AS latest ON TRUE
+	 WHERE a.seeker_id = $1
+`
+
+const seekerApplicationsOrder = ` ORDER BY a.created_at DESC, a.application_id DESC`
+const firstSeekerApplicationsQuery = listBySeekerQuery + seekerApplicationsOrder + " LIMIT $2"
+const nextSeekerApplicationsQuery = listBySeekerQuery +
+	` AND (a.created_at, a.application_id) < ($2, $3)` + seekerApplicationsOrder + " LIMIT $4"
+
+const countBySeekerQuery = `SELECT COUNT(*)` + seekerApplicationsFrom + ` WHERE a.seeker_id = $1`
+
+func (r *PostgresRepository) ListBySeeker(ctx context.Context, seekerID int64, params pagination.Params) ([]models.SeekerApplication, int64, error) {
+	query := firstSeekerApplicationsQuery
+	args := []any{seekerID, params.Limit}
+	if params.Cursor != nil {
+		query = nextSeekerApplicationsQuery
+		args = []any{seekerID, params.Cursor.CreatedAt, params.Cursor.ID, params.Limit}
+	}
+
+	var applications []models.SeekerApplication
+	var total int64
+	err := pgx.BeginTxFunc(ctx, r.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly}, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, countBySeekerQuery, seekerID).Scan(&total); err != nil {
+			return fmt.Errorf("count seeker applications: %w", err)
+		}
+		var err error
+		applications, err = querySeekerApplications(ctx, tx, query, args...)
+		return err
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+	return applications, total, nil
+}
+
+func querySeekerApplications(ctx context.Context, tx pgx.Tx, query string, args ...any) ([]models.SeekerApplication, error) {
+	rows, err := tx.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list seeker applications: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]models.SeekerApplication, 0)
+	for rows.Next() {
+		var app models.SeekerApplication
+		if err := rows.Scan(
+			&app.ID, &app.SeekerID, &app.Vacancy.VacancyID, &app.Vacancy.VacancyVersion,
+			&app.CoverLetter, &app.CreatedAt, &app.UpdatedAt, &app.Resume.ResumeID,
+			&app.Vacancy.VacancyTitle, &app.Vacancy.CompanyName, &app.Resume.ResumeTitle,
+			&app.Status.Value, &app.Status.ReasonCode, &app.Status.StatusComment, &app.Status.StatusChangedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan seeker application: %w", err)
+		}
+		result = append(result, app)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list seeker applications: %w", err)
+	}
+	return result, nil
 }

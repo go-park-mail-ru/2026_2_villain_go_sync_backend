@@ -10,6 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/application"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -30,7 +31,7 @@ func TestHandler_Create_Success(t *testing.T) {
 			if input.CoverLetter == nil || *input.CoverLetter != "Hello" {
 				t.Errorf("expected cover letter 'Hello', got %v", input.CoverLetter)
 			}
-			return models.Application{ID: 1}, nil
+			return models.Application{ID: 1, SeekerID: input.SeekerID}, nil
 		})
 
 	body := `{"resume_id": 3, "cover_letter": "Hello"}`
@@ -46,6 +47,9 @@ func TestHandler_Create_Success(t *testing.T) {
 
 	if rec.Code != http.StatusCreated {
 		t.Errorf("expected 201, got %d; body: %s", rec.Code, rec.Body.String())
+	}
+	if !bytes.Contains(rec.Body.Bytes(), []byte(`"seeker_id":10`)) {
+		t.Errorf("missing seeker_id in response: %s", rec.Body.String())
 	}
 }
 
@@ -84,5 +88,23 @@ func TestHandler_Create_InvalidVacancyID(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Errorf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestListMinePagination(t *testing.T) {
+	mockUC := application.NewMockApplicationUsecase(gomock.NewController(t))
+	mockUC.EXPECT().ListBySeeker(gomock.Any(), int64(10), models.RoleSeeker, pagination.Params{Limit: 6}).
+		Return(nil, int64(6), nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/seeker/applications?limit=5", nil)
+	ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
+	rec := httptest.NewRecorder()
+	application.NewHandler(mockUC).ListMine(rec, req.WithContext(ctx))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+	for _, part := range []string{`"items":[]`, `"limit":5`, `"total":6`, `"next_cursor":null`} {
+		if !bytes.Contains(rec.Body.Bytes(), []byte(part)) {
+			t.Errorf("missing %s in %s", part, rec.Body.String())
+		}
 	}
 }

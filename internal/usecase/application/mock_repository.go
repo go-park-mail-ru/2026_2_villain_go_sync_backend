@@ -13,6 +13,8 @@ import (
 	context "context"
 	reflect "reflect"
 
+	application "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	pagination "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -54,6 +56,52 @@ func (m *MockApplicationRepository) Create(ctx context.Context, input models.App
 func (mr *MockApplicationRepositoryMockRecorder) Create(ctx, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockApplicationRepository)(nil).Create), ctx, input)
+}
+
+// GetVacancyEmployerID mocks base method.
+func (m *MockApplicationRepository) GetVacancyEmployerID(ctx context.Context, applicationID int64) (int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVacancyEmployerID", ctx, applicationID)
+	ret0, _ := ret[0].(int64)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVacancyEmployerID indicates an expected call of GetVacancyEmployerID.
+func (mr *MockApplicationRepositoryMockRecorder) GetVacancyEmployerID(ctx, applicationID any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVacancyEmployerID", reflect.TypeOf((*MockApplicationRepository)(nil).GetVacancyEmployerID), ctx, applicationID)
+}
+
+// ListBySeeker mocks base method.
+func (m *MockApplicationRepository) ListBySeeker(ctx context.Context, seekerID int64, params pagination.Params) ([]models.SeekerApplication, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID, params)
+	ret0, _ := ret[0].([]models.SeekerApplication)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListBySeeker indicates an expected call of ListBySeeker.
+func (mr *MockApplicationRepositoryMockRecorder) ListBySeeker(ctx, seekerID, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationRepository)(nil).ListBySeeker), ctx, seekerID, params)
+}
+
+// UpdateStatus mocks base method.
+func (m *MockApplicationRepository) UpdateStatus(ctx context.Context, input application.UpdateStatusInput) (models.ApplicationStatusUpdate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, input)
+	ret0, _ := ret[0].(models.ApplicationStatusUpdate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockApplicationRepositoryMockRecorder) UpdateStatus(ctx, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockApplicationRepository)(nil).UpdateStatus), ctx, input)
 }
 
 // MockResumeRepository is a mock of ResumeRepository interface.
@@ -159,10 +207,10 @@ func (m *MockUserRepository) EXPECT() *MockUserRepositoryMockRecorder {
 }
 
 // GetRoleByID mocks base method.
-func (m *MockUserRepository) GetRoleByID(ctx context.Context, id int64) (string, error) {
+func (m *MockUserRepository) GetRoleByID(ctx context.Context, id int64) (models.Role, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRoleByID", ctx, id)
-	ret0, _ := ret[0].(string)
+	ret0, _ := ret[0].(models.Role)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	application "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	pagination "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -55,4 +56,35 @@ func (m *MockApplicationUsecase) Create(ctx context.Context, input application.C
 func (mr *MockApplicationUsecaseMockRecorder) Create(ctx, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockApplicationUsecase)(nil).Create), ctx, input)
+}
+
+// ListBySeeker mocks base method.
+func (m *MockApplicationUsecase) ListBySeeker(ctx context.Context, seekerID int64, role models.Role, params pagination.Params) ([]models.SeekerApplication, int64, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ListBySeeker", ctx, seekerID, role, params)
+	ret0, _ := ret[0].([]models.SeekerApplication)
+	ret1, _ := ret[1].(int64)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// ListBySeeker indicates an expected call of ListBySeeker.
+func (mr *MockApplicationUsecaseMockRecorder) ListBySeeker(ctx, seekerID, role, params any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListBySeeker", reflect.TypeOf((*MockApplicationUsecase)(nil).ListBySeeker), ctx, seekerID, role, params)
+}
+
+// UpdateStatus mocks base method.
+func (m *MockApplicationUsecase) UpdateStatus(ctx context.Context, role models.Role, input application.UpdateStatusInput) (models.ApplicationStatusUpdate, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateStatus", ctx, role, input)
+	ret0, _ := ret[0].(models.ApplicationStatusUpdate)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// UpdateStatus indicates an expected call of UpdateStatus.
+func (mr *MockApplicationUsecaseMockRecorder) UpdateStatus(ctx, role, input any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateStatus", reflect.TypeOf((*MockApplicationUsecase)(nil).UpdateStatus), ctx, role, input)
 }

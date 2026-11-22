@@ -125,7 +125,7 @@ func TestPostgresRepository_GetRoleByID_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if role != string(models.RoleEmployer) {
+	if role != models.RoleEmployer {
 		t.Errorf("expected employer, got %s", role)
 	}
 }

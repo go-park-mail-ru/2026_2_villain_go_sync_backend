@@ -67,6 +67,7 @@ func New() http.Handler {
 	mux.Handle("PATCH /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.UpdateVacancy)))
 	mux.Handle("DELETE /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.Delete)))
 	mux.Handle("GET /api/vacancies/{id}/applicants", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListApplicants)))
+	mux.HandleFunc("GET /api/vacancy-categories", appConfig.Handlers.Vacancy.ListCategories)
 
 	mux.Handle("POST /api/resumes",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Create)))
@@ -115,6 +116,15 @@ func New() http.Handler {
 	mux.Handle(
 		"GET /api/employer/applications",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListEmployerApplicants)),
+	)
+
+	mux.Handle(
+		"PATCH /api/employer/applications/{id}/status",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.UpdateStatus)),
+	)
+	mux.Handle(
+		"GET /api/seeker/applications",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.ListMine)),
 	)
 
 	return middleware.RequestID(

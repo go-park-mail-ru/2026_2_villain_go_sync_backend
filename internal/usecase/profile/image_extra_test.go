@@ -44,10 +44,10 @@ func TestProfileImageUsecase_Get(t *testing.T) {
 			ctx := context.Background()
 			if tt.employer {
 				repo.EXPECT().GetEmployerByID(gomock.Any(), 12).
-					Return(models.EmployerProfile{LogoKey: tt.key}, tt.repoErr)
+					Return(models.EmployerProfile{Company: models.EmployerCompanyInfo{LogoKey: tt.key}}, tt.repoErr)
 			} else {
 				repo.EXPECT().GetSeekerByID(gomock.Any(), 12).
-					Return(models.SeekerProfile{AvatarKey: tt.key}, tt.repoErr)
+					Return(models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{AvatarKey: tt.key}}, tt.repoErr)
 			}
 			if tt.repoErr == nil && tt.key != nil {
 				if tt.storageErr != nil {
@@ -143,10 +143,10 @@ func TestProfileImageUsecase_Delete(t *testing.T) {
 			} else {
 				if tt.employer {
 					repo.EXPECT().GetEmployerByID(gomock.Any(), 12).
-						Return(models.EmployerProfile{LogoKey: tt.oldKey}, tt.repoErr)
+						Return(models.EmployerProfile{Company: models.EmployerCompanyInfo{LogoKey: tt.oldKey}}, tt.repoErr)
 				} else {
 					repo.EXPECT().GetSeekerByID(gomock.Any(), 12).
-						Return(models.SeekerProfile{AvatarKey: tt.oldKey}, tt.repoErr)
+						Return(models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{AvatarKey: tt.oldKey}}, tt.repoErr)
 				}
 				if tt.repoErr == nil && tt.oldKey != nil {
 					if tt.employer {
@@ -230,10 +230,10 @@ func TestProfileImageUsecase_Upload(t *testing.T) {
 			} else {
 				if tt.employer {
 					repo.EXPECT().GetEmployerByID(gomock.Any(), 12).
-						Return(models.EmployerProfile{LogoKey: tt.oldKey}, tt.repoErr)
+						Return(models.EmployerProfile{Company: models.EmployerCompanyInfo{LogoKey: tt.oldKey}}, tt.repoErr)
 				} else {
 					repo.EXPECT().GetSeekerByID(gomock.Any(), 12).
-						Return(models.SeekerProfile{AvatarKey: tt.oldKey}, tt.repoErr)
+						Return(models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{AvatarKey: tt.oldKey}}, tt.repoErr)
 				}
 				if tt.repoErr == nil {
 					var generatedKey string

@@ -2,9 +2,12 @@ package httputil
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 )
 
 func TestWriteOK(t *testing.T) {
@@ -71,5 +74,33 @@ func TestWriteError(t *testing.T) {
 	}
 	if resp.Error != "invalid request" {
 		t.Errorf("error = %q, want invalid request", resp.Error)
+	}
+}
+
+func TestWriteAppErrorContract(t *testing.T) {
+	const message = "failed to update resume"
+	for _, tc := range []struct {
+		name    string
+		err     error
+		status  int
+		message string
+	}{
+		{"validation", fmt.Errorf("update: %w", apperrors.ValidationError("invalid work_format")), http.StatusUnprocessableEntity, "invalid work_format"},
+		{"invalid input", apperrors.ErrInvalidInput, http.StatusBadRequest, message},
+		{"forbidden", apperrors.ErrForbidden, http.StatusForbidden, message},
+		{"missing", apperrors.ErrNotFound, http.StatusNotFound, message},
+		{"different owner", apperrors.ErrNotOwner, http.StatusNotFound, message},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			WriteAppError(rec, tc.err, message)
+			if rec.Code != tc.status {
+				t.Fatalf("status = %d, want %d", rec.Code, tc.status)
+			}
+			want := fmt.Sprintf("{\"error\":%q}\n", tc.message)
+			if got := rec.Body.String(); got != want {
+				t.Errorf("body = %q, want %q", got, want)
+			}
+		})
 	}
 }
