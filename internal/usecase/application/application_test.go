@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	uc "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/application"
 	"go.uber.org/mock/gomock"
@@ -136,7 +137,7 @@ func TestUpdateStatusValidation(t *testing.T) {
 func TestListBySeekerRequiresSeekerRole(t *testing.T) {
 	repo := uc.NewMockApplicationRepository(gomock.NewController(t))
 	usecase := uc.NewApplicationUsecase(repo, nil, nil, nil)
-	if _, err := usecase.ListBySeeker(context.Background(), 1, models.RoleEmployer); !errors.Is(err, apperrors.ErrForbidden) {
+	if _, _, err := usecase.ListBySeeker(context.Background(), 1, models.RoleEmployer, pagination.Params{Limit: 12}); !errors.Is(err, apperrors.ErrForbidden) {
 		t.Fatalf("expected forbidden, got %v", err)
 	}
 }

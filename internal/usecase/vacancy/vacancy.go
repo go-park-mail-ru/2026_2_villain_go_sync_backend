@@ -6,21 +6,22 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
 //go:generate mockgen -source=vacancy.go -destination=mock_repository.go -package=vacancy
 type VacancyRepository interface {
-	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
+	ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
-	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
+	ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error)
 	Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
-	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
-	ListByEmployerID(ctx context.Context, employerID int64) ([]models.Applicant, error)
+	ListByVacancyID(ctx context.Context, vacancyID int64, params pagination.Params) ([]models.Applicant, int64, error)
+	ListByEmployerID(ctx context.Context, employerID int64, params pagination.Params) ([]models.Applicant, int64, error)
 	ListCategories(ctx context.Context) ([]models.Category, error)
 }
 
@@ -41,8 +42,12 @@ func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository) *Vacan
 	}
 }
 
-func (u *VacancyUsecase) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
-	return u.vacancies.ListVacancies(ctx)
+func (u *VacancyUsecase) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
+	vacancies, total, err := u.vacancies.ListVacancies(ctx, params)
+	if err != nil {
+		return nil, 0, err
+	}
+	return vacancies, total, nil
 }
 
 func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64) error {
@@ -142,15 +147,15 @@ func (u *VacancyUsecase) GetByID(ctx context.Context, id int64) (models.Vacancy,
 	return u.vacancies.GetByID(ctx, id)
 }
 
-func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
+func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error) {
 	role, err := u.users.GetRoleByID(ctx, employerID)
 	if err != nil {
-		return nil, fmt.Errorf("get employer role: %w", err)
+		return nil, 0, fmt.Errorf("get employer role: %w", err)
 	}
 	if !role.IsEmployer() {
-		return nil, apperrors.ErrForbidden
+		return nil, 0, apperrors.ErrForbidden
 	}
-	return u.vacancies.ListByEmployer(ctx, employerID)
+	return u.vacancies.ListByEmployer(ctx, employerID, params)
 }
 
 func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error) {
@@ -261,9 +266,9 @@ func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64
 	return u.vacancies.Delete(ctx, vacancyID, employerID)
 }
 
-func (u *VacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error) {
+func (u *VacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, params pagination.Params) ([]models.Applicant, int64, error) {
 	if !role.IsEmployer() {
-		return nil, apperrors.ErrForbidden
+		return nil, 0, apperrors.ErrForbidden
 	}
-	return u.vacancies.ListByEmployerID(ctx, userID)
+	return u.vacancies.ListByEmployerID(ctx, userID, params)
 }

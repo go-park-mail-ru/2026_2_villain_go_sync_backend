@@ -10,6 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/sanitizer"
@@ -18,7 +19,7 @@ import (
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=application
 type ApplicationUsecase interface {
 	UpdateStatus(ctx context.Context, role models.Role, input dto.UpdateStatusInput) (models.ApplicationStatusUpdate, error)
-	ListBySeeker(ctx context.Context, seekerID int64, role models.Role) ([]models.SeekerApplication, error)
+	ListBySeeker(ctx context.Context, seekerID int64, role models.Role, params pagination.Params) ([]models.SeekerApplication, int64, error)
 	Create(ctx context.Context, input dto.CreateApplicationInput) (models.Application, error)
 }
 
@@ -133,10 +134,16 @@ func (h *Handler) ListMine(w http.ResponseWriter, r *http.Request) {
 	}
 	role, _ := auth.RoleFromContext(r.Context())
 
-	applications, err := h.applications.ListBySeeker(r.Context(), userID, role)
+	params, ok := httputil.ReadPagination(w, r)
+	if !ok {
+		return
+	}
+	applications, total, err := h.applications.ListBySeeker(r.Context(), userID, role, params.WithLookahead())
 	if err != nil {
 		httputil.WriteAppError(w, err, "failed to list applications")
 		return
 	}
-	httputil.WriteOK(w, http.StatusOK, dto.NewSeekerApplicationListResponse(applications))
+	httputil.WritePage(w, dto.NewSeekerApplicationListResponse(applications), params.Limit, total, func(app dto.SeekerApplicationResponse) pagination.Cursor {
+		return pagination.Cursor{CreatedAt: app.CreatedAt, ID: app.ID}
+	})
 }
