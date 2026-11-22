@@ -47,10 +47,14 @@ func (u *ProfileUsecase) GetSeekerByID(ctx context.Context, seekerID int) (model
 }
 
 func (u *ProfileUsecase) UpdateSeeker(ctx context.Context, userID int, role models.Role, p models.SeekerProfile) (models.SeekerProfile, error) {
-	if !role.IsSeeker() {
+	if !role.IsSeeker() || (p.Profile.UserID != 0 && p.Profile.UserID != userID) {
 		return models.SeekerProfile{}, apperrors.ErrForbidden
 	}
+	if value := p.Preferences.WorkFormat; value != nil && *value != "" && !value.IsValid() {
+		return models.SeekerProfile{}, apperrors.ValidationError("work_format must be office, hybrid or remote")
+	}
 
+	p.Profile.UserID = userID
 	return u.profiles.UpsertSeeker(ctx, p)
 }
 
@@ -85,7 +89,7 @@ func (u *ProfileUsecase) UploadSeekerAvatar(ctx context.Context, userID int, rol
 		ctx,
 		userID,
 		"avatars",
-		p.AvatarKey,
+		p.PersonalInfo.AvatarKey,
 		body,
 		contentType,
 		u.profiles.UpdateSeekerAvatarKey,
@@ -97,10 +101,10 @@ func (u *ProfileUsecase) GetSeekerAvatar(ctx context.Context, userID int) (io.Re
 	if err != nil {
 		return nil, "", err
 	}
-	if p.AvatarKey == nil {
+	if p.PersonalInfo.AvatarKey == nil {
 		return nil, "", apperrors.ErrNotFound
 	}
-	body, contentType, err := u.storage.Download(ctx, *p.AvatarKey)
+	body, contentType, err := u.storage.Download(ctx, *p.PersonalInfo.AvatarKey)
 	if err != nil {
 		return nil, "", fmt.Errorf("get avatar from s3 storage: %w", err)
 	}
@@ -118,7 +122,7 @@ func (u *ProfileUsecase) DeleteSeekerAvatar(ctx context.Context, userID int, rol
 	return u.deleteProfileImage(
 		ctx,
 		userID,
-		p.AvatarKey,
+		p.PersonalInfo.AvatarKey,
 		u.profiles.UpdateSeekerAvatarKey,
 	)
 }
@@ -135,7 +139,7 @@ func (u *ProfileUsecase) UploadEmployerLogo(ctx context.Context, userID int, rol
 		ctx,
 		userID,
 		"logos",
-		p.LogoKey,
+		p.Company.LogoKey,
 		body,
 		contentType,
 		u.profiles.UpdateEmployerLogoKey,
@@ -147,10 +151,10 @@ func (u *ProfileUsecase) GetEmployerLogo(ctx context.Context, userID int) (io.Re
 	if err != nil {
 		return nil, "", err
 	}
-	if p.LogoKey == nil {
+	if p.Company.LogoKey == nil {
 		return nil, "", apperrors.ErrNotFound
 	}
-	body, contentType, err := u.storage.Download(ctx, *p.LogoKey)
+	body, contentType, err := u.storage.Download(ctx, *p.Company.LogoKey)
 	if err != nil {
 		return nil, "", fmt.Errorf("get logo from s3 storage: %w", err)
 	}
@@ -168,7 +172,7 @@ func (u *ProfileUsecase) DeleteEmployerLogo(ctx context.Context, userID int, rol
 	return u.deleteProfileImage(
 		ctx,
 		userID,
-		p.LogoKey,
+		p.Company.LogoKey,
 		u.profiles.UpdateEmployerLogoKey,
 	)
 }

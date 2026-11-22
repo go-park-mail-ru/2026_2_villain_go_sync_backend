@@ -10,6 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/vacancy"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
@@ -66,16 +67,23 @@ func TestMoreVacancyHandler_ListByEmployer(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			uc := vacancy.NewMockVacancyUsecase(ctrl)
 			h := vacancy.NewHandler(uc)
-			req := httptest.NewRequest(http.MethodGet, "/api/employer/vacancies", nil)
+			req := httptest.NewRequest(http.MethodGet, "/api/employer/vacancies?limit=5", nil)
 			if tt.authorized {
 				req = req.WithContext(auth.WithUserID(req.Context(), 12))
-				uc.EXPECT().ListByEmployer(gomock.Any(), int64(12)).
-					Return([]models.Vacancy{{ID: 7, Title: "Go developer"}}, tt.err)
+				uc.EXPECT().ListByEmployer(gomock.Any(), int64(12), pagination.Params{Limit: 6}).
+					Return([]models.Vacancy{{ID: 7, Title: "Go developer"}}, int64(6), tt.err)
 			}
 			rec := httptest.NewRecorder()
 			h.ListVacanciesByEmployer(rec, req)
 			if rec.Code != tt.status {
 				t.Fatalf("want %d, got %d: %s", tt.status, rec.Code, rec.Body.String())
+			}
+			if tt.status == http.StatusOK {
+				for _, part := range []string{`"items":[`, `"id":7`, `"limit":5`, `"total":6`, `"next_cursor":null`} {
+					if !bytes.Contains(rec.Body.Bytes(), []byte(part)) {
+						t.Errorf("missing %s in %s", part, rec.Body.String())
+					}
+				}
 			}
 		})
 	}
@@ -249,8 +257,8 @@ func TestMoreVacancyHandler_ListEmployerApplicants(t *testing.T) {
 				req = req.WithContext(ctx)
 			}
 			if tt.call {
-				uc.EXPECT().ListEmployerApplicants(gomock.Any(), int64(12), tt.role).
-					Return([]models.Applicant{{ApplicationID: 4, FirstName: "Ivan"}}, tt.err)
+				uc.EXPECT().ListEmployerApplicants(gomock.Any(), int64(12), tt.role, pagination.Params{Limit: 13}).
+					Return([]models.Applicant{{ApplicationID: 4, Seeker: models.ApplicantSeeker{FirstName: "Ivan"}}}, int64(1), tt.err)
 			}
 			rec := httptest.NewRecorder()
 			h.ListEmployerApplicants(rec, req)

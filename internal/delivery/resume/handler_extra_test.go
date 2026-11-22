@@ -1,6 +1,7 @@
 package resume_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,6 +11,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/resume"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"go.uber.org/mock/gomock"
 )
@@ -25,20 +27,21 @@ func TestResumeHandlers_Table(t *testing.T) {
 		{name: "create unauthorized", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV"}`, wantStatus: 401},
 		{name: "create bad json", action: "create", method: http.MethodPost, url: "/api/resumes", body: "{", auth: true, wantStatus: 400},
 		{name: "create missing title", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":" "}`, auth: true, wantStatus: 422},
-		{name: "create success", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV","description":"Go dev"}`, auth: true, wantStatus: 201, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
+		{name: "create missing target position", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV"}`, auth: true, wantStatus: 422, wantBody: "target_position is required"},
+		{name: "create success", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV","target_position":"Engineer","description":"Go dev"}`, auth: true, wantStatus: 201, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Create(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
 				Return(models.Resume{ID: 31, Title: "CV"}, nil)
 		}},
-		{name: "create forbidden", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
+		{name: "create forbidden", action: "create", method: http.MethodPost, url: "/api/resumes", body: `{"title":"CV","target_position":"Engineer"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Create(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).Return(models.Resume{}, apperrors.ErrForbidden)
 		}},
 
-		{name: "get invalid id", action: "get", method: http.MethodGet, url: "/api/resumes/abc", id: "abc", wantStatus: 400},
-		{name: "get success", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", wantStatus: 200, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
-			m.EXPECT().GetByID(gomock.Any(), 31).Return(models.Resume{ID: 31, Title: "CV"}, nil)
+		{name: "get invalid id", action: "get", method: http.MethodGet, url: "/api/resumes/abc", id: "abc", auth: true, wantStatus: 400},
+		{name: "get success", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", auth: true, wantStatus: 200, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
+			m.EXPECT().GetByID(gomock.Any(), 31, 10, models.RoleSeeker).Return(models.Resume{ID: 31, Title: "CV"}, nil)
 		}},
-		{name: "get not found", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", wantStatus: 404, setup: func(m *resume.MockResumeUsecase) {
-			m.EXPECT().GetByID(gomock.Any(), 31).Return(models.Resume{}, apperrors.ErrNotFound)
+		{name: "get not found", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", auth: true, wantStatus: 404, setup: func(m *resume.MockResumeUsecase) {
+			m.EXPECT().GetByID(gomock.Any(), 31, 10, models.RoleSeeker).Return(models.Resume{}, apperrors.ErrNotFound)
 		}},
 
 		{name: "list missing seeker id", action: "list", method: http.MethodGet, url: "/api/resumes", wantStatus: 400},
@@ -57,11 +60,13 @@ func TestResumeHandlers_Table(t *testing.T) {
 		{name: "update invalid id", action: "update", method: http.MethodPut, url: "/api/resumes/bad", id: "bad", body: `{"title":"Updated"}`, auth: true, wantStatus: 400},
 		{name: "update invalid json", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: "{", auth: true, wantStatus: 400},
 		{name: "update missing title", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{}`, auth: true, wantStatus: 422},
-		{name: "update success", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated"}`, auth: true, wantStatus: 200, wantBody: `"title":"Updated"`, setup: func(m *resume.MockResumeUsecase) {
+		{name: "update missing target position", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated"}`, auth: true, wantStatus: 422, wantBody: "target_position is required"},
+		{name: "update blank target position", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated","target_position":" \t"}`, auth: true, wantStatus: 422, wantBody: "target_position is required"},
+		{name: "update success", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated","target_position":"Engineer"}`, auth: true, wantStatus: 200, wantBody: `"title":"Updated"`, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Update(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
 				Return(models.Resume{ID: 31, Title: "Updated"}, nil)
 		}},
-		{name: "update forbidden", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
+		{name: "update forbidden", action: "update", method: http.MethodPut, url: "/api/resumes/31", id: "31", body: `{"title":"Updated","target_position":"Engineer"}`, auth: true, wantStatus: 403, setup: func(m *resume.MockResumeUsecase) {
 			m.EXPECT().Update(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).Return(models.Resume{}, apperrors.ErrForbidden)
 		}},
 
@@ -116,6 +121,38 @@ func TestResumeHandlers_Table(t *testing.T) {
 			if tt.wantBody != "" && !strings.Contains(rec.Body.String(), tt.wantBody) {
 				t.Errorf("expected body to contain %q, got %s",
 					tt.wantBody, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestUpdateResumeSalary(t *testing.T) {
+	for _, tc := range []struct {
+		name, salaryJSON string
+		clear, hasSalary bool
+	}{
+		{name: "omitted"},
+		{name: "clear", salaryJSON: `,"salary_from":null`, clear: true},
+		{name: "set", salaryJSON: `,"salary_from":100.25`, hasSalary: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mockUC := resume.NewMockResumeUsecase(gomock.NewController(t))
+			mockUC.EXPECT().Update(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
+				DoAndReturn(func(_ context.Context, _ int, _ models.Role, input dto.UpdateInput) (models.Resume, error) {
+					salary := input.Resume.Preferences.SalaryFrom
+					if input.ClearSalaryFrom != tc.clear || (salary != nil) != tc.hasSalary || (salary != nil && *salary != 100.25) {
+						t.Fatalf("unexpected salary update: %+v", input)
+					}
+					return input.Resume, nil
+				})
+			body := `{"title":"CV","target_position":"Engineer"` + tc.salaryJSON + "}"
+			req := httptest.NewRequest(http.MethodPut, "/api/resumes/7", strings.NewReader(body))
+			req.SetPathValue("id", "7")
+			ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
+			rec := httptest.NewRecorder()
+			resume.NewHandler(mockUC).Update(rec, req.WithContext(ctx))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
 			}
 		})
 	}

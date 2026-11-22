@@ -22,7 +22,7 @@ func TestGetSeekerByID_Success(t *testing.T) {
 
 	mockUC.EXPECT().
 		GetSeekerByID(gomock.Any(), 1).
-		Return(models.SeekerProfile{FirstName: "Ivan"}, nil)
+		Return(models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan"}}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/seekers/1", nil)
 	req.SetPathValue("id", "1")
@@ -66,7 +66,7 @@ func TestUpdateEmployer_Success(t *testing.T) {
 
 	mockUC.EXPECT().
 		UpdateEmployer(gomock.Any(), 10, models.RoleEmployer, gomock.Any()).
-		Return(models.EmployerProfile{CompanyName: "Test"}, nil)
+		Return(models.EmployerProfile{Company: models.EmployerCompanyInfo{CompanyName: "Test"}}, nil)
 
 	body := `{"company_name":"Test","description":"Desc","website":"site.com"}`
 	req := httptest.NewRequest(http.MethodPut, "/api/profile/employer", bytes.NewBufferString(body))
@@ -119,10 +119,10 @@ func TestUpdateSeeker_Success(t *testing.T) {
 	mockUC.EXPECT().
 		UpdateSeeker(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).
 		Return(models.SeekerProfile{
-			Profile:   models.Profile{UserID: 10},
-			FirstName: "Ivan",
-			LastName:  "Ivanov",
-			AvatarKey: &avatarKey,
+			Profile: models.Profile{UserID: 10},
+			PersonalInfo: models.SeekerPersonalInfo{
+				FirstName: "Ivan", LastName: "Ivanov", AvatarKey: &avatarKey,
+			},
 		}, nil)
 
 	body := `{"first_name":"Ivan","last_name":"Ivanov","description":"Go developer"}`
@@ -229,7 +229,7 @@ func TestUpdateSeeker_Forbidden(t *testing.T) {
 		UpdateSeeker(gomock.Any(), 10, models.RoleEmployer, gomock.Any()).
 		Return(models.SeekerProfile{}, apperrors.ErrForbidden)
 
-	body := `{"first_name":"Ivan"}`
+	body := `{"first_name":"Ivan","last_name":"Ivanov","preferred_position":"Go developer"}`
 
 	req := httptest.NewRequest(
 		http.MethodPut,
@@ -259,9 +259,10 @@ func TestGetPublicEmployer_Success(t *testing.T) {
 	mockUC.EXPECT().
 		GetEmployerByID(gomock.Any(), 11).
 		Return(models.EmployerProfile{
-			Profile:     models.Profile{UserID: 11},
-			CompanyName: "Test Company",
-			LogoKey:     &logoKey,
+			Profile: models.Profile{UserID: 11},
+			Company: models.EmployerCompanyInfo{
+				CompanyName: "Test Company", LogoKey: &logoKey,
+			},
 		}, nil)
 
 	req := httptest.NewRequest(
@@ -328,5 +329,26 @@ func TestGetPublicEmployer_NotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("expected 404, got %d", rec.Code)
+	}
+}
+
+func TestUpdateSeeker_RequiresLastName(t *testing.T) {
+	for _, tc := range []struct {
+		body  string
+		field string
+	}{
+		{`{"first_name":"Ivan","preferred_position":"Engineer"}`, "last_name"},
+		{`{"first_name":"Ivan","last_name":" \t","preferred_position":"Engineer"}`, "last_name"},
+	} {
+		t.Run(tc.body, func(t *testing.T) {
+			h := profile.NewHandler(profile.NewMockProfileUsecase(gomock.NewController(t)))
+			req := httptest.NewRequest(http.MethodPut, "/api/profile/seeker", bytes.NewBufferString(tc.body))
+			ctx := auth.WithRole(auth.WithUserID(req.Context(), 10), models.RoleSeeker)
+			rec := httptest.NewRecorder()
+			h.UpdateSeeker(rec, req.WithContext(ctx))
+			if rec.Code != http.StatusUnprocessableEntity || !bytes.Contains(rec.Body.Bytes(), []byte(tc.field+" is required")) {
+				t.Fatalf("expected 422 for %s, got %d: %s", tc.field, rec.Code, rec.Body.String())
+			}
+		})
 	}
 }

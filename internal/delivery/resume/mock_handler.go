@@ -13,6 +13,7 @@ import (
 	context "context"
 	reflect "reflect"
 
+	resume "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -42,18 +43,18 @@ func (m *MockResumeUsecase) EXPECT() *MockResumeUsecaseMockRecorder {
 }
 
 // Create mocks base method.
-func (m *MockResumeUsecase) Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
+func (m *MockResumeUsecase) Create(ctx context.Context, userID int, role models.Role, arg3 models.Resume) (models.Resume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Create", ctx, userID, role, resume)
+	ret := m.ctrl.Call(m, "Create", ctx, userID, role, arg3)
 	ret0, _ := ret[0].(models.Resume)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Create indicates an expected call of Create.
-func (mr *MockResumeUsecaseMockRecorder) Create(ctx, userID, role, resume any) *gomock.Call {
+func (mr *MockResumeUsecaseMockRecorder) Create(ctx, userID, role, arg3 any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockResumeUsecase)(nil).Create), ctx, userID, role, resume)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockResumeUsecase)(nil).Create), ctx, userID, role, arg3)
 }
 
 // Delete mocks base method.
@@ -71,18 +72,18 @@ func (mr *MockResumeUsecaseMockRecorder) Delete(ctx, userID, role, id any) *gomo
 }
 
 // GetByID mocks base method.
-func (m *MockResumeUsecase) GetByID(ctx context.Context, id int) (models.Resume, error) {
+func (m *MockResumeUsecase) GetByID(ctx context.Context, id, userID int, role models.Role) (models.Resume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, userID, role)
 	ret0, _ := ret[0].(models.Resume)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockResumeUsecaseMockRecorder) GetByID(ctx, id any) *gomock.Call {
+func (mr *MockResumeUsecaseMockRecorder) GetByID(ctx, id, userID, role any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResumeUsecase)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResumeUsecase)(nil).GetByID), ctx, id, userID, role)
 }
 
 // ListBySeekerID mocks base method.
@@ -101,16 +102,16 @@ func (mr *MockResumeUsecaseMockRecorder) ListBySeekerID(ctx, seekerID any) *gomo
 }
 
 // Update mocks base method.
-func (m *MockResumeUsecase) Update(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error) {
+func (m *MockResumeUsecase) Update(ctx context.Context, userID int, role models.Role, input resume.UpdateInput) (models.Resume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Update", ctx, userID, role, resume)
+	ret := m.ctrl.Call(m, "Update", ctx, userID, role, input)
 	ret0, _ := ret[0].(models.Resume)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // Update indicates an expected call of Update.
-func (mr *MockResumeUsecaseMockRecorder) Update(ctx, userID, role, resume any) *gomock.Call {
+func (mr *MockResumeUsecaseMockRecorder) Update(ctx, userID, role, input any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResumeUsecase)(nil).Update), ctx, userID, role, resume)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Update", reflect.TypeOf((*MockResumeUsecase)(nil).Update), ctx, userID, role, input)
 }

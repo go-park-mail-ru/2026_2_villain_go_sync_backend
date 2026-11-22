@@ -20,11 +20,16 @@ func TestGetByID_Success(t *testing.T) {
 	h := resume.NewHandler(mockUC)
 
 	mockUC.EXPECT().
-		GetByID(gomock.Any(), 1).
+		GetByID(gomock.Any(), 1, 10, models.RoleSeeker).
 		Return(models.Resume{Title: "Go Dev"}, nil)
 
 	req := httptest.NewRequest(http.MethodGet, "/api/resumes/1", nil)
 	req.SetPathValue("id", "1")
+
+	ctx := auth.WithUserID(req.Context(), 10)
+	ctx = auth.WithRole(ctx, models.RoleSeeker)
+	req = req.WithContext(ctx)
+
 	rec := httptest.NewRecorder()
 
 	h.GetByID(rec, req)

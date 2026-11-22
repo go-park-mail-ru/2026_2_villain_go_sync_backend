@@ -19,7 +19,7 @@ func TestProfileUsecase_UpdateSeeker_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.SeekerProfile{FirstName: "Ivan"}
+	p := models.SeekerProfile{Profile: models.Profile{UserID: 10}, PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan"}}
 
 	mockRepo.EXPECT().
 		UpsertSeeker(gomock.Any(), p).
@@ -30,8 +30,8 @@ func TestProfileUsecase_UpdateSeeker_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.FirstName != "Ivan" {
-		t.Errorf("expected Ivan, got %v", res.FirstName)
+	if res.PersonalInfo.FirstName != "Ivan" {
+		t.Errorf("expected Ivan, got %v", res.PersonalInfo.FirstName)
 	}
 }
 
@@ -42,7 +42,10 @@ func TestProfileUsecase_UpdateSeeker_Forbidden(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	_, err := uc.UpdateSeeker(context.Background(), 10, models.RoleEmployer, models.SeekerProfile{})
+	invalid := models.WorkFormat("unknown")
+	_, err := uc.UpdateSeeker(context.Background(), 10, models.RoleEmployer, models.SeekerProfile{
+		Preferences: models.SeekerPreferences{WorkFormat: &invalid},
+	})
 
 	if !errors.Is(err, apperrors.ErrForbidden) {
 		t.Errorf("expected ErrForbidden, got %v", err)
@@ -56,7 +59,7 @@ func TestProfileUsecase_GetSeekerByID_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.SeekerProfile{FirstName: "Ivan"}
+	p := models.SeekerProfile{PersonalInfo: models.SeekerPersonalInfo{FirstName: "Ivan"}}
 
 	mockRepo.EXPECT().
 		GetSeekerByID(gomock.Any(), 1).
@@ -67,8 +70,8 @@ func TestProfileUsecase_GetSeekerByID_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.FirstName != "Ivan" {
-		t.Errorf("expected Ivan, got %v", res.FirstName)
+	if res.PersonalInfo.FirstName != "Ivan" {
+		t.Errorf("expected Ivan, got %v", res.PersonalInfo.FirstName)
 	}
 }
 
@@ -97,7 +100,7 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.EmployerProfile{CompanyName: "Yandex"}
+	p := models.EmployerProfile{Company: models.EmployerCompanyInfo{CompanyName: "Yandex"}}
 
 	mockRepo.EXPECT().
 		UpsertEmployer(gomock.Any(), p).
@@ -108,8 +111,8 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.CompanyName != "Yandex" {
-		t.Errorf("expected Yandex, got %v", res.CompanyName)
+	if res.Company.CompanyName != "Yandex" {
+		t.Errorf("expected Yandex, got %v", res.Company.CompanyName)
 	}
 }
 
@@ -134,7 +137,7 @@ func TestProfileUsecase_GetEmployerByID_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
-	p := models.EmployerProfile{CompanyName: "Yandex"}
+	p := models.EmployerProfile{Company: models.EmployerCompanyInfo{CompanyName: "Yandex"}}
 
 	mockRepo.EXPECT().
 		GetEmployerByID(gomock.Any(), 1).
@@ -145,7 +148,19 @@ func TestProfileUsecase_GetEmployerByID_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if res.CompanyName != "Yandex" {
-		t.Errorf("expected Yandex, got %v", res.CompanyName)
+	if res.Company.CompanyName != "Yandex" {
+		t.Errorf("expected Yandex, got %v", res.Company.CompanyName)
+	}
+}
+
+func TestSeekerProfileChecksOwnershipBeforePreferences(t *testing.T) {
+	repo := profile.NewMockProfileRepository(gomock.NewController(t))
+	invalid := models.WorkFormat("unknown")
+	_, err := profileUsecase.NewProfileUsecase(repo, nil).UpdateSeeker(context.Background(), 10, models.RoleSeeker, models.SeekerProfile{
+		Profile:     models.Profile{UserID: 20},
+		Preferences: models.SeekerPreferences{WorkFormat: &invalid},
+	})
+	if !errors.Is(err, apperrors.ErrForbidden) {
+		t.Fatalf("expected forbidden, got %v", err)
 	}
 }

@@ -6,26 +6,27 @@ import (
 	"fmt"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
 //go:generate mockgen -source=vacancy.go -destination=mock_repository.go -package=vacancy
 type VacancyRepository interface {
-	ListVacancies(ctx context.Context) ([]models.Vacancy, error)
+	ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
-	ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error)
+	ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error)
 	Update(ctx context.Context, vacancy models.Vacancy, categoryIDs *[]int64) (models.Vacancy, error)
 	Delete(ctx context.Context, vacancyID, employerID int64) error
 	IsOwner(ctx context.Context, vacancyID int64, employerID int64) (bool, error)
-	ListByVacancyID(ctx context.Context, vacancyID int64) ([]models.Applicant, error)
-	ListByEmployerID(ctx context.Context, employerID int64) ([]models.Applicant, error)
+	ListByVacancyID(ctx context.Context, vacancyID int64, params pagination.Params) ([]models.Applicant, int64, error)
+	ListByEmployerID(ctx context.Context, employerID int64, params pagination.Params) ([]models.Applicant, int64, error)
 	ListCategories(ctx context.Context) ([]models.Category, error)
 }
 
 type UserRepository interface {
-	GetRoleByID(ctx context.Context, userID int64) (string, error)
+	GetRoleByID(ctx context.Context, userID int64) (models.Role, error)
 	HasEmployerProfile(ctx context.Context, userID int64) (bool, error)
 }
 
@@ -41,8 +42,12 @@ func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository) *Vacan
 	}
 }
 
-func (u *VacancyUsecase) ListVacancies(ctx context.Context) ([]models.Vacancy, error) {
-	return u.vacancies.ListVacancies(ctx)
+func (u *VacancyUsecase) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
+	vacancies, total, err := u.vacancies.ListVacancies(ctx, params)
+	if err != nil {
+		return nil, 0, err
+	}
+	return vacancies, total, nil
 }
 
 func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64) error {
@@ -50,7 +55,7 @@ func (u *VacancyUsecase) validateEmployer(ctx context.Context, employerID int64)
 	if err != nil {
 		return fmt.Errorf("get employer role: %w", err)
 	}
-	if role != "employer" {
+	if !role.IsEmployer() {
 		return apperrors.ErrForbidden
 	}
 
@@ -73,17 +78,19 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
+	if err := validateVacancyDetails(input.Responsibilities, input.Requirements); err != nil {
+		return models.Vacancy{}, err
+	}
+
 	if err := validateSalary(input.SalaryFrom, input.SalaryTo); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	if input.Currency == "" {
-		input.Currency = "RUB"
+	currency := models.Currency(input.Currency)
+	if currency == "" {
+		currency = models.CurrencyRUB
 	}
-
-	switch input.Currency {
-	case "RUB", "USD", "EUR":
-	default:
+	if !currency.IsValid() {
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 
@@ -92,12 +99,38 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 	}
 
 	vacancy := models.Vacancy{
-		EmployerID:  input.EmployerID,
-		Title:       input.Title,
-		Description: input.Description,
-		SalaryFrom:  input.SalaryFrom,
-		SalaryTo:    input.SalaryTo,
-		Currency:    input.Currency,
+		Title: input.Title,
+		Company: models.VacancyCompany{
+			EmployerID: input.EmployerID,
+		},
+		Content: models.VacancyContent{
+			Description:      input.Description,
+			Responsibilities: input.Responsibilities,
+		},
+		Requirements: models.VacancyRequirements{
+			Description:     input.Requirements,
+			ExperienceLevel: (*models.ExperienceLevel)(input.ExperienceLevel),
+		},
+		Salary: models.VacancySalary{
+			SalaryFrom: input.SalaryFrom,
+			SalaryTo:   input.SalaryTo,
+			Currency:   currency,
+		},
+		Conditions: models.VacancyConditions{
+			Offer:          input.Offer,
+			EmploymentType: (*models.EmploymentType)(input.EmploymentType),
+			WorkFormat:     (*models.WorkFormat)(input.WorkFormat),
+			WorkSchedule:   (*models.WorkSchedule)(input.WorkSchedule),
+			WorkHours:      input.WorkHours,
+		},
+		Location: models.VacancyLocation{
+			City:          input.City,
+			OfficeAddress: input.OfficeAddress,
+		},
+	}
+
+	if err := validateVacancyOptions(vacancy); err != nil {
+		return models.Vacancy{}, err
 	}
 
 	createdVacancy, err := u.vacancies.Create(ctx, vacancy, input.CategoryIDs)
@@ -114,15 +147,15 @@ func (u *VacancyUsecase) GetByID(ctx context.Context, id int64) (models.Vacancy,
 	return u.vacancies.GetByID(ctx, id)
 }
 
-func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64) ([]models.Vacancy, error) {
+func (u *VacancyUsecase) ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error) {
 	role, err := u.users.GetRoleByID(ctx, employerID)
 	if err != nil {
-		return nil, fmt.Errorf("get employer role: %w", err)
+		return nil, 0, fmt.Errorf("get employer role: %w", err)
 	}
-	if role != "employer" {
-		return nil, apperrors.ErrForbidden
+	if !role.IsEmployer() {
+		return nil, 0, apperrors.ErrForbidden
 	}
-	return u.vacancies.ListByEmployer(ctx, employerID)
+	return u.vacancies.ListByEmployer(ctx, employerID, params)
 }
 
 func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInput) (models.Vacancy, error) {
@@ -138,7 +171,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
-	if vacancy.EmployerID != input.EmployerID {
+	if vacancy.Company.EmployerID != input.EmployerID {
 		return models.Vacancy{}, apperrors.ErrForbidden
 	}
 
@@ -146,29 +179,66 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 		vacancy.Title = *input.Title
 	}
 	if input.Description != nil {
-		vacancy.Description = *input.Description
+		vacancy.Content.Description = *input.Description
+	}
+	if input.Responsibilities != nil {
+		vacancy.Content.Responsibilities = *input.Responsibilities
+	}
+	if input.Requirements != nil {
+		vacancy.Requirements.Description = *input.Requirements
 	}
 	if input.SalaryFrom.Provided {
-		vacancy.SalaryFrom = input.SalaryFrom.Value
+		vacancy.Salary.SalaryFrom = input.SalaryFrom.Value
 	}
 	if input.SalaryTo.Provided {
-		vacancy.SalaryTo = input.SalaryTo.Value
+		vacancy.Salary.SalaryTo = input.SalaryTo.Value
 	}
 	if input.Currency != nil {
-		vacancy.Currency = *input.Currency
+		vacancy.Salary.Currency = models.Currency(*input.Currency)
 	}
 
-	if err := validateVacancyText(vacancy.Title, vacancy.Description); err != nil {
+	if input.Offer != nil {
+		vacancy.Conditions.Offer = input.Offer
+	}
+	if input.ExperienceLevel != nil {
+		vacancy.Requirements.ExperienceLevel = (*models.ExperienceLevel)(input.ExperienceLevel)
+	}
+	if input.EmploymentType != nil {
+		vacancy.Conditions.EmploymentType = (*models.EmploymentType)(input.EmploymentType)
+	}
+	if input.WorkFormat != nil {
+		vacancy.Conditions.WorkFormat = (*models.WorkFormat)(input.WorkFormat)
+	}
+	if input.WorkSchedule != nil {
+		vacancy.Conditions.WorkSchedule = (*models.WorkSchedule)(input.WorkSchedule)
+	}
+	if input.WorkHours != nil {
+		vacancy.Conditions.WorkHours = input.WorkHours
+	}
+	if input.City != nil {
+		vacancy.Location.City = input.City
+	}
+	if input.OfficeAddress != nil {
+		vacancy.Location.OfficeAddress = input.OfficeAddress
+	}
+
+	if err := validateVacancyOptions(vacancy); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	if err := validateSalary(vacancy.SalaryFrom, vacancy.SalaryTo); err != nil {
+	if err := validateVacancyText(vacancy.Title, vacancy.Content.Description); err != nil {
 		return models.Vacancy{}, err
 	}
 
-	switch vacancy.Currency {
-	case "RUB", "USD", "EUR":
-	default:
+	if err := validateVacancyDetails(vacancy.Content.Responsibilities, vacancy.Requirements.Description); err != nil {
+		return models.Vacancy{}, err
+	}
+
+	if err := validateSalary(vacancy.Salary.SalaryFrom, vacancy.Salary.SalaryTo); err != nil {
+		return models.Vacancy{}, err
+	}
+
+	if !vacancy.Salary.Currency.IsValid() {
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 
@@ -196,9 +266,9 @@ func (u *VacancyUsecase) Delete(ctx context.Context, vacancyID, employerID int64
 	return u.vacancies.Delete(ctx, vacancyID, employerID)
 }
 
-func (u *VacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role) ([]models.Applicant, error) {
+func (u *VacancyUsecase) ListEmployerApplicants(ctx context.Context, userID int64, role models.Role, params pagination.Params) ([]models.Applicant, int64, error) {
 	if !role.IsEmployer() {
-		return nil, apperrors.ErrForbidden
+		return nil, 0, apperrors.ErrForbidden
 	}
-	return u.vacancies.ListByEmployerID(ctx, userID)
+	return u.vacancies.ListByEmployerID(ctx, userID, params)
 }

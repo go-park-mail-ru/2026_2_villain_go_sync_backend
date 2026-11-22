@@ -6,26 +6,65 @@ import (
 )
 
 type Vacancy struct {
-	ID          int64     `json:"id"`
-	Version     int       `json:"version"`
-	EmployerID  int64     `json:"employer_id"`
-	CompanyName string    `json:"company_name"`
-	Title       string    `json:"title"`
-	Description string    `json:"description"`
-	SalaryFrom  *float64  `json:"salary_from"`
-	SalaryTo    *float64  `json:"salary_to"`
-	Currency    string    `json:"currency"`
-	CreatedAt   time.Time `json:"created_at"`
-	LogoURL     *string   `json:"logo_url"`
-	Categories  []string  `json:"categories"`
+	ID         int64
+	Version    int
+	Title      string
+	ApplyUntil *string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	ChangedAt  time.Time
+
+	Company      VacancyCompany
+	Content      VacancyContent
+	Requirements VacancyRequirements
+	Salary       VacancySalary
+	Conditions   VacancyConditions
+	Location     VacancyLocation
+
+	Categories []string
+}
+
+type VacancyCompany struct {
+	EmployerID int64
+	Name       string
+	LogoURL    *string
+}
+
+type VacancyContent struct {
+	Description      string
+	Responsibilities string
+}
+
+type VacancyRequirements struct {
+	Description     string
+	ExperienceLevel *ExperienceLevel
+}
+
+type VacancySalary struct {
+	SalaryFrom *float64
+	SalaryTo   *float64
+	Currency   Currency
+}
+
+type VacancyConditions struct {
+	Offer          *string
+	EmploymentType *EmploymentType
+	WorkFormat     *WorkFormat
+	WorkSchedule   *WorkSchedule
+	WorkHours      *string
+}
+
+type VacancyLocation struct {
+	City          *string
+	OfficeAddress *string
 }
 
 func (v *Vacancy) SetLogoURL(logoKey string) {
 	if logoKey == "" {
-		v.LogoURL = nil
+		v.Company.LogoURL = nil
 		return
 	}
 
-	url := fmt.Sprintf("/api/employers/%d/logo", v.EmployerID)
-	v.LogoURL = &url
+	url := fmt.Sprintf("/api/employers/%d/logo", v.Company.EmployerID)
+	v.Company.LogoURL = &url
 }

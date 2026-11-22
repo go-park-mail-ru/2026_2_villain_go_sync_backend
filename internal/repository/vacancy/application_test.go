@@ -6,8 +6,10 @@ import (
 
 	"time"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
+	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v5"
 )
 
@@ -70,39 +72,56 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 
 			repo := vacancy.NewPostgresRepository(mockPool)
 			now := time.Now()
+			resumeID := int64(7)
 
 			rows := pgxmock.NewRows([]string{
 				"first_name", "last_name", "status",
 				"applied_at", "resume_title",
 				"application_id", "vacancy_id", "vacancy_title",
 				"seeker_id", "resume_id", "cover_letter",
-				"avatar_key",
+				"avatar_key", "updated_at", "vacancy_version", "status_history_id",
+				"status_comment", "status_changed_at", "status_changed_by", "reason_code",
 			}).AddRow(
-				"Ivan", "Ivanov", "created",
+				"Ivan", "Ivanov", models.ApplicationCreated,
 				now, "Go dev",
 				int64(5), int64(1), "Go dev",
-				int64(12), int64(7), nil,
-				tt.avatarKey,
+				int64(12), &resumeID, nil,
+				tt.avatarKey, now, 2, nil, nil, nil, nil, nil,
 			)
 
-			mockPool.ExpectQuery(`FROM application a`).
+			filter := `v.employer_id = \$1`
+			if tt.byVacancy {
+				filter = `a.vacancy_id = \$1`
+			}
+			mockPool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead, AccessMode: pgx.ReadOnly})
+			mockPool.ExpectQuery(`SELECT COUNT\(\*\).*WHERE ` + filter).
 				WithArgs(int64(1)).
+				WillReturnRows(pgxmock.NewRows([]string{"count"}).AddRow(int64(8)))
+			mockPool.ExpectQuery(`WHERE `+filter+` AND \(a.created_at, a.application_id\) < \(\$2, \$3\) ORDER BY a.created_at DESC, a.application_id DESC LIMIT \$4`).
+				WithArgs(int64(1), now, int64(9), 4).
 				WillReturnRows(rows)
+			mockPool.ExpectCommit()
+			mockPool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
 			var applicants []models.Applicant
+			var total int64
 
 			if tt.byVacancy {
-				applicants, err = repo.ListByVacancyID(
-					context.Background(), 1,
+				applicants, total, err = repo.ListByVacancyID(
+					context.Background(), 1, pagination.Params{Cursor: &pagination.Cursor{CreatedAt: now, ID: 9}, Limit: 4},
 				)
 			} else {
-				applicants, err = repo.ListByEmployerID(
-					context.Background(), 1,
+				applicants, total, err = repo.ListByEmployerID(
+					context.Background(), 1, pagination.Params{Cursor: &pagination.Cursor{CreatedAt: now, ID: 9}, Limit: 4},
 				)
 			}
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if total != 8 {
+				t.Fatalf("total = %d, want 8", total)
 			}
 
 			if len(applicants) != 1 {
@@ -111,20 +130,20 @@ func TestPostgresRepository_ApplicantAvatarURL(t *testing.T) {
 
 			app := applicants[0]
 
-			if app.ApplicationID != 5 || app.ResumeID != 7 {
+			if app.ApplicationID != 5 || app.Vacancy.VacancyVersion != 2 || !app.CreatedAt.Equal(now) || !app.UpdatedAt.Equal(now) || app.Resume.ResumeID == nil || *app.Resume.ResumeID != 7 {
 				t.Fatalf("unexpected applicant IDs: %+v", app)
 			}
 
 			if tt.wantURL == "" {
-				if app.AvatarURL != nil {
-					t.Errorf("expected nil avatar URL, got %q", *app.AvatarURL)
+				if app.Seeker.AvatarURL != nil {
+					t.Errorf("expected nil avatar URL, got %q", *app.Seeker.AvatarURL)
 				}
 			} else {
-				if app.AvatarURL == nil {
+				if app.Seeker.AvatarURL == nil {
 					t.Fatal("expected avatar URL, got nil")
 				}
-				if *app.AvatarURL != tt.wantURL {
-					t.Errorf("got %q, want %q", *app.AvatarURL, tt.wantURL)
+				if *app.Seeker.AvatarURL != tt.wantURL {
+					t.Errorf("got %q, want %q", *app.Seeker.AvatarURL, tt.wantURL)
 				}
 			}
 
