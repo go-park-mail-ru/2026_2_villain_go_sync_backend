@@ -3,9 +3,11 @@ package resume
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
@@ -15,7 +17,7 @@ import (
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=resume
 type ResumeUsecase interface {
 	Create(ctx context.Context, userID int, role models.Role, resume models.Resume) (models.Resume, error)
-	GetByID(ctx context.Context, id int) (models.Resume, error)
+	GetByID(ctx context.Context, id int, userID int, role models.Role) (models.Resume, error)
 	ListBySeekerID(ctx context.Context, seekerID int) ([]models.Resume, error)
 	Update(ctx context.Context, userID int, role models.Role, input dto.UpdateInput) (models.Resume, error)
 	Delete(ctx context.Context, userID int, role models.Role, id int) error
@@ -58,15 +60,29 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) GetByID(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFromContext(r.Context())
+	if !ok {
+		httputil.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	role, _ := auth.RoleFromContext(r.Context())
+
 	id, err := strconv.Atoi(r.PathValue("id"))
 	if err != nil {
 		httputil.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 
-	res, err := h.resumes.GetByID(r.Context(), id)
+	res, err := h.resumes.GetByID(r.Context(), id, int(userID), role)
 	if err != nil {
-		httputil.WriteAppError(w, err, "resume not found")
+		switch {
+		case errors.Is(err, apperrors.ErrForbidden):
+			httputil.WriteError(w, http.StatusForbidden, "access denied")
+		case errors.Is(err, apperrors.ErrNotFound):
+			httputil.WriteError(w, http.StatusNotFound, "resume not found")
+		default:
+			httputil.WriteError(w, http.StatusInternalServerError, "internal error")
+		}
 		return
 	}
 

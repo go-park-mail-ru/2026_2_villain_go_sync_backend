@@ -36,12 +36,12 @@ func TestResumeHandlers_Table(t *testing.T) {
 			m.EXPECT().Create(gomock.Any(), 10, models.RoleSeeker, gomock.Any()).Return(models.Resume{}, apperrors.ErrForbidden)
 		}},
 
-		{name: "get invalid id", action: "get", method: http.MethodGet, url: "/api/resumes/abc", id: "abc", wantStatus: 400},
-		{name: "get success", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", wantStatus: 200, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
-			m.EXPECT().GetByID(gomock.Any(), 31).Return(models.Resume{ID: 31, Title: "CV"}, nil)
+		{name: "get invalid id", action: "get", method: http.MethodGet, url: "/api/resumes/abc", id: "abc", auth: true, wantStatus: 400},
+		{name: "get success", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", auth: true, wantStatus: 200, wantBody: `"title":"CV"`, setup: func(m *resume.MockResumeUsecase) {
+			m.EXPECT().GetByID(gomock.Any(), 31, 10, models.RoleSeeker).Return(models.Resume{ID: 31, Title: "CV"}, nil)
 		}},
-		{name: "get not found", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", wantStatus: 404, setup: func(m *resume.MockResumeUsecase) {
-			m.EXPECT().GetByID(gomock.Any(), 31).Return(models.Resume{}, apperrors.ErrNotFound)
+		{name: "get not found", action: "get", method: http.MethodGet, url: "/api/resumes/31", id: "31", auth: true, wantStatus: 404, setup: func(m *resume.MockResumeUsecase) {
+			m.EXPECT().GetByID(gomock.Any(), 31, 10, models.RoleSeeker).Return(models.Resume{}, apperrors.ErrNotFound)
 		}},
 
 		{name: "list missing seeker id", action: "list", method: http.MethodGet, url: "/api/resumes", wantStatus: 400},

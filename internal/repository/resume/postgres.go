@@ -105,6 +105,23 @@ func NewPostgresRepository(pool PgxPool) *PostgresRepository {
 	return &PostgresRepository{pool: pool}
 }
 
+func (r *PostgresRepository) HasApplicantResume(ctx context.Context, resumeID int, employerID int) (bool, error) {
+	query := `
+		SELECT EXISTS(
+			SELECT 1 
+			FROM application a
+			JOIN vacancy v ON a.vacancy_id = v.vacancy_id
+			WHERE a.resume_id = $1 AND v.employer_id = $2
+		)
+	`
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, resumeID, employerID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("check resume access: %w", err)
+	}
+	return exists, nil
+}
+
 func (r *PostgresRepository) Create(ctx context.Context, resume models.Resume) (models.Resume, error) {
 	err := pgx.BeginFunc(ctx, r.pool, func(tx pgx.Tx) error {
 		err := tx.QueryRow(

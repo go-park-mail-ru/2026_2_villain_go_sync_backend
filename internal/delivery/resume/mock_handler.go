@@ -72,18 +72,18 @@ func (mr *MockResumeUsecaseMockRecorder) Delete(ctx, userID, role, id any) *gomo
 }
 
 // GetByID mocks base method.
-func (m *MockResumeUsecase) GetByID(ctx context.Context, id int) (models.Resume, error) {
+func (m *MockResumeUsecase) GetByID(ctx context.Context, id, userID int, role models.Role) (models.Resume, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetByID", ctx, id)
+	ret := m.ctrl.Call(m, "GetByID", ctx, id, userID, role)
 	ret0, _ := ret[0].(models.Resume)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetByID indicates an expected call of GetByID.
-func (mr *MockResumeUsecaseMockRecorder) GetByID(ctx, id any) *gomock.Call {
+func (mr *MockResumeUsecaseMockRecorder) GetByID(ctx, id, userID, role any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResumeUsecase)(nil).GetByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByID", reflect.TypeOf((*MockResumeUsecase)(nil).GetByID), ctx, id, userID, role)
 }
 
 // ListBySeekerID mocks base method.

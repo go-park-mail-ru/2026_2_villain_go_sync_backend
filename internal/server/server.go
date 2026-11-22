@@ -76,7 +76,8 @@ func New() http.Handler {
 	mux.Handle("DELETE /api/resumes/{id}",
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Delete)))
 
-	mux.HandleFunc("GET /api/resumes/{id}", appConfig.Handlers.Resume.GetByID)
+	mux.Handle("GET /api/resumes/{id}",
+		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.GetByID)))
 	mux.HandleFunc("GET /api/resumes", appConfig.Handlers.Resume.ListBySeekerID)
 
 	mux.HandleFunc("GET /api/seekers/{id}", appConfig.Handlers.Profile.GetSeekerByID)
