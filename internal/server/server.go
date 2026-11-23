@@ -14,6 +14,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
 	healthDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/health"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/metrics"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/s3"
@@ -48,6 +49,8 @@ func New() http.Handler {
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
 	appConfig := app.CreateConfig(pool, tokens, s3Adapter)
+
+	metric := metrics.NewHTTPMetrics()
 
 	mux := http.NewServeMux()
 
@@ -127,10 +130,13 @@ func New() http.Handler {
 		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.ListMine)),
 	)
 
+	mux.Handle("GET /metrics", metric.Handler())
+
 	return middleware.RequestID(
 		middleware.AccessLog(
 			mux,
 			middleware.CORS(middleware.CSRF(mux)),
+			metric,
 		),
 	)
 }
