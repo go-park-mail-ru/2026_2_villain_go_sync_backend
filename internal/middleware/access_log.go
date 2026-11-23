@@ -9,6 +9,10 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/requestid"
 )
 
+type HTTPObserver interface {
+	Observe(method string, route string, status int, duration time.Duration)
+}
+
 type statusWriter struct {
 	http.ResponseWriter
 	status int
@@ -37,7 +41,7 @@ func (sw *statusWriter) Unwrap() http.ResponseWriter {
 	return sw.ResponseWriter
 }
 
-func AccessLog(mux *http.ServeMux, next http.Handler) http.Handler {
+func AccessLog(mux *http.ServeMux, next http.Handler, observer HTTPObserver) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		sw := &statusWriter{
@@ -58,14 +62,17 @@ func AccessLog(mux *http.ServeMux, next http.Handler) http.Handler {
 			pattern = "redacted"
 		}
 
+		duration := time.Since(start)
+
 		slog.InfoContext(
 			r.Context(),
 			"http request",
 			"request_id", requestid.FromContext(r.Context()),
 			"method", r.Method,
 			"status", sw.status,
-			"duration_ms", time.Since(start).Milliseconds(),
+			"duration_ms", duration.Milliseconds(),
 			"route", pattern,
 		)
+		observer.Observe(r.Method, pattern, sw.status, duration)
 	})
 }

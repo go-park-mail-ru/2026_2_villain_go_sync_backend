@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: HireNoon
+    orgId: 1
+    folder: HireNoon
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

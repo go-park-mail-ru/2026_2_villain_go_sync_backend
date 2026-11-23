@@ -8,7 +8,21 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
+
+type httpObservation struct {
+	method   string
+	route    string
+	status   int
+	duration time.Duration
+}
+
+type recordingHTTPObserver []httpObservation
+
+func (observer *recordingHTTPObserver) Observe(method, route string, status int, duration time.Duration) {
+	*observer = append(*observer, httpObservation{method, route, status, duration})
+}
 
 func TestAccessLog(t *testing.T) {
 	var buf bytes.Buffer
@@ -29,7 +43,8 @@ func TestAccessLog(t *testing.T) {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	handler := RequestID(AccessLog(mux, mux))
+	var observations recordingHTTPObserver
+	handler := RequestID(AccessLog(mux, mux, &observations))
 
 	tests := []struct {
 		name       string
@@ -60,6 +75,7 @@ func TestAccessLog(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			buf.Reset()
+			observations = nil
 
 			req := httptest.NewRequest(http.MethodGet, tt.path, nil)
 			req.Header.Set("Authorization", "Bearer secret-auth-token")
@@ -101,6 +117,17 @@ func TestAccessLog(t *testing.T) {
 			duration, ok := entry["duration_ms"].(float64)
 			if !ok || duration < 0 {
 				t.Errorf("invalid duration_ms: %v", entry["duration_ms"])
+			}
+
+			if len(observations) != 1 {
+				t.Fatalf("observations = %d, want 1", len(observations))
+			}
+			observation := observations[0]
+			if observation.method != http.MethodGet || observation.route != tt.wantRoute || observation.status != tt.wantStatus {
+				t.Errorf("unexpected observation: %+v", observation)
+			}
+			if observation.duration < 0 || float64(observation.duration.Milliseconds()) != duration {
+				t.Errorf("observation duration = %v, log duration_ms = %v", observation.duration, duration)
 			}
 
 			if strings.Contains(buf.String(), "secret-") {
