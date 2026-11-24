@@ -1,4 +1,4 @@
-.PHONY: run build test coverage lint fmt docker-up docker-down migrate-up migrate-down migrate-version
+.PHONY: run build test coverage lint fmt docker-up docker-down migrate-up migrate-down migrate-version proto-tools proto
 
 run:
 	go run ./cmd/server
@@ -38,3 +38,23 @@ migrate-down:
 
 migrate-version:
 	$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" version
+
+PROTO_DIR := api/proto
+PROTO_OUT := gen/go
+PROTO_FILES := $(shell find $(PROTO_DIR) -name '*.proto')
+export PATH := $(shell go env GOPATH)/bin:$(PATH)
+
+proto-tools:
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.12
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+
+proto:
+	mkdir -p $(PROTO_OUT)
+	protoc \
+ 		-I $(PROTO_DIR) \
+ 		--go_out=$(PROTO_OUT) \
+ 		--go_opt=paths=source_relative \
+ 		--go-grpc_out=$(PROTO_OUT) \
+ 		--go-grpc_opt=paths=source_relative \
+ 		$(PROTO_FILES)
+ 		
