@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/usecase/company"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/profileimage"
 )
 
 //go:generate mockgen -source=profile.go -destination=mock_repository.go -package=profile
@@ -27,14 +29,16 @@ type ImageStorage interface {
 }
 
 type ProfileUsecase struct {
+	*company.CompanyUsecase
 	profiles ProfileRepository
 	storage  ImageStorage
 }
 
 func NewProfileUsecase(profiles ProfileRepository, storage ImageStorage) *ProfileUsecase {
 	return &ProfileUsecase{
-		profiles: profiles,
-		storage:  storage,
+		CompanyUsecase: company.NewCompanyUsecase(profiles, storage),
+		profiles:       profiles,
+		storage:        storage,
 	}
 }
 
@@ -58,25 +62,6 @@ func (u *ProfileUsecase) UpdateSeeker(ctx context.Context, userID int, role mode
 	return u.profiles.UpsertSeeker(ctx, p)
 }
 
-func (u *ProfileUsecase) GetEmployerByID(ctx context.Context, employerID int) (models.EmployerProfile, error) {
-	p, err := u.profiles.GetEmployerByID(ctx, employerID)
-	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return models.EmployerProfile{}, apperrors.ErrNotFound
-		}
-		return models.EmployerProfile{}, err
-	}
-	return p, nil
-}
-
-func (u *ProfileUsecase) UpdateEmployer(ctx context.Context, userID int, role models.Role, p models.EmployerProfile) (models.EmployerProfile, error) {
-	if !role.IsEmployer() {
-		return models.EmployerProfile{}, apperrors.ErrForbidden
-	}
-
-	return u.profiles.UpsertEmployer(ctx, p)
-}
-
 func (u *ProfileUsecase) UploadSeekerAvatar(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error {
 	if !role.IsSeeker() {
 		return apperrors.ErrForbidden
@@ -85,8 +70,9 @@ func (u *ProfileUsecase) UploadSeekerAvatar(ctx context.Context, userID int, rol
 	if err != nil {
 		return err
 	}
-	return u.replaceProfileImage(
+	return profileimage.Replace(
 		ctx,
+		u.storage,
 		userID,
 		"avatars",
 		p.PersonalInfo.AvatarKey,
@@ -119,60 +105,11 @@ func (u *ProfileUsecase) DeleteSeekerAvatar(ctx context.Context, userID int, rol
 	if err != nil {
 		return err
 	}
-	return u.deleteProfileImage(
+	return profileimage.Delete(
 		ctx,
+		u.storage,
 		userID,
 		p.PersonalInfo.AvatarKey,
 		u.profiles.UpdateSeekerAvatarKey,
-	)
-}
-
-func (u *ProfileUsecase) UploadEmployerLogo(ctx context.Context, userID int, role models.Role, body io.ReadSeeker, contentType string) error {
-	if !role.IsEmployer() {
-		return apperrors.ErrForbidden
-	}
-	p, err := u.profiles.GetEmployerByID(ctx, userID)
-	if err != nil {
-		return err
-	}
-	return u.replaceProfileImage(
-		ctx,
-		userID,
-		"logos",
-		p.Company.LogoKey,
-		body,
-		contentType,
-		u.profiles.UpdateEmployerLogoKey,
-	)
-}
-
-func (u *ProfileUsecase) GetEmployerLogo(ctx context.Context, userID int) (io.ReadCloser, string, error) {
-	p, err := u.profiles.GetEmployerByID(ctx, userID)
-	if err != nil {
-		return nil, "", err
-	}
-	if p.Company.LogoKey == nil {
-		return nil, "", apperrors.ErrNotFound
-	}
-	body, contentType, err := u.storage.Download(ctx, *p.Company.LogoKey)
-	if err != nil {
-		return nil, "", fmt.Errorf("get logo from s3 storage: %w", err)
-	}
-	return body, contentType, nil
-}
-
-func (u *ProfileUsecase) DeleteEmployerLogo(ctx context.Context, userID int, role models.Role) error {
-	if !role.IsEmployer() {
-		return apperrors.ErrForbidden
-	}
-	p, err := u.profiles.GetEmployerByID(ctx, userID)
-	if err != nil {
-		return err
-	}
-	return u.deleteProfileImage(
-		ctx,
-		userID,
-		p.Company.LogoKey,
-		u.profiles.UpdateEmployerLogoKey,
 	)
 }

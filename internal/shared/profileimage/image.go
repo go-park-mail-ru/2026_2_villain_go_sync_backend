@@ -1,4 +1,4 @@
-package profile
+package profileimage
 
 import (
 	"context"
@@ -11,8 +11,15 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 )
 
-func (u *ProfileUsecase) replaceProfileImage(
+type ImageStorage interface {
+	Upload(ctx context.Context, key string, body io.ReadSeeker, contentType string) error
+	Download(ctx context.Context, key string) (io.ReadCloser, string, error)
+	Delete(ctx context.Context, key string) error
+}
+
+func Replace(
 	ctx context.Context,
+	storage ImageStorage,
 	userID int,
 	prefix string,
 	oldKey *string,
@@ -21,13 +28,13 @@ func (u *ProfileUsecase) replaceProfileImage(
 	updateKey func(context.Context, int, *string) error,
 ) error {
 	key := fmt.Sprintf("%s/%d/%s", prefix, userID, rand.Text())
-	err := u.storage.Upload(ctx, key, body, contentType)
+	err := storage.Upload(ctx, key, body, contentType)
 	if err != nil {
 		return fmt.Errorf("upload profile image: %w", err)
 	}
 	err = updateKey(ctx, userID, &key)
 	if err != nil {
-		deleteErr := u.storage.Delete(ctx, key)
+		deleteErr := storage.Delete(ctx, key)
 		if deleteErr != nil {
 			return errors.Join(
 				fmt.Errorf("update profile image key: %w", err),
@@ -37,7 +44,7 @@ func (u *ProfileUsecase) replaceProfileImage(
 		return fmt.Errorf("update profile image key: %w", err)
 	}
 	if oldKey != nil {
-		err := u.storage.Delete(ctx, *oldKey)
+		err := storage.Delete(ctx, *oldKey)
 		if err != nil {
 			slog.Warn("failed to delete old profile image",
 				"user_id", userID,
@@ -48,7 +55,7 @@ func (u *ProfileUsecase) replaceProfileImage(
 	return nil
 }
 
-func (u *ProfileUsecase) deleteProfileImage(ctx context.Context, userID int, oldKey *string, updateKey func(context.Context, int, *string) error) error {
+func Delete(ctx context.Context, storage ImageStorage, userID int, oldKey *string, updateKey func(context.Context, int, *string) error) error {
 	if oldKey == nil {
 		return apperrors.ErrNotFound
 	}
@@ -57,7 +64,7 @@ func (u *ProfileUsecase) deleteProfileImage(ctx context.Context, userID int, old
 	if err != nil {
 		return fmt.Errorf("delete profile image key: %w", err)
 	}
-	err = u.storage.Delete(ctx, *oldKey)
+	err = storage.Delete(ctx, *oldKey)
 	if err != nil {
 		slog.Warn("failed to delete profile image",
 			"user_id", userID,

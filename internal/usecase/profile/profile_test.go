@@ -100,13 +100,17 @@ func TestProfileUsecase_UpdateEmployer_Success(t *testing.T) {
 	mockRepo := profile.NewMockProfileRepository(ctrl)
 	uc := profileUsecase.NewProfileUsecase(mockRepo, nil)
 
+	const userID = 10
 	p := models.EmployerProfile{Company: models.EmployerCompanyInfo{CompanyName: "Yandex"}}
 
-	mockRepo.EXPECT().
-		UpsertEmployer(gomock.Any(), p).
-		Return(p, nil)
+	want := p
+	want.Profile.UserID = userID
 
-	res, err := uc.UpdateEmployer(context.Background(), 10, models.RoleEmployer, p)
+	mockRepo.EXPECT().
+		UpsertEmployer(gomock.Any(), want).
+		Return(want, nil)
+
+	res, err := uc.UpdateEmployer(context.Background(), userID, models.RoleEmployer, p)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
