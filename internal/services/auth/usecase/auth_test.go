@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
-	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
+	auth "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/auth/security"
+	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/auth/usecase"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/password"
 	gomock "go.uber.org/mock/gomock"
 )
 

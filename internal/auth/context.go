@@ -6,6 +6,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 )
 
+// это мб тоже на уровне API GAteway т.к. в grpc Уже улетают готовые поля
+
 type ctxKey int
 
 const (

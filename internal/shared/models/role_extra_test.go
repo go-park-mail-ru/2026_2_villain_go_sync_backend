@@ -3,7 +3,7 @@ package models_test
 import (
 	"testing"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/models"
 )
 
 func TestRoleHelpers_Table(t *testing.T) {

@@ -1,4 +1,4 @@
-package auth
+package security
 
 import (
 	"errors"
@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 

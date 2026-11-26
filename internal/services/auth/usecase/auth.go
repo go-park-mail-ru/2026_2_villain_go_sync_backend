@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/password"
+	auth "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/auth/security"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/password"
 )
 
 //go:generate mockgen -source=auth.go -destination=mock_repository.go -package=auth

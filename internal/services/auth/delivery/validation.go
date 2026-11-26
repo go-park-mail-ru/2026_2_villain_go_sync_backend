@@ -1,4 +1,4 @@
-package auth
+package delivery
 
 import (
 	"regexp"
@@ -18,11 +18,6 @@ var (
 	reDigit = regexp.MustCompile(`[0-9]`)
 	reChars = regexp.MustCompile("^[A-Za-z0-9!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~]+$")
 )
-
-var allowedRoles = map[string]bool{
-	"employer": true,
-	"seeker":   true,
-}
 
 func validateCredentials(email, pass string) error {
 	if !isValidEmail(email) || !isValidPassword(pass) {

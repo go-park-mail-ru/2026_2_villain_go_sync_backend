@@ -7,6 +7,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 )
 
+// Это запихать в API Gateway
+
 func (h *Handler) Logout(w http.ResponseWriter, _ *http.Request) {
 	for _, cookie := range []http.Cookie{
 		{Name: "access_token", Path: "/", HttpOnly: true},

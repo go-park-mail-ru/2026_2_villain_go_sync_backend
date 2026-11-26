@@ -19,6 +19,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/s3"
 )
 
+// Это свалит в API Gateway в измененном виде
+
 func New() http.Handler {
 	cfg, err := config.Load()
 	if err != nil {

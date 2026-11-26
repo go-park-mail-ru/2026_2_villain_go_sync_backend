@@ -13,6 +13,9 @@ import (
 	authUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 )
 
+// Все кроме *func Me* уже в Auth микросервисе
+// оставлю пока это для сравнения с методами в grpc ыыыыыы:3
+
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=auth
 type AuthUsecase interface {
 	Register(ctx context.Context, email, password string, role models.Role) (*authUsecase.Tokens, error)
@@ -142,6 +145,8 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	setCSRFCookie(w, csrfToken)
 	httputil.WriteOK(w, http.StatusOK, nil)
 }
+
+// Это скорее всего в API Gateway
 
 func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	userID, ok := id.UserIDFromContext(r.Context())

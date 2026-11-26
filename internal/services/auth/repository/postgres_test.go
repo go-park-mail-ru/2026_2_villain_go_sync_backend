@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
+	user "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/auth/repository"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/shared/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/pashagolub/pgxmock/v5"

@@ -2,6 +2,8 @@ package auth
 
 import "net/http"
 
+// это скорее всего тоже в API Gateway бахнуть
+
 func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "access_token",

@@ -1,5 +1,7 @@
 package auth
 
+// это скорее всего API Gateway
+
 import (
 	"crypto/rand"
 	"encoding/base64"
