@@ -9,8 +9,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
-	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/usecase/vacancy"
+	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/usecase/vacancy"
 	"go.uber.org/mock/gomock"
 )
 

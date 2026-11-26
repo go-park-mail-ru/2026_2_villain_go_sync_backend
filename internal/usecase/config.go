@@ -3,11 +3,11 @@ package usecase
 import (
 	tokenauth "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/usecase/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/application"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 type Config struct {

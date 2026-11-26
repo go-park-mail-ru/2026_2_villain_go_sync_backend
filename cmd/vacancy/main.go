@@ -9,11 +9,11 @@ import (
 
 	vacancyv1 "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/gen/go/vacancy/v1"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
-	vacancydelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/grpc/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/vacancy"
-	vacancyusecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
+	vacancydelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/delivery/vacancy"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/repository/vacancy"
+	vacancyusecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/usecase/vacancy"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 )
