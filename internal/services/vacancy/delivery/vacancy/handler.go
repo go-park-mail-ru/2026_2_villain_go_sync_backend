@@ -10,11 +10,13 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 type VacancyUsecase interface {
 	ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
+	ListCategories(ctx context.Context) ([]models.Category, error)
 }
 
 type Handler struct {
@@ -67,10 +69,7 @@ func (h *Handler) ListVacancies(ctx context.Context, req *vacancyv1.ListVacancie
 
 	vacancies, total, err := h.usecase.ListVacancies(ctx, params.WithLookahead())
 	if err != nil {
-		if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
-			return nil, status.FromContextError(err).Err()
-		}
-		return nil, status.Error(codes.Internal, "internal server error")
+		return nil, listRPCError(err)
 	}
 
 	page, err := pagination.NewPage(vacancies, params.Limit, total, func(v models.Vacancy) pagination.Cursor {
@@ -91,4 +90,30 @@ func (h *Handler) ListVacancies(ctx context.Context, req *vacancyv1.ListVacancie
 			NextCursor: page.Pagination.NextCursor,
 		},
 	}, nil
+}
+
+func (h *Handler) ListCategories(ctx context.Context, req *emptypb.Empty) (*vacancyv1.ListCategoriesResponse, error) {
+	categories, err := h.usecase.ListCategories(ctx)
+	if err != nil {
+		return nil, listRPCError(err)
+	}
+	protoCategories := make([]*vacancyv1.Category, 0, len(categories))
+	for _, category := range categories {
+		protoCategories = append(protoCategories, &vacancyv1.Category{
+			Id:   category.ID,
+			Name: category.Name,
+		})
+	}
+	return &vacancyv1.ListCategoriesResponse{Categories: protoCategories}, nil
+}
+
+func listRPCError(err error) error {
+	switch {
+	case errors.Is(err, context.Canceled):
+		return status.Error(codes.Canceled, "request canceled")
+	case errors.Is(err, context.DeadlineExceeded):
+		return status.Error(codes.DeadlineExceeded, "deadline exceeded")
+	default:
+		return status.Error(codes.Internal, "internal server error")
+	}
 }
