@@ -8,7 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/profile"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/seeker/repository/profile"
 	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v5"
 )
@@ -114,5 +114,42 @@ func expectCareerDetails(pool pgxmock.PgxPoolIface, prefix string) {
 		pool.ExpectQuery("FROM " + prefix + "_" + section).
 			WithArgs(pgxmock.AnyArg()).
 			WillReturnRows(pgxmock.NewRows(nil))
+	}
+}
+
+func TestPostgresRepository_UpdateSeekerAvatarKey(t *testing.T) {
+	dbErr := errors.New("update failed")
+	for _, tc := range []struct {
+		name    string
+		rows    int64
+		execErr error
+		wantErr error
+	}{
+		{name: "success", rows: 1},
+		{name: "missing seeker", wantErr: apperrors.ErrNotFound},
+		{name: "database error", execErr: dbErr, wantErr: dbErr},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			pool, err := pgxmock.NewPool()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer pool.Close()
+
+			key := "avatars/42/avatar"
+			exec := pool.ExpectExec("UPDATE seeker_profile").WithArgs(&key, 42)
+			if tc.execErr != nil {
+				exec.WillReturnError(tc.execErr)
+			} else {
+				exec.WillReturnResult(pgxmock.NewResult("UPDATE", tc.rows))
+			}
+			err = profile.NewPostgresRepository(pool).UpdateSeekerAvatarKey(t.Context(), 42, &key)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("UpdateSeekerAvatarKey() = %v, want %v", err, tc.wantErr)
+			}
+			if err := pool.ExpectationsWereMet(); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }

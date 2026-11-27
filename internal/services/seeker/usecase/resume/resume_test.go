@@ -8,8 +8,8 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
-	resumeUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/seeker/usecase/resume"
+	resumeUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/seeker/usecase/resume"
 	"go.uber.org/mock/gomock"
 )
 
@@ -243,6 +243,34 @@ func TestResumeUpdateChecksOwnershipBeforePreferences(t *testing.T) {
 			_, err := resumeUsecase.NewResumeUsecase(repo).Update(context.Background(), 10, models.RoleSeeker, input)
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("got %v, want %v", err, tc.want)
+			}
+		})
+	}
+}
+
+func TestResumeUsecase_GetByID_EmployerAccess(t *testing.T) {
+	dependencyErr := errors.New("access lookup failed")
+	for _, tc := range []struct {
+		name    string
+		allowed bool
+		repoErr error
+		wantErr error
+	}{
+		{name: "application exists", allowed: true},
+		{name: "no application", wantErr: apperrors.ErrForbidden},
+		{name: "lookup error", repoErr: dependencyErr, wantErr: dependencyErr},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := resume.NewMockResumeRepository(gomock.NewController(t))
+			repo.EXPECT().GetByID(gomock.Any(), 7).Return(models.Resume{ID: 7, SeekerID: 12}, nil)
+			repo.EXPECT().HasApplicantResume(gomock.Any(), 7, 42).Return(tc.allowed, tc.repoErr)
+
+			got, err := resumeUsecase.NewResumeUsecase(repo).GetByID(t.Context(), 7, 42, models.RoleEmployer)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("GetByID() = %v, want %v", err, tc.wantErr)
+			}
+			if tc.wantErr == nil && got.ID != 7 {
+				t.Fatalf("GetByID() returned resume %d, want 7", got.ID)
 			}
 		})
 	}

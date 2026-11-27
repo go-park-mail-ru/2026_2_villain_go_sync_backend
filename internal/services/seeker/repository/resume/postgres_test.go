@@ -9,7 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/resume"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/seeker/repository/resume"
 	"github.com/jackc/pgx/v5"
 	"github.com/pashagolub/pgxmock/v5"
 )
@@ -214,5 +214,24 @@ func expectCareerDetails(pool pgxmock.PgxPoolIface, prefix string) {
 		pool.ExpectQuery("FROM " + prefix + "_" + section).
 			WithArgs(pgxmock.AnyArg()).
 			WillReturnRows(pgxmock.NewRows(nil))
+	}
+}
+
+func TestPostgresRepository_HasApplicantResume(t *testing.T) {
+	pool, err := pgxmock.NewPool()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	pool.ExpectQuery(`SELECT EXISTS\(.*FROM application a JOIN vacancy v`).
+		WithArgs(7, 42).
+		WillReturnRows(pgxmock.NewRows([]string{"exists"}).AddRow(true))
+	allowed, err := resume.NewPostgresRepository(pool).HasApplicantResume(t.Context(), 7, 42)
+	if err != nil || !allowed {
+		t.Fatalf("HasApplicantResume() = %t, %v, want true, nil", allowed, err)
+	}
+	if err := pool.ExpectationsWereMet(); err != nil {
+		t.Fatal(err)
 	}
 }

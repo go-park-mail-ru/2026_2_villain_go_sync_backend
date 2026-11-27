@@ -3,9 +3,9 @@ package repository
 import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/application"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/profile"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/s3"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/user"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/seeker/repository/resume"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/services/vacancy/repository/vacancy"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
