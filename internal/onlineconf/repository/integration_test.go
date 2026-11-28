@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/pkg/onlineconf"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -112,7 +114,7 @@ func TestPostgresScopeAndConfigCRUD(t *testing.T) {
 		if gotScope.ID != scope.ID || scopeByName.ID != scope.ID {
 			t.Fatal("scope lookup returned the wrong ID")
 		}
-		page, err := store.Scopes.List(ctx, repository.PageRequest{Limit: 2})
+		page, err := store.Scopes.List(ctx, models.PageRequest{Limit: 2})
 		requireError(t, err, nil)
 		if len(page.Items) != 2 || page.Items[0].ID >= page.Items[1].ID || page.NextCursor == nil {
 			t.Fatalf("scope page = %+v", page)
@@ -165,7 +167,7 @@ func TestPostgresKeySearchFiltersAndCursor(t *testing.T) {
 			t.Fatalf("key by ID = %+v", got)
 		}
 
-		filter := repository.KeyFilter{ScopeID: &first.ID, Search: "ALPHA_", Page: repository.PageRequest{Limit: 1}}
+		filter := models.KeyFilter{ScopeID: &first.ID, Search: "ALPHA_", Page: models.PageRequest{Limit: 1}}
 		page, err := store.Keys.List(ctx, filter)
 		requireError(t, err, nil)
 		if len(page.Items) != 1 || page.Items[0].ID != config.ID || page.NextCursor == nil {
@@ -217,17 +219,17 @@ func TestPostgresFlagOverrideAndAdminCRUD(t *testing.T) {
 		if override.Enabled || override.UserID != 5 {
 			t.Fatalf("updated override = %+v", override)
 		}
-		byFlag, err := store.Overrides.ListByFlag(ctx, flag.ID, repository.PageRequest{Limit: 1})
+		byFlag, err := store.Overrides.ListByFlag(ctx, flag.ID, models.PageRequest{Limit: 1})
 		requireError(t, err, nil)
 		if len(byFlag.Items) != 1 || byFlag.Items[0].UserID != 5 || byFlag.NextCursor == nil {
 			t.Fatalf("flag overrides = %+v", byFlag)
 		}
-		next, err := store.Overrides.ListByFlag(ctx, flag.ID, repository.PageRequest{Cursor: byFlag.NextCursor})
+		next, err := store.Overrides.ListByFlag(ctx, flag.ID, models.PageRequest{Cursor: byFlag.NextCursor})
 		requireError(t, err, nil)
 		if len(next.Items) != 1 || next.Items[0].UserID != 6 {
 			t.Fatalf("next override page = %+v", next)
 		}
-		byUser, err := store.Overrides.ListByUser(ctx, 5, repository.PageRequest{})
+		byUser, err := store.Overrides.ListByUser(ctx, 5, models.PageRequest{})
 		requireError(t, err, nil)
 		if len(byUser.Items) != 1 || byUser.Items[0].KeyID != flag.ID {
 			t.Fatalf("user overrides = %+v", byUser)
@@ -246,7 +248,7 @@ func TestPostgresFlagOverrideAndAdminCRUD(t *testing.T) {
 		if child.Role != models.AdminRoleOwner || child.GrantedBy == nil || *child.GrantedBy != owner.UserID {
 			t.Fatalf("updated admin = %+v", child)
 		}
-		list, err := store.Admins.List(ctx, repository.PageRequest{})
+		list, err := store.Admins.List(ctx, models.PageRequest{})
 		requireError(t, err, nil)
 		if len(list.Items) != 2 || list.Items[0].UserID != owner.UserID {
 			t.Fatalf("admin list = %+v", list)
@@ -308,8 +310,8 @@ func TestPostgresAtomicChangesAndHistory(t *testing.T) {
 			t.Fatalf("history lookup = %+v", get)
 		}
 		resourceType := models.ResourceTypeConfig
-		filter := repository.HistoryFilter{
-			ResourceType: &resourceType, ResourceID: &config.ID, ScopeName: &scope.Name, Page: repository.PageRequest{Limit: 1},
+		filter := models.HistoryFilter{
+			ResourceType: &resourceType, ResourceID: &config.ID, ScopeName: &scope.Name, Page: models.PageRequest{Limit: 1},
 		}
 		page, err := tx.History.List(ctx, filter)
 		requireError(t, err, nil)
@@ -325,7 +327,7 @@ func TestPostgresAtomicChangesAndHistory(t *testing.T) {
 		return rollbackFixture
 	})
 	requireError(t, err, rollbackFixture)
-	history, err := store.History.List(ctx, repository.HistoryFilter{ScopeName: &scope.Name})
+	history, err := store.History.List(ctx, models.HistoryFilter{ScopeName: &scope.Name})
 	requireError(t, err, nil)
 	if len(history.Items) != 0 {
 		t.Fatalf("history escaped rollback: %+v", history)
@@ -370,7 +372,7 @@ func TestPostgresSnapshotIsCompleteAndConsistent(t *testing.T) {
 		requireError(t, store.Flags.Delete(cleanupCtx, emptyFlag.ID), nil)
 		requireError(t, store.Scopes.Delete(cleanupCtx, scope.ID), nil)
 	})
-	check := func(snapshot repository.Snapshot, enabled bool, value string, count int) {
+	check := func(snapshot models.Snapshot, enabled bool, value string, count int) {
 		t.Helper()
 		var gotConfig *models.Config
 		var flags []models.FeatureFlag
@@ -430,4 +432,17 @@ func TestPostgresSnapshotIsCompleteAndConsistent(t *testing.T) {
 	committed, err := store.Snapshots.Get(ctx)
 	requireError(t, err, nil)
 	check(committed, true, "true", 105)
+}
+
+func TestPostgresSnapshotRejectsOversizeBeforeReturningRows(t *testing.T) {
+	withFixture(t, func(ctx context.Context, store *repository.Store) {
+		scope := addScope(t, ctx, store, "snapshot_budget")
+		value := "\"" + strings.Repeat("x", onlineconf.MaxSnapshotBytes/6) + "\""
+		addConfig(t, ctx, store, scope, "large", value)
+		snapshot, err := store.Snapshots.Get(ctx)
+		requireError(t, err, apperrors.ErrDependencyUnavailable)
+		if len(snapshot.Configs)+len(snapshot.Flags)+len(snapshot.Overrides) != 0 {
+			t.Fatal("oversize snapshot returned partial data")
+		}
+	})
 }

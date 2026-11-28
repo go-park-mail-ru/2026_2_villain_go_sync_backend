@@ -4,27 +4,26 @@ import (
 	"context"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 type ScopeUsecase struct {
-	store *repository.Store
+	store Store
 }
 
 func (u ScopeUsecase) Get(ctx context.Context, actorID, scopeID int64) (models.Scope, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Scope, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Scope, error) {
 		return tx.Scopes.Get(ctx, scopeID)
 	})
 }
 
-func (u ScopeUsecase) List(ctx context.Context, actorID int64, page repository.PageRequest) (repository.Page[models.Scope], error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[models.Scope], error) {
+func (u ScopeUsecase) List(ctx context.Context, actorID int64, page models.PageRequest) (models.Page[models.Scope], error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.Scope], error) {
 		return tx.Scopes.List(ctx, page)
 	})
 }
 
 func (u ScopeUsecase) Create(ctx context.Context, actorID int64, input models.Scope) (models.Scope, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Scope, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Scope, error) {
 		scope, err := tx.Scopes.Create(ctx, input)
 		if err != nil {
 			return models.Scope{}, err
@@ -34,7 +33,7 @@ func (u ScopeUsecase) Create(ctx context.Context, actorID int64, input models.Sc
 }
 
 func (u ScopeUsecase) Update(ctx context.Context, actorID int64, input models.Scope) (models.Scope, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Scope, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Scope, error) {
 		before, err := tx.Scopes.Get(ctx, input.ID)
 		if err != nil {
 			return models.Scope{}, err
@@ -51,7 +50,7 @@ func (u ScopeUsecase) Update(ctx context.Context, actorID int64, input models.Sc
 }
 
 func (u ScopeUsecase) Delete(ctx context.Context, actorID, scopeID int64) error {
-	return protectedAction(ctx, u.store, actorID, false, func(tx *repository.Store) error {
+	return protectedAction(ctx, u.store, actorID, adminAccess, func(tx Repositories) error {
 		before, err := tx.Scopes.Get(ctx, scopeID)
 		if err != nil {
 			return err

@@ -5,6 +5,8 @@ import (
 	"encoding/binary"
 )
 
+const MaxRolloutPercentage = 100
+
 type Reason string
 
 const (
@@ -37,7 +39,7 @@ func Evaluate(flagID, userID int64, enabled bool, rolloutPercentage int16, overr
 		binary.BigEndian.PutUint64(key[:8], uint64(flagID))
 		binary.BigEndian.PutUint64(key[8:], uint64(userID))
 		digest := sha256.Sum256(key[:])
-		bucket := uint8(binary.BigEndian.Uint64(digest[:8]) % 100)
+		bucket := uint8(binary.BigEndian.Uint64(digest[:8]) % MaxRolloutPercentage)
 		result.Bucket = &bucket
 		result.Enabled = int16(bucket) < rolloutPercentage
 		result.Reason = ReasonRolloutExcluded

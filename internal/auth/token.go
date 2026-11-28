@@ -97,6 +97,7 @@ func (m *TokenManager) Parse(tokenString string, expected TokenType) (*Claims, e
 		tokenString,
 		claims,
 		func(t *jwt.Token) (any, error) { return m.secret, nil },
+		jwt.WithExpirationRequired(),
 		jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}),
 	)
 	if err != nil {

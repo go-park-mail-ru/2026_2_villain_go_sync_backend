@@ -64,7 +64,7 @@ func readHistory(t *testing.T, ctx context.Context, u usecase.HistoryUsecase, ac
 	kind models.ResourceType, id int64,
 ) []models.ChangeHistory {
 	t.Helper()
-	page, err := u.List(ctx, actor, repository.HistoryFilter{ResourceType: &kind, ResourceID: &id})
+	page, err := u.List(ctx, actor, models.HistoryFilter{ResourceType: &kind, ResourceID: &id})
 	requireError(t, err, nil)
 	return page.Items
 }
@@ -86,7 +86,7 @@ func TestScopeAndConfigHistoryIgnoresNoOps(t *testing.T) {
 		if gotScope.Name != scope.Name {
 			t.Fatalf("scope lookup = %+v", gotScope)
 		}
-		scopes, err := u.Scopes.List(ctx, ownerID, repository.PageRequest{})
+		scopes, err := u.Scopes.List(ctx, ownerID, models.PageRequest{})
 		requireError(t, err, nil)
 		if len(scopes.Items) == 0 {
 			t.Fatal("scope list is empty")
@@ -112,8 +112,8 @@ func TestScopeAndConfigHistoryIgnoresNoOps(t *testing.T) {
 		if string(readConfig.Value) != "null" {
 			t.Fatalf("config value = %s", readConfig.Value)
 		}
-		keys, err := u.Keys.List(ctx, ownerID, repository.KeyFilter{
-			ScopeID: &scope.ID, Search: "SEARCH_", Page: repository.PageRequest{Limit: 1},
+		keys, err := u.Keys.List(ctx, ownerID, models.KeyFilter{
+			ScopeID: &scope.ID, Search: "SEARCH_", Page: models.PageRequest{Limit: 1},
 		})
 		requireError(t, err, nil)
 		key, err := u.Keys.Get(ctx, ownerID, config.ID)
@@ -201,9 +201,9 @@ func TestFlagEvaluationOverrideHistoryAndCascade(t *testing.T) {
 		}
 		item, err := u.Overrides.Get(ctx, ownerID, flag.ID, 200)
 		requireError(t, err, nil)
-		flagPage, err := u.Overrides.ListByFlag(ctx, ownerID, flag.ID, repository.PageRequest{})
+		flagPage, err := u.Overrides.ListByFlag(ctx, ownerID, flag.ID, models.PageRequest{})
 		requireError(t, err, nil)
-		userPage, err := u.Overrides.ListByUser(ctx, ownerID, 200, repository.PageRequest{})
+		userPage, err := u.Overrides.ListByUser(ctx, ownerID, 200, models.PageRequest{})
 		requireError(t, err, nil)
 		if item.Enabled || len(flagPage.Items) != 1 || len(userPage.Items) != 1 {
 			t.Fatal("override lookups do not match the saved override")
@@ -260,11 +260,11 @@ func TestAdminPermissionAndLastOwner(t *testing.T) {
 		_, err = u.Admins.ChangeRole(ctx, adminID, adminID, models.AdminRoleOwner)
 		requireError(t, err, apperrors.ErrForbidden)
 		requireError(t, u.Admins.Revoke(ctx, adminID, ownerID), apperrors.ErrForbidden)
-		_, err = u.Admins.List(ctx, adminID, repository.PageRequest{})
+		_, err = u.Admins.List(ctx, adminID, models.PageRequest{})
 		requireError(t, err, apperrors.ErrForbidden)
 		_, err = u.Scopes.Create(ctx, adminID, models.Scope{Name: "admin_scope"})
 		requireError(t, err, nil)
-		_, err = u.History.List(ctx, adminID, repository.HistoryFilter{})
+		_, err = u.History.List(ctx, adminID, models.HistoryFilter{})
 		requireError(t, err, nil)
 
 		requireError(t, u.Admins.Revoke(ctx, ownerID, ownerID), apperrors.ErrInvalidInput)
@@ -275,7 +275,7 @@ func TestAdminPermissionAndLastOwner(t *testing.T) {
 		requireError(t, err, nil)
 		_, err = u.Admins.ChangeRole(ctx, ownerID, adminID, models.AdminRoleOwner)
 		requireError(t, err, nil)
-		_, err = u.Admins.List(ctx, ownerID, repository.PageRequest{})
+		_, err = u.Admins.List(ctx, ownerID, models.PageRequest{})
 		requireError(t, err, nil)
 		requireError(t, u.Admins.Revoke(ctx, ownerID, adminID), nil)
 		_, err = u.Admins.CheckAccess(ctx, adminID)
@@ -357,7 +357,7 @@ func TestConcurrentScopeAuditUsesActualPreviousVersion(t *testing.T) {
 	}
 	releaseOnce()
 	requireError(t, <-writerDone, nil)
-	requireError(t, <-secondDone, repository.ErrRetryable)
+	requireError(t, <-secondDone, apperrors.ErrRetryable)
 
 	_, err = u.Scopes.Update(ctx, ownerID, second)
 	requireError(t, err, nil)
@@ -369,5 +369,89 @@ func TestConcurrentScopeAuditUsesActualPreviousVersion(t *testing.T) {
 	requireError(t, json.Unmarshal(changes[0].OldValue, &previous), nil)
 	if previous.Name != first.Name {
 		t.Fatalf("audited previous scope name = %q, want %q", previous.Name, first.Name)
+	}
+}
+
+func TestFlagDeleteAndOverrideUseParentLockFirst(t *testing.T) {
+	ctx, store, pool := openTestStore(t)
+	u := usecase.New(store, fixtureUsers{})
+	scope, err := store.Scopes.GetByName(ctx, "auth")
+	requireError(t, err, nil)
+	flag, err := u.Flags.Create(ctx, ownerID, models.FeatureFlag{
+		ConfigKey: models.ConfigKey{ScopeID: scope.ID, Name: "lock_order_test", OwnerUserID: ownerID},
+	})
+	requireError(t, err, nil)
+	override := models.FeatureFlagOverride{KeyID: flag.ID, UserID: ownerID, Enabled: true}
+	_, err = u.Overrides.Upsert(ctx, ownerID, override)
+	requireError(t, err, nil)
+
+	competing := make(chan error, 1)
+	err = store.WithinTx(ctx, func(tx *repository.Store) error {
+		if _, err := tx.Flags.GetForUpdate(ctx, flag.ID); err != nil {
+			return err
+		}
+		override.Enabled = false
+		go func() {
+			_, err := u.Overrides.Upsert(ctx, ownerID, override)
+			competing <- err
+		}()
+		if err := waitForBlockedStatement(ctx, pool, "%FOR NO KEY UPDATE OF k", competing); err != nil {
+			return err
+		}
+		return usecase.New(tx, fixtureUsers{}).Flags.Delete(ctx, ownerID, flag.ID)
+	})
+	requireError(t, err, nil)
+	requireError(t, <-competing, apperrors.ErrRetryable)
+}
+
+func TestMutualAdminDemotionChecksActorAfterLock(t *testing.T) {
+	ctx, store, pool := openTestStore(t)
+	const otherOwner int64 = 42
+	actor := ownerID
+	_, err := store.Admins.Create(ctx, models.Admin{UserID: otherOwner, Role: models.AdminRoleOwner, GrantedBy: &actor})
+	requireError(t, err, nil)
+	t.Cleanup(func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		requireError(t, store.Admins.Delete(cleanup, otherOwner), nil)
+	})
+	competing := make(chan error, 1)
+	err = store.WithinTx(ctx, func(tx *repository.Store) error {
+		if err := tx.Admins.LockChanges(ctx); err != nil {
+			return err
+		}
+		go func() {
+			_, err := usecase.New(store, fixtureUsers{}).Admins.ChangeRole(ctx, otherOwner, ownerID, models.AdminRoleAdmin)
+			competing <- err
+		}()
+		if err := waitForBlockedStatement(ctx, pool, "LOCK TABLE public.admin%", competing); err != nil {
+			return err
+		}
+		_, err := tx.Admins.UpdateRole(ctx, otherOwner, models.AdminRoleAdmin, &actor)
+		return err
+	})
+	requireError(t, err, nil)
+	requireError(t, <-competing, apperrors.ErrForbidden)
+}
+
+func waitForBlockedStatement(ctx context.Context, pool *pgxpool.Pool, statement string, result <-chan error) error {
+	ticker := time.NewTicker(10 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		var blocked bool
+		err := pool.QueryRow(ctx, `SELECT EXISTS (
+   SELECT FROM pg_stat_activity WHERE application_name = 'onlineconf_usecase_test'
+     AND pid <> pg_backend_pid() AND wait_event_type = 'Lock' AND query LIKE $1
+  )`, statement).Scan(&blocked)
+		if err != nil || blocked {
+			return err
+		}
+		select {
+		case err := <-result:
+			return fmt.Errorf("competing operation finished before blocking: %v", err)
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-ticker.C:
+		}
 	}
 }

@@ -8,11 +8,19 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 )
 
-type Handler struct {
-	settings runtimeconfig.Settings
+type Settings interface {
+	ForUser(userID int64) runtimeconfig.PublicConfig
 }
 
-func NewHandler(settings runtimeconfig.Settings) *Handler {
+type responseDTO struct {
+	Configs map[string]int  `json:"configs"`
+	Flags   map[string]bool `json:"flags"`
+}
+type Handler struct {
+	settings Settings
+}
+
+func NewHandler(settings Settings) *Handler {
 	return &Handler{settings: settings}
 }
 
@@ -24,8 +32,5 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	config := h.settings.ForUser(userID)
-	httputil.WriteOK(w, http.StatusOK, struct {
-		Configs map[string]int  `json:"configs"`
-		Flags   map[string]bool `json:"flags"`
-	}{Configs: config.Configs, Flags: config.Flags})
+	httputil.WriteOK(w, http.StatusOK, responseDTO{Configs: config.Configs, Flags: config.Flags})
 }

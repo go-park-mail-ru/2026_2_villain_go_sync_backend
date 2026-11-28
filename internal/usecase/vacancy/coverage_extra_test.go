@@ -9,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 	"go.uber.org/mock/gomock"
 )
@@ -33,7 +34,7 @@ func TestVacancyListExtra(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			vr := vacancy.NewMockVacancyRepository(ctrl)
 			ur := vacancy.NewMockUserRepository(ctrl)
-			uc := vacancy.NewVacancyUsecase(vr, ur)
+			uc := vacancy.NewVacancyUsecase(vr, ur, runtimeconfig.New(nil))
 
 			expected := []models.Vacancy{{ID: 8, Title: "Go"}}
 
@@ -171,7 +172,7 @@ func TestVacancyUpdateExtra(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			vr := vacancy.NewMockVacancyRepository(ctrl)
 			ur := vacancy.NewMockUserRepository(ctrl)
-			uc := vacancy.NewVacancyUsecase(vr, ur)
+			uc := vacancy.NewVacancyUsecase(vr, ur, runtimeconfig.New(nil))
 
 			ur.EXPECT().GetRoleByID(
 				gomock.Any(), int64(10),
@@ -248,7 +249,7 @@ func TestVacancyListEmployerApplicantsExtra(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			vr := vacancy.NewMockVacancyRepository(ctrl)
 			ur := vacancy.NewMockUserRepository(ctrl)
-			uc := vacancy.NewVacancyUsecase(vr, ur)
+			uc := vacancy.NewVacancyUsecase(vr, ur, runtimeconfig.New(nil))
 
 			want := []models.Applicant{
 				{ApplicationID: 3, Seeker: models.ApplicantSeeker{FirstName: "Ivan"}},

@@ -21,6 +21,7 @@ type overrideKey struct {
 
 type Snapshot struct {
 	configs   map[key]json.RawMessage
+	integers  map[key]int
 	flags     map[key]flag
 	overrides map[overrideKey]bool
 }
@@ -54,53 +55,16 @@ type snapshotResponse struct {
 	Overrides []overrideResponse `json:"overrides"`
 }
 
-func (r snapshotResponse) snapshot() (Snapshot, error) {
-	if r.Configs == nil || r.Flags == nil || r.Overrides == nil {
-		return Snapshot{}, ErrInvalidSnapshot
-	}
-
-	s := Snapshot{
-		configs:   make(map[key]json.RawMessage, len(r.Configs)),
-		flags:     make(map[key]flag, len(r.Flags)),
-		overrides: make(map[overrideKey]bool, len(r.Overrides)),
-	}
-	for _, config := range r.Configs {
-		k := key{config.ScopeName, config.Name}
-		if k.scope == "" || k.name == "" || config.Value == nil || s.configs[k] != nil {
-			return Snapshot{}, ErrInvalidSnapshot
-		}
-		s.configs[k] = config.Value
-	}
-
-	flagIDs := make(map[int64]bool, len(r.Flags))
-	for _, item := range r.Flags {
-		k := key{item.ScopeName, item.Name}
-		if k.scope == "" || k.name == "" || item.ID <= 0 || flagIDs[item.ID] || s.flags[k].id != 0 ||
-			s.configs[k] != nil || item.Enabled == nil || item.Rollout == nil || *item.Rollout < 0 || *item.Rollout > 100 {
-			return Snapshot{}, ErrInvalidSnapshot
-		}
-		s.flags[k] = flag{item.ID, *item.Enabled, *item.Rollout}
-		flagIDs[item.ID] = true
-	}
-
-	for _, override := range r.Overrides {
-		k := overrideKey{override.KeyID, override.UserID}
-		_, exists := s.overrides[k]
-		if !flagIDs[override.KeyID] || override.UserID <= 0 || override.Enabled == nil || exists {
-			return Snapshot{}, ErrInvalidSnapshot
-		}
-		s.overrides[k] = *override.Enabled
-	}
-	return s, nil
-}
-
 func (s Snapshot) JSON(scope, name string) (json.RawMessage, bool) {
 	value, ok := s.configs[key{scope, name}]
 	return bytes.Clone(value), ok
 }
 
 func (s Snapshot) Int(scope, name string, fallback int) int {
-	return configValue(s, scope, name, fallback)
+	if value, ok := s.integers[key{scope, name}]; ok {
+		return value
+	}
+	return fallback
 }
 
 func (s Snapshot) Bool(scope, name string, fallback bool) bool {
@@ -111,7 +75,7 @@ func (s Snapshot) String(scope, name, fallback string) string {
 	return configValue(s, scope, name, fallback)
 }
 
-func configValue[T int | bool | string](s Snapshot, scope, name string, fallback T) T {
+func configValue[T bool | string](s Snapshot, scope, name string, fallback T) T {
 	raw := s.configs[key{scope, name}]
 	if raw == nil {
 		return fallback

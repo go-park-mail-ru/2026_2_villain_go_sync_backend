@@ -21,8 +21,8 @@ func TestClassifyError(t *testing.T) {
 		{&pgconn.PgError{Code: "23503"}, apperrors.ErrConflict},
 		{&pgconn.PgError{Code: "23514"}, apperrors.ErrInvalidInput},
 		{&pgconn.PgError{Code: "23502"}, apperrors.ErrInvalidInput},
-		{&pgconn.PgError{Code: "40001"}, ErrRetryable},
-		{&pgconn.PgError{Code: "40P01"}, ErrRetryable},
+		{&pgconn.PgError{Code: "40001"}, apperrors.ErrRetryable},
+		{&pgconn.PgError{Code: "40P01"}, apperrors.ErrRetryable},
 		{context.DeadlineExceeded, context.DeadlineExceeded},
 	} {
 		got := classifyError(t.Context(), tc.cause)

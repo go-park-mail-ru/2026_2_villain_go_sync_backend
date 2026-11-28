@@ -104,3 +104,11 @@ func TestWriteAppErrorContract(t *testing.T) {
 		})
 	}
 }
+
+func TestWriteJSONSerializationFailure(t *testing.T) {
+	w := httptest.NewRecorder()
+	WriteJSON(w, http.StatusOK, make(chan int))
+	if w.Code != http.StatusInternalServerError || w.Body.String() != "{\"error\":\"internal error\"}\n" {
+		t.Fatalf("unexpected status or response: %d %s", w.Code, w.Body)
+	}
+}

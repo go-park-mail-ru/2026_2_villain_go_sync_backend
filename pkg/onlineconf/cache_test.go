@@ -60,6 +60,10 @@ func TestCacheInitialLoadRefreshRetainsAndRemoves(t *testing.T) {
 	cache := startCache(ctx, client, 10*time.Millisecond)
 	defer stopCache(t, cancel, cache)
 
+	loadedAt := cache.LastSuccessfulRefresh()
+	if loadedAt.IsZero() {
+		t.Fatal("initial refresh did not record its success")
+	}
 	original := cache.View()
 	if original.Int("vacancy", "max_categories", 5) != 2 || !original.Enabled("vacancy", "creation_enabled", 3, false) {
 		t.Fatal("initial snapshot was unavailable")
@@ -70,7 +74,7 @@ func TestCacheInitialLoadRefreshRetainsAndRemoves(t *testing.T) {
 		current.Store(response)
 		previous := calls.Load()
 		waitUntil(t, func() bool { return calls.Load() >= previous+2 })
-		if cache.View().Int("vacancy", "max_categories", 5) != 2 {
+		if cache.View().Int("vacancy", "max_categories", 5) != 2 || cache.LastSuccessfulRefresh() != loadedAt {
 			t.Fatal("failed refresh discarded the last good snapshot")
 		}
 	}
@@ -78,7 +82,7 @@ func TestCacheInitialLoadRefreshRetainsAndRemoves(t *testing.T) {
 	waitUntil(t, func() bool { _, ok := cache.View().JSON("vacancy", "max_categories"); return !ok })
 	if cache.View().Int("vacancy", "max_categories", 5) != 5 ||
 		cache.View().Enabled("vacancy", "creation_enabled", 3, false) ||
-		original.Int("vacancy", "max_categories", 5) != 2 {
+		original.Int("vacancy", "max_categories", 5) != 2 || !cache.LastSuccessfulRefresh().After(loadedAt) {
 		t.Fatal("deleted data did not revert to defaults or previously acquired view was mutated")
 	}
 }

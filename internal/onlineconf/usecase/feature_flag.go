@@ -6,23 +6,22 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/pkg/onlineconf"
 )
 
 type FeatureFlagUsecase struct {
-	store *repository.Store
+	store Store
 	users ProductUsers
 }
 
 func (u FeatureFlagUsecase) Get(ctx context.Context, actorID, keyID int64) (models.FeatureFlag, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.FeatureFlag, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlag, error) {
 		return tx.Flags.Get(ctx, keyID)
 	})
 }
 
 func (u FeatureFlagUsecase) Create(ctx context.Context, actorID int64, input models.FeatureFlag) (models.FeatureFlag, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.FeatureFlag, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlag, error) {
 		if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
 			return models.FeatureFlag{}, err
 		}
@@ -55,7 +54,7 @@ func (u FeatureFlagUsecase) SetRolloutPercentage(ctx context.Context, actorID, k
 func (u FeatureFlagUsecase) update(ctx context.Context, actorID, keyID int64,
 	apply func(models.FeatureFlag) models.FeatureFlag,
 ) (models.FeatureFlag, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.FeatureFlag, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlag, error) {
 		before, err := tx.Flags.Get(ctx, keyID)
 		if err != nil {
 			return models.FeatureFlag{}, err
@@ -79,8 +78,8 @@ func (u FeatureFlagUsecase) update(ctx context.Context, actorID, keyID int64,
 }
 
 func (u FeatureFlagUsecase) Delete(ctx context.Context, actorID, keyID int64) error {
-	return protectedAction(ctx, u.store, actorID, false, func(tx *repository.Store) error {
-		flag, err := tx.Flags.Get(ctx, keyID)
+	return protectedAction(ctx, u.store, actorID, adminAccess, func(tx Repositories) error {
+		flag, err := tx.Flags.GetForUpdate(ctx, keyID)
 		if err != nil {
 			return err
 		}
@@ -91,16 +90,13 @@ func (u FeatureFlagUsecase) Delete(ctx context.Context, actorID, keyID int64) er
 		if err := tx.Flags.Delete(ctx, keyID); err != nil {
 			return err
 		}
-		before := struct {
-			models.FeatureFlag
-			Overrides []models.FeatureFlagOverride `json:"overrides"`
-		}{FeatureFlag: flag, Overrides: overrides}
+		before := flagDeletion{flag, overrides}
 		return recordChange(ctx, tx, actorID, keyResource(models.ResourceTypeFeatureFlag, flag.ConfigKey), before, nil)
 	})
 }
 
 func (u FeatureFlagUsecase) Evaluate(ctx context.Context, actorID, keyID, userID int64) (onlineconf.Evaluation, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (onlineconf.Evaluation, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (onlineconf.Evaluation, error) {
 		if userID <= 0 {
 			return onlineconf.Evaluation{}, apperrors.ValidationError("user id must be positive")
 		}

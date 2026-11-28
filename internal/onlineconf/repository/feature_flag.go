@@ -12,13 +12,17 @@ type FeatureFlagRepository struct {
 }
 
 func (r FeatureFlagRepository) Get(ctx context.Context, keyID int64) (models.FeatureFlag, error) {
-	return getFlag(ctx, r.conn.db, keyID)
+	return getFlag(ctx, r.conn.db, keyID, "")
 }
 
-func getFlag(ctx context.Context, db database, keyID int64) (models.FeatureFlag, error) {
+func (r FeatureFlagRepository) GetForUpdate(ctx context.Context, keyID int64) (models.FeatureFlag, error) {
+	return getFlag(ctx, r.conn.db, keyID, " FOR NO KEY UPDATE OF k")
+}
+
+func getFlag(ctx context.Context, db database, keyID int64, lock string) (models.FeatureFlag, error) {
 	var flag models.FeatureFlag
 	err := db.QueryRow(ctx, "SELECT "+keyColumns+", f.enabled, f.rollout_percentage"+keyFrom+
-		" JOIN public.feature_flag f ON f.key_id = k.key_id WHERE k.key_id = $1", keyID).
+		" JOIN public.feature_flag f ON f.key_id = k.key_id WHERE k.key_id = $1"+lock, keyID).
 		Scan(append(keyFields(&flag.ConfigKey), &flag.Enabled, &flag.RolloutPercentage)...)
 	return flag, classifyError(ctx, err)
 }
@@ -35,7 +39,7 @@ func (r FeatureFlagRepository) Create(ctx context.Context, input models.FeatureF
 			id, input.Enabled, input.RolloutPercentage); err != nil {
 			return err
 		}
-		flag, err = getFlag(ctx, tx, id)
+		flag, err = getFlag(ctx, tx, id, "")
 		return err
 	})
 	if err != nil {
@@ -56,7 +60,7 @@ func (r FeatureFlagRepository) Update(ctx context.Context, input models.FeatureF
 			return err
 		}
 		var err error
-		flag, err = getFlag(ctx, tx, input.ID)
+		flag, err = getFlag(ctx, tx, input.ID, "")
 		return err
 	})
 	if err != nil {

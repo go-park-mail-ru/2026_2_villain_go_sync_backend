@@ -4,27 +4,26 @@ import (
 	"context"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 type AdminUsecase struct {
-	store *repository.Store
+	store Store
 	users ProductUsers
 }
 
 func (u AdminUsecase) CheckAccess(ctx context.Context, actorID int64) (models.Admin, error) {
-	admin, err := u.store.Admins.Get(ctx, actorID)
+	admin, err := u.store.Repositories().Admins.Get(ctx, actorID)
 	return checkAccess(admin, err, false)
 }
 
-func (u AdminUsecase) List(ctx context.Context, actorID int64, page repository.PageRequest) (repository.Page[models.Admin], error) {
-	return protected(ctx, u.store, actorID, true, func(tx *repository.Store) (repository.Page[models.Admin], error) {
+func (u AdminUsecase) List(ctx context.Context, actorID int64, page models.PageRequest) (models.Page[models.Admin], error) {
+	return protected(ctx, u.store, actorID, ownerAccess, func(tx Repositories) (models.Page[models.Admin], error) {
 		return tx.Admins.List(ctx, page)
 	})
 }
 
 func (u AdminUsecase) Grant(ctx context.Context, actorID, userID int64, role models.AdminRole) (models.Admin, error) {
-	return protected(ctx, u.store, actorID, true, func(tx *repository.Store) (models.Admin, error) {
+	return protected(ctx, u.store, actorID, changeAdmins, func(tx Repositories) (models.Admin, error) {
 		if err := requireUser(ctx, u.users, userID); err != nil {
 			return models.Admin{}, err
 		}
@@ -37,7 +36,7 @@ func (u AdminUsecase) Grant(ctx context.Context, actorID, userID int64, role mod
 }
 
 func (u AdminUsecase) ChangeRole(ctx context.Context, actorID, userID int64, role models.AdminRole) (models.Admin, error) {
-	return protected(ctx, u.store, actorID, true, func(tx *repository.Store) (models.Admin, error) {
+	return protected(ctx, u.store, actorID, changeAdmins, func(tx Repositories) (models.Admin, error) {
 		before, err := tx.Admins.Get(ctx, userID)
 		if err != nil {
 			return models.Admin{}, err
@@ -58,7 +57,7 @@ func (u AdminUsecase) ChangeRole(ctx context.Context, actorID, userID int64, rol
 }
 
 func (u AdminUsecase) Revoke(ctx context.Context, actorID, userID int64) error {
-	return protectedAction(ctx, u.store, actorID, true, func(tx *repository.Store) error {
+	return protectedAction(ctx, u.store, actorID, changeAdmins, func(tx Repositories) error {
 		before, err := tx.Admins.Get(ctx, userID)
 		if err != nil {
 			return err

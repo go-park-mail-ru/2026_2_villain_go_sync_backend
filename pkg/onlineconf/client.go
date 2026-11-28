@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
@@ -15,10 +16,14 @@ import (
 
 const (
 	RequestTimeout = 3 * time.Second
-	snapshotPath   = "/internal/onlineconf/snapshot"
+	// MaxSnapshotBytes caps the complete uncompressed response, including the envelope.
+	MaxSnapshotBytes   = 16 << 20
+	maxErrorDrainBytes = 4 << 10
+	snapshotPath       = "/internal/onlineconf/snapshot"
 )
 
 var (
+	ErrSnapshotTooLarge   = errors.New("OnlineConf snapshot exceeds the size limit")
 	ErrInvalidSnapshot    = errors.New("invalid OnlineConf snapshot")
 	ErrSnapshotConnection = errors.New("OnlineConf snapshot request failed")
 )
@@ -50,12 +55,23 @@ func NewClient(baseURL, secret string) (*Client, error) {
 		endpoint: base.JoinPath(snapshotPath).String(),
 		secret:   secret,
 		http: &http.Client{
-			Timeout: RequestTimeout,
+			Timeout:   RequestTimeout,
+			Transport: newSnapshotTransport(),
 			CheckRedirect: func(*http.Request, []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
 		},
 	}, nil
+}
+
+func newSnapshotTransport() *http.Transport {
+	return &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		DialContext:         (&net.Dialer{Timeout: RequestTimeout}).DialContext,
+		ForceAttemptHTTP2:   true,
+		IdleConnTimeout:     2 * RefreshInterval,
+		MaxIdleConnsPerHost: 1,
+	}
 }
 
 func (c *Client) FetchSnapshot(ctx context.Context) (Snapshot, error) {
@@ -72,19 +88,23 @@ func (c *Client) FetchSnapshot(ctx context.Context) (Snapshot, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4096))
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, maxErrorDrainBytes))
 		return Snapshot{}, StatusError{StatusCode: resp.StatusCode}
 	}
 
-	decoder := json.NewDecoder(resp.Body)
+	body := &io.LimitedReader{R: resp.Body, N: MaxSnapshotBytes + 1}
+	decoder := json.NewDecoder(body)
 	var envelope struct {
 		Data *snapshotResponse `json:"data"`
 	}
 	if err := decoder.Decode(&envelope); err != nil {
-		return Snapshot{}, decodeError(err)
+		return Snapshot{}, decodeSnapshotError(body, err)
 	}
 	if err := decoder.Decode(new(any)); err != io.EOF {
-		return Snapshot{}, decodeError(err)
+		return Snapshot{}, decodeSnapshotError(body, err)
+	}
+	if body.N == 0 {
+		return Snapshot{}, ErrSnapshotTooLarge
 	}
 	if envelope.Data == nil {
 		return Snapshot{}, ErrInvalidSnapshot
@@ -103,7 +123,10 @@ func requestError(err error) error {
 	}
 }
 
-func decodeError(err error) error {
+func decodeSnapshotError(body *io.LimitedReader, err error) error {
+	if body.N == 0 {
+		return ErrSnapshotTooLarge
+	}
 	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
 		return requestError(err)
 	}

@@ -23,7 +23,7 @@ func (r AdminRepository) Get(ctx context.Context, userID int64) (models.Admin, e
 	return admin, classifyError(ctx, err)
 }
 
-func (r AdminRepository) List(ctx context.Context, page PageRequest) (Page[models.Admin], error) {
+func (r AdminRepository) List(ctx context.Context, page models.PageRequest) (models.Page[models.Admin], error) {
 	return readPage(ctx, r.db, page, `SELECT `+adminColumns+` FROM public.admin
 		WHERE ($1::BIGINT IS NULL OR user_id > $1) ORDER BY user_id LIMIT $2`, scanAdmin,
 		func(admin models.Admin) int64 { return admin.UserID })
@@ -50,4 +50,10 @@ func (r AdminRepository) Delete(ctx context.Context, userID int64) error {
 func (r AdminRepository) GetForShare(ctx context.Context, userID int64) (models.Admin, error) {
 	admin, err := scanAdmin(r.db.QueryRow(ctx, "SELECT "+adminColumns+" FROM public.admin WHERE user_id = $1 FOR SHARE", userID))
 	return admin, classifyError(ctx, err)
+}
+
+// LockChanges serializes changes to admin roles before taking actor row locks.
+func (r AdminRepository) LockChanges(ctx context.Context) error {
+	_, err := r.db.Exec(ctx, "LOCK TABLE public.admin IN SHARE ROW EXCLUSIVE MODE")
+	return classifyError(ctx, err)
 }

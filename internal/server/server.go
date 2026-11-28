@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"errors"
 	"net/http"
 	"time"
 
@@ -22,23 +22,30 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/pkg/onlineconf"
 )
 
-func New(ctx context.Context) http.Handler {
+const startupTimeout = 5 * time.Second
+
+func New(ctx context.Context) (_ http.Handler, _ func(), err error) {
 	cfg, err := config.Load()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		return nil, nil, errors.New("load backend configuration")
 	}
 
-	startup, cancel := context.WithTimeout(ctx, 5*time.Second)
+	startup, cancel := context.WithTimeout(ctx, startupTimeout)
 	defer cancel()
 
 	pool, err := repository.NewPostgresPool(startup, cfg.DSN())
 	if err != nil {
-		log.Fatalf("connect db: %v", err)
+		return nil, nil, errors.New("connect product database")
 	}
 
+	defer func() {
+		if err != nil {
+			pool.Close()
+		}
+	}()
 	sdkCfg, err := awsconfig.LoadDefaultConfig(startup, awsconfig.WithRegion(cfg.S3Region), awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")))
 	if err != nil {
-		log.Fatalf("load config s3 : %v", err)
+		return nil, nil, errors.New("configure S3")
 	}
 
 	s3Client := awss3.NewFromConfig(sdkCfg, func(o *awss3.Options) {
@@ -50,16 +57,24 @@ func New(ctx context.Context) http.Handler {
 
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	var source runtimeconfig.Source
+	settings := runtimeconfig.New(nil)
+	closeResources := pool.Close
 	if cfg.OnlineConfURL != "" {
 		client, err := onlineconf.NewClient(cfg.OnlineConfURL, cfg.OnlineConfSnapshotSecret)
 		if err != nil {
-			log.Fatalf("configure OnlineConf: %v", err)
+			return nil, nil, err
 		}
-		source = onlineconf.StartCache(ctx, client)
+		refreshCtx, stopRefresh := context.WithCancel(ctx)
+		cache := onlineconf.StartCache(refreshCtx, client)
+		settings = runtimeconfig.New(cache)
+		closeResources = func() {
+			stopRefresh()
+			<-cache.Done()
+			pool.Close()
+		}
 	}
-	appConfig := app.CreateConfig(pool, tokens, s3Adapter, runtimeconfig.New(source))
-	return routes(appConfig.Handlers, tokens)
+	appConfig := app.CreateConfig(pool, tokens, s3Adapter, settings)
+	return routes(appConfig.Handlers, tokens), closeResources, nil
 }
 
 func routes(handlers *delivery.Config, tokens *auth.TokenManager) http.Handler {

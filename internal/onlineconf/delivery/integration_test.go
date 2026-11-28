@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"reflect"
@@ -70,7 +71,7 @@ func TestPostgresHTTP(t *testing.T) {
 	ordinary := tokenFor(t, tokens, 3, productmodels.RoleEmployer, auth.TokenTypeAccess)
 	rollback := errors.New("rollback HTTP fixtures")
 	err = repository.NewStore(pool).WithinTx(ctx, func(tx *repository.Store) error {
-		h := delivery.New(usecase.New(tx, users), tokens, testSecret, users.Ping)
+		h := newHTTPHandler(usecase.New(tx, users), tokens, testSecret, users.Ping)
 		snapshotServer := httptest.NewServer(h)
 		defer snapshotServer.Close()
 		snapshotClient, err := onlineconf.NewClient(snapshotServer.URL, testSecret)
@@ -123,7 +124,7 @@ func TestPostgresHTTP(t *testing.T) {
 
 		configBody := fmt.Sprintf(`{"name":"sample_config","scope_id":%d,"owner_user_id":3,"value":null}`, scope.ID)
 		asAdmin("POST", "/configs", strings.Replace(configBody, `"owner_user_id":3`, `"owner_user_id":99999`, 1), 422)
-		failureHandler := delivery.New(usecase.New(tx, failureReader{}), tokens, testSecret, users.Ping)
+		failureHandler := newHTTPHandler(usecase.New(tx, failureReader{}), tokens, testSecret, users.Ping)
 		errBody = request(t, failureHandler, "POST", admin+"/configs", configBody, adminUser, csrfToken, "", 503)
 		if strings.Contains(string(errBody), "private") {
 			t.Fatalf("product error leaked: %s", errBody)
@@ -234,4 +235,8 @@ func TestPostgresHTTP(t *testing.T) {
 	if !errors.Is(err, rollback) {
 		t.Fatalf("test transaction: %v", err)
 	}
+}
+
+func newHTTPHandler(u usecase.Usecases, tokens *auth.TokenManager, secret string, health func(context.Context) error) http.Handler {
+	return delivery.New(delivery.Services{Scopes: u.Scopes, Configs: u.Configs, Flags: u.Flags, Overrides: u.Overrides, Admins: u.Admins, History: u.History, Keys: u.Keys, Snapshots: u.Snapshots}, tokens, secret, health)
 }

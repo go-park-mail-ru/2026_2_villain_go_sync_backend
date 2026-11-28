@@ -10,6 +10,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	uc "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/application"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 	"go.uber.org/mock/gomock"
 )
 
@@ -22,7 +23,7 @@ func TestApplicationUsecase_Create_Success(t *testing.T) {
 	mockVac := uc.NewMockVacancyRepository(ctrl)
 	mockUser := uc.NewMockUserRepository(ctrl)
 
-	usecase := uc.NewApplicationUsecase(mockApp, mockRes, mockVac, mockUser)
+	usecase := uc.NewApplicationUsecase(mockApp, mockRes, mockVac, mockUser, runtimeconfig.New(nil))
 
 	input := dto.CreateApplicationInput{
 		SeekerID:  10,
@@ -57,7 +58,7 @@ func TestApplicationUsecase_Create_NotSeeker(t *testing.T) {
 	mockVac := uc.NewMockVacancyRepository(ctrl)
 	mockUser := uc.NewMockUserRepository(ctrl)
 
-	usecase := uc.NewApplicationUsecase(mockApp, mockRes, mockVac, mockUser)
+	usecase := uc.NewApplicationUsecase(mockApp, mockRes, mockVac, mockUser, runtimeconfig.New(nil))
 
 	input := dto.CreateApplicationInput{SeekerID: 10, VacancyID: -5, ResumeID: 3}
 
@@ -79,7 +80,7 @@ func TestApplicationUsecase_Create_ResumeBelongsToAnother(t *testing.T) {
 	mockVac := uc.NewMockVacancyRepository(ctrl)
 	mockUser := uc.NewMockUserRepository(ctrl)
 
-	usecase := uc.NewApplicationUsecase(mockApp, mockRes, mockVac, mockUser)
+	usecase := uc.NewApplicationUsecase(mockApp, mockRes, mockVac, mockUser, runtimeconfig.New(nil))
 
 	input := dto.CreateApplicationInput{SeekerID: 10, VacancyID: 5, ResumeID: 3}
 
@@ -118,7 +119,7 @@ func TestUpdateStatusValidation(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := uc.NewMockApplicationRepository(gomock.NewController(t))
-			usecase := uc.NewApplicationUsecase(repo, nil, nil, nil)
+			usecase := uc.NewApplicationUsecase(repo, nil, nil, nil, runtimeconfig.New(nil))
 			input := dto.UpdateStatusInput{ApplicationID: 1, EmployerID: 2, Status: tc.status, ReasonCode: tc.reason}
 			if tc.role.IsEmployer() {
 				repo.EXPECT().GetVacancyEmployerID(gomock.Any(), int64(1)).Return(int64(2), nil)
@@ -136,7 +137,7 @@ func TestUpdateStatusValidation(t *testing.T) {
 
 func TestListBySeekerRequiresSeekerRole(t *testing.T) {
 	repo := uc.NewMockApplicationRepository(gomock.NewController(t))
-	usecase := uc.NewApplicationUsecase(repo, nil, nil, nil)
+	usecase := uc.NewApplicationUsecase(repo, nil, nil, nil, runtimeconfig.New(nil))
 	if _, _, err := usecase.ListBySeeker(context.Background(), 1, models.RoleEmployer, pagination.Params{Limit: 12}); !errors.Is(err, apperrors.ErrForbidden) {
 		t.Fatalf("expected forbidden, got %v", err)
 	}
@@ -155,7 +156,7 @@ func TestUpdateStatusChecksOwnershipBeforeStatus(t *testing.T) {
 			repo := uc.NewMockApplicationRepository(gomock.NewController(t))
 			repo.EXPECT().GetVacancyEmployerID(gomock.Any(), int64(1)).Return(tc.ownerID, tc.lookupErr)
 			input := dto.UpdateStatusInput{ApplicationID: 1, EmployerID: 2, Status: "invalid"}
-			_, err := uc.NewApplicationUsecase(repo, nil, nil, nil).UpdateStatus(context.Background(), models.RoleEmployer, input)
+			_, err := uc.NewApplicationUsecase(repo, nil, nil, nil, runtimeconfig.New(nil)).UpdateStatus(context.Background(), models.RoleEmployer, input)
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("got %v, want %v", err, tc.want)
 			}

@@ -275,3 +275,17 @@ func TestTokenManager_DefaultTTL(t *testing.T) {
 		})
 	}
 }
+
+func TestTokenManagerRejectsMissingExpiration(t *testing.T) {
+	secret := []byte("test-secret")
+	manager := NewTokenManager(secret, time.Minute, time.Hour)
+	for _, kind := range []TokenType{TokenTypeAccess, TokenTypeRefresh} {
+		token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, Claims{UserID: 42, Role: "seeker", TokenType: kind}).SignedString(secret)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := manager.Parse(token, kind); err == nil {
+			t.Errorf("%s token without exp was accepted", kind)
+		}
+	}
+}

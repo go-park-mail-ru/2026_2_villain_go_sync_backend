@@ -37,13 +37,13 @@ func (r FeatureFlagOverrideRepository) Delete(ctx context.Context, keyID, userID
 	return execOne(ctx, r.db, "DELETE FROM public.feature_flag_override WHERE key_id = $1 AND user_id = $2", keyID, userID)
 }
 
-func (r FeatureFlagOverrideRepository) ListByFlag(ctx context.Context, keyID int64, page PageRequest) (Page[models.FeatureFlagOverride], error) {
+func (r FeatureFlagOverrideRepository) ListByFlag(ctx context.Context, keyID int64, page models.PageRequest) (models.Page[models.FeatureFlagOverride], error) {
 	return readPage(ctx, r.db, page, `SELECT `+overrideColumns+` FROM public.feature_flag_override
 		WHERE key_id = $3 AND ($1::BIGINT IS NULL OR user_id > $1) ORDER BY user_id LIMIT $2`, scanOverride,
 		func(override models.FeatureFlagOverride) int64 { return override.UserID }, keyID)
 }
 
-func (r FeatureFlagOverrideRepository) ListByUser(ctx context.Context, userID int64, page PageRequest) (Page[models.FeatureFlagOverride], error) {
+func (r FeatureFlagOverrideRepository) ListByUser(ctx context.Context, userID int64, page models.PageRequest) (models.Page[models.FeatureFlagOverride], error) {
 	return readPage(ctx, r.db, page, `SELECT `+overrideColumns+` FROM public.feature_flag_override
 		WHERE user_id = $3 AND ($1::BIGINT IS NULL OR key_id > $1) ORDER BY key_id LIMIT $2`, scanOverride,
 		func(override models.FeatureFlagOverride) int64 { return override.KeyID }, userID)

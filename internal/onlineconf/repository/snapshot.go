@@ -2,75 +2,72 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"time"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/pkg/onlineconf"
+	"github.com/jackc/pgx/v5"
 )
 
 type SnapshotRepository struct {
-	db database
+	conn connection
 }
 
-type Snapshot struct {
-	Configs   []models.Config
-	Flags     []models.FeatureFlag
-	Overrides []models.FeatureFlagOverride
-}
+// The estimate includes the wire fields, escaping, and overhead per row.
+// The HTTP layer separately checks the exact envelope size.
+const snapshotBudgetQuery = `
+ SELECT
+   COALESCE((SELECT sum(256 + 6 * (octet_length(k.name)::bigint + octet_length(s.name)
+     + COALESCE(octet_length(k.description), 0)) + 6 * octet_length(c.value::text)::bigint)
+     FROM public.config c JOIN public.config_key k USING (key_id) JOIN public.scope s USING (scope_id)), 0)
+ + COALESCE((SELECT sum(256 + 6 * (octet_length(k.name)::bigint + octet_length(s.name)
+     + COALESCE(octet_length(k.description), 0)))
+     FROM public.feature_flag f JOIN public.config_key k USING (key_id) JOIN public.scope s USING (scope_id)), 0)
+ + (SELECT count(*) * 256 FROM public.feature_flag_override)`
 
-func (r SnapshotRepository) Get(ctx context.Context) (Snapshot, error) {
-	rows, err := r.db.Query(ctx, "SELECT "+keyColumns+`,
-		c.value, f.enabled, f.rollout_percentage, o.user_id, o.enabled, o.created_at, o.updated_at`+keyFrom+`
-		LEFT JOIN public.config c ON c.key_id = k.key_id
-		LEFT JOIN public.feature_flag f ON f.key_id = k.key_id
-		LEFT JOIN public.feature_flag_override o ON o.key_id = f.key_id
-		ORDER BY k.key_id, o.user_id`)
-	if err != nil {
-		return Snapshot{}, classifyError(ctx, err)
-	}
-	defer rows.Close()
-
-	snapshot := Snapshot{
-		Configs:   []models.Config{},
-		Flags:     []models.FeatureFlag{},
-		Overrides: []models.FeatureFlagOverride{},
-	}
-	var lastFlagID int64
-	hasLastFlag := false
-	for rows.Next() {
-		var key models.ConfigKey
-		var value json.RawMessage
-		var flagEnabled, overrideEnabled *bool
-		var rollout *int16
-		var userID *int64
-		var createdAt, updatedAt *time.Time
-		err := rows.Scan(append(keyFields(&key), &value, &flagEnabled, &rollout, &userID, &overrideEnabled, &createdAt, &updatedAt)...)
+func (r SnapshotRepository) Get(ctx context.Context) (models.Snapshot, error) {
+	var snapshot models.Snapshot
+	err := r.conn.withinTx(ctx, func(tx pgx.Tx) error {
+		var size int64
+		if err := tx.QueryRow(ctx, snapshotBudgetQuery).Scan(&size); err != nil {
+			return err
+		}
+		if size > onlineconf.MaxSnapshotBytes {
+			return apperrors.ErrDependencyUnavailable
+		}
+		var err error
+		snapshot.Configs, err = snapshotRows(ctx, tx, "SELECT "+keyColumns+", c.value"+keyFrom+
+			" JOIN public.config c ON c.key_id = k.key_id ORDER BY k.key_id", func(row rowScanner) (models.Config, error) {
+			var c models.Config
+			err := row.Scan(append(keyFields(&c.ConfigKey), &c.Value)...)
+			return c, err
+		})
 		if err != nil {
-			return Snapshot{}, classifyError(ctx, err)
+			return err
 		}
-
-		if key.Type == models.KeyTypeConfig && value != nil {
-			snapshot.Configs = append(snapshot.Configs, models.Config{ConfigKey: key, Value: value})
-			continue
+		snapshot.Flags, err = snapshotRows(ctx, tx, "SELECT "+keyColumns+", f.enabled, f.rollout_percentage"+keyFrom+
+			" JOIN public.feature_flag f ON f.key_id = k.key_id ORDER BY k.key_id", func(row rowScanner) (models.FeatureFlag, error) {
+			var f models.FeatureFlag
+			err := row.Scan(append(keyFields(&f.ConfigKey), &f.Enabled, &f.RolloutPercentage)...)
+			return f, err
+		})
+		if err != nil {
+			return err
 		}
-		if key.Type != models.KeyTypeFeatureFlag || flagEnabled == nil || rollout == nil {
-			return Snapshot{}, fmt.Errorf("config key %d has no matching subtype", key.ID)
-		}
-		if !hasLastFlag || lastFlagID != key.ID {
-			snapshot.Flags = append(snapshot.Flags, models.FeatureFlag{
-				ConfigKey: key, Enabled: *flagEnabled, RolloutPercentage: *rollout,
-			})
-			lastFlagID, hasLastFlag = key.ID, true
-		}
-		if userID != nil {
-			snapshot.Overrides = append(snapshot.Overrides, models.FeatureFlagOverride{
-				KeyID: key.ID, UserID: *userID, Enabled: *overrideEnabled, CreatedAt: *createdAt, UpdatedAt: *updatedAt,
-			})
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return Snapshot{}, classifyError(ctx, err)
+		snapshot.Overrides, err = snapshotRows(ctx, tx, "SELECT "+overrideColumns+
+			" FROM public.feature_flag_override ORDER BY key_id, user_id", scanOverride)
+		return err
+	})
+	if err != nil {
+		return models.Snapshot{}, err
 	}
 	return snapshot, nil
+}
+
+func snapshotRows[T any](ctx context.Context, db database, query string, scan func(rowScanner) (T, error)) ([]T, error) {
+	rows, err := db.Query(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.AppendRows([]T{}, rows, func(row pgx.CollectableRow) (T, error) { return scan(row) })
 }

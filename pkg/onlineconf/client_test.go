@@ -1,6 +1,8 @@
 package onlineconf
 
 import (
+	"bytes"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -161,5 +163,39 @@ func TestClientTimeoutAndRedirect(t *testing.T) {
 		if _, err := NewClient(address, "secret"); err == nil || strings.Contains(err.Error(), "secret") {
 			t.Fatalf("unsafe service URL, error = %v", err)
 		}
+	}
+}
+
+func TestClientCapsDecompressedSnapshot(t *testing.T) {
+	var payload bytes.Buffer
+	compressed, err := gzip.NewWriterLevel(&payload, gzip.BestSpeed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := fmt.Fprint(compressed, emptySnapshot); err != nil {
+		t.Fatal(err)
+	}
+	chunk := strings.Repeat(" ", 64<<10)
+	for written := 0; written < MaxSnapshotBytes; written += len(chunk) {
+		if _, err := fmt.Fprint(compressed, chunk); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := compressed.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Encoding", "gzip")
+		_, _ = w.Write(payload.Bytes())
+	}))
+	defer server.Close()
+	client, err := NewClient(server.URL, "secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.http.Timeout = 15 * time.Second
+	if _, err := client.FetchSnapshot(t.Context()); !errors.Is(err, ErrSnapshotTooLarge) {
+		t.Fatalf("oversize snapshot: %v", err)
 	}
 }

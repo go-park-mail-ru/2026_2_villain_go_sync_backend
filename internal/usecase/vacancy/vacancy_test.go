@@ -9,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 	vacancyUsecase "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 	"go.uber.org/mock/gomock"
@@ -20,7 +21,7 @@ func setupUsecase(t *testing.T) (*vacancyUsecase.VacancyUsecase, *vacancy.MockVa
 	mockVacancyRepo := vacancy.NewMockVacancyRepository(ctrl)
 	mockUserRepo := vacancy.NewMockUserRepository(ctrl)
 
-	uc := vacancyUsecase.NewVacancyUsecase(mockVacancyRepo, mockUserRepo)
+	uc := vacancyUsecase.NewVacancyUsecase(mockVacancyRepo, mockUserRepo, runtimeconfig.New(nil))
 	return uc, mockVacancyRepo, mockUserRepo
 }
 

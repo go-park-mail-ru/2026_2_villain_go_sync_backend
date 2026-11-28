@@ -4,22 +4,21 @@ import (
 	"context"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 type ConfigUsecase struct {
-	store *repository.Store
+	store Store
 	users ProductUsers
 }
 
 func (u ConfigUsecase) Get(ctx context.Context, actorID, keyID int64) (models.Config, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Config, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Config, error) {
 		return tx.Configs.Get(ctx, keyID)
 	})
 }
 
 func (u ConfigUsecase) Create(ctx context.Context, actorID int64, input models.Config) (models.Config, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Config, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Config, error) {
 		if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
 			return models.Config{}, err
 		}
@@ -32,7 +31,7 @@ func (u ConfigUsecase) Create(ctx context.Context, actorID int64, input models.C
 }
 
 func (u ConfigUsecase) Update(ctx context.Context, actorID int64, input models.Config) (models.Config, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Config, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Config, error) {
 		before, err := tx.Configs.Get(ctx, input.ID)
 		if err != nil {
 			return models.Config{}, err
@@ -60,7 +59,7 @@ func (u ConfigUsecase) Update(ctx context.Context, actorID int64, input models.C
 }
 
 func (u ConfigUsecase) Delete(ctx context.Context, actorID, keyID int64) error {
-	return protectedAction(ctx, u.store, actorID, false, func(tx *repository.Store) error {
+	return protectedAction(ctx, u.store, actorID, adminAccess, func(tx Repositories) error {
 		before, err := tx.Configs.Get(ctx, keyID)
 		if err != nil {
 			return err

@@ -2,13 +2,11 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strconv"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 type Usecases struct {
@@ -22,7 +20,7 @@ type Usecases struct {
 	Snapshots SnapshotUsecase
 }
 
-func New(store *repository.Store, users ProductUsers) Usecases {
+func New(store Store, users ProductUsers) Usecases {
 	return Usecases{
 		Scopes: ScopeUsecase{store}, Configs: ConfigUsecase{store: store, users: users}, Flags: FeatureFlagUsecase{store: store, users: users},
 		Overrides: OverrideUsecase{store: store, users: users}, Keys: KeyUsecase{store}, Admins: AdminUsecase{store: store, users: users},
@@ -43,13 +41,26 @@ func checkAccess(admin models.Admin, err error, ownerOnly bool) (models.Admin, e
 	return models.Admin{}, apperrors.ErrForbidden
 }
 
-func protected[T any](ctx context.Context, store *repository.Store, actorID int64, ownerOnly bool,
-	fn func(*repository.Store) (T, error),
+type accessMode uint8
+
+const (
+	adminAccess accessMode = iota
+	ownerAccess
+	changeAdmins
+)
+
+func protected[T any](ctx context.Context, store Store, actorID int64, access accessMode,
+	fn func(Repositories) (T, error),
 ) (T, error) {
 	var result T
-	err := store.WithinTx(ctx, func(tx *repository.Store) error {
+	err := store.WithinTransaction(ctx, func(tx Repositories) error {
+		if access == changeAdmins {
+			if err := tx.Admins.LockChanges(ctx); err != nil {
+				return err
+			}
+		}
 		admin, err := tx.Admins.GetForShare(ctx, actorID)
-		if _, err := checkAccess(admin, err, ownerOnly); err != nil {
+		if _, err := checkAccess(admin, err, access != adminAccess); err != nil {
 			return err
 		}
 		result, err = fn(tx)
@@ -62,10 +73,10 @@ func protected[T any](ctx context.Context, store *repository.Store, actorID int6
 	return result, nil
 }
 
-func protectedAction(ctx context.Context, store *repository.Store, actorID int64, ownerOnly bool,
-	fn func(*repository.Store) error,
+func protectedAction(ctx context.Context, store Store, actorID int64, access accessMode,
+	fn func(Repositories) error,
 ) error {
-	_, err := protected(ctx, store, actorID, ownerOnly, func(tx *repository.Store) (struct{}, error) {
+	_, err := protected(ctx, store, actorID, access, func(tx Repositories) (struct{}, error) {
 		return struct{}{}, fn(tx)
 	})
 	return err
@@ -90,7 +101,7 @@ func adminResource(userID int64) resource {
 	return resource{kind: models.ResourceTypeAdmin, id: userID, name: strconv.FormatInt(userID, 10)}
 }
 
-func recordChange(ctx context.Context, tx *repository.Store, actorID int64, ref resource, before, after any) error {
+func recordChange(ctx context.Context, tx Repositories, actorID int64, ref resource, before, after any) error {
 	change := models.ChangeHistory{
 		ActorUserID: actorID, ResourceType: ref.kind, ResourceID: ref.id, ScopeName: ref.scope, ResourceName: ref.name,
 		Action: models.ActionUpdate,
@@ -99,7 +110,7 @@ func recordChange(ctx context.Context, tx *repository.Store, actorID int64, ref 
 	if before == nil {
 		change.Action = models.ActionCreate
 	} else {
-		change.OldValue, err = json.Marshal(before)
+		change.OldValue, err = marshalHistory(before)
 		if err != nil {
 			return err
 		}
@@ -107,7 +118,7 @@ func recordChange(ctx context.Context, tx *repository.Store, actorID int64, ref 
 	if after == nil {
 		change.Action = models.ActionDelete
 	} else {
-		change.NewValue, err = json.Marshal(after)
+		change.NewValue, err = marshalHistory(after)
 		if err != nil {
 			return err
 		}

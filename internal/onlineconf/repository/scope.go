@@ -35,7 +35,7 @@ func (r ScopeRepository) GetByName(ctx context.Context, name string) (models.Sco
 	return result, classifyError(ctx, err)
 }
 
-func (r ScopeRepository) List(ctx context.Context, page PageRequest) (Page[models.Scope], error) {
+func (r ScopeRepository) List(ctx context.Context, page models.PageRequest) (models.Page[models.Scope], error) {
 	return readPage(ctx, r.db, page, `SELECT `+scopeColumns+` FROM public.scope
 		WHERE ($1::BIGINT IS NULL OR scope_id > $1) ORDER BY scope_id LIMIT $2`, scanScope,
 		func(scope models.Scope) int64 { return scope.ID })

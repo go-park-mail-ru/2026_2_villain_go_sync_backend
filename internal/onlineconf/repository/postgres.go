@@ -56,7 +56,7 @@ func newStore(conn connection) *Store {
 		Admins:    AdminRepository{db: conn.db},
 		History:   HistoryRepository{db: conn.db},
 		Keys:      KeyRepository{db: conn.db},
-		Snapshots: SnapshotRepository{db: conn.db},
+		Snapshots: SnapshotRepository{conn: conn},
 		conn:      conn,
 	}
 }
@@ -74,16 +74,11 @@ func (c connection) withinTx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return classifyError(ctx, pgx.BeginTxFunc(ctx, c.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, fn))
 }
 
-var (
-	ErrRetryable   = errors.New("retryable database transaction")
-	ErrUnavailable = errors.New("database unavailable")
-)
-
 func classifyError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	for _, known := range []error{apperrors.ErrNotFound, apperrors.ErrConflict, apperrors.ErrInvalidInput, ErrRetryable, ErrUnavailable} {
+	for _, known := range []error{apperrors.ErrNotFound, apperrors.ErrConflict, apperrors.ErrInvalidInput, apperrors.ErrRetryable, apperrors.ErrDependencyUnavailable} {
 		if errors.Is(err, known) {
 			return err
 		}
@@ -94,17 +89,17 @@ func classifyError(ctx context.Context, err error) error {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
 		if strings.HasPrefix(pgErr.Code, "08") {
-			return fmt.Errorf("%w: %w", ErrUnavailable, err)
+			return fmt.Errorf("%w: %w", apperrors.ErrDependencyUnavailable, err)
 		}
 		switch pgErr.Code {
 		case "57P01", "57P02", "57P03", "53300":
-			return fmt.Errorf("%w: %w", ErrUnavailable, err)
+			return fmt.Errorf("%w: %w", apperrors.ErrDependencyUnavailable, err)
 		case "23505", "23503", "23P01":
 			return fmt.Errorf("%w: %w", apperrors.ErrConflict, err)
 		case "23502", "23514", "22001", "22003", "22P02", "22P05":
 			return fmt.Errorf("%w: %w", apperrors.ErrInvalidInput, err)
 		case "40001", "40P01":
-			return fmt.Errorf("%w: %w", ErrRetryable, err)
+			return fmt.Errorf("%w: %w", apperrors.ErrRetryable, err)
 		case "57014":
 			if ctx.Err() != nil {
 				return fmt.Errorf("%w: %w", ctx.Err(), err)
@@ -115,7 +110,7 @@ func classifyError(ctx context.Context, err error) error {
 	var networkErr net.Error
 	if pgconn.Timeout(err) || errors.As(err, &connectErr) || errors.As(err, &networkErr) ||
 		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, context.DeadlineExceeded) {
-		return fmt.Errorf("%w: %w", ErrUnavailable, err)
+		return fmt.Errorf("%w: %w", apperrors.ErrDependencyUnavailable, err)
 	}
 	return err
 }

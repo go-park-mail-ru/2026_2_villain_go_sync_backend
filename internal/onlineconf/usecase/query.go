@@ -4,45 +4,44 @@ import (
 	"context"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 type KeyUsecase struct {
-	store *repository.Store
+	store Store
 }
 
-func (u KeyUsecase) Get(ctx context.Context, actorID, keyID int64) (repository.KeyDetails, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.KeyDetails, error) {
+func (u KeyUsecase) Get(ctx context.Context, actorID, keyID int64) (models.KeyDetails, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.KeyDetails, error) {
 		return tx.Keys.GetDetails(ctx, keyID)
 	})
 }
 
-func (u KeyUsecase) List(ctx context.Context, actorID int64, filter repository.KeyFilter) (repository.Page[repository.KeyDetails], error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[repository.KeyDetails], error) {
+func (u KeyUsecase) List(ctx context.Context, actorID int64, filter models.KeyFilter) (models.Page[models.KeyDetails], error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.KeyDetails], error) {
 		return tx.Keys.List(ctx, filter)
 	})
 }
 
 type HistoryUsecase struct {
-	store *repository.Store
+	store Store
 }
 
 func (u HistoryUsecase) Get(ctx context.Context, actorID, changeID int64) (models.ChangeHistory, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.ChangeHistory, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.ChangeHistory, error) {
 		return tx.History.Get(ctx, changeID)
 	})
 }
 
-func (u HistoryUsecase) List(ctx context.Context, actorID int64, filter repository.HistoryFilter) (repository.Page[models.ChangeHistory], error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[models.ChangeHistory], error) {
+func (u HistoryUsecase) List(ctx context.Context, actorID int64, filter models.HistoryFilter) (models.Page[models.ChangeHistory], error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.ChangeHistory], error) {
 		return tx.History.List(ctx, filter)
 	})
 }
 
 type SnapshotUsecase struct {
-	store *repository.Store
+	store Store
 }
 
-func (u SnapshotUsecase) Get(ctx context.Context) (repository.Snapshot, error) {
-	return u.store.Snapshots.Get(ctx)
+func (u SnapshotUsecase) Get(ctx context.Context) (models.Snapshot, error) {
+	return u.store.Repositories().Snapshots.Get(ctx)
 }

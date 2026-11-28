@@ -12,7 +12,6 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	productmodels "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/delivery"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/usecase"
 )
 
@@ -82,7 +81,7 @@ func request(t *testing.T, handler http.Handler, method, path, body, token, csrf
 
 func TestJWTAndCSRF(t *testing.T) {
 	tokens := auth.NewTokenManager([]byte(testJWT), 0, 0)
-	h := delivery.New(usecase.Usecases{}, tokens, testSecret, func(context.Context) error { return nil })
+	h := newHTTPHandler(usecase.Usecases{}, tokens, testSecret, func(context.Context) error { return nil })
 	access := tokenFor(t, tokens, 1, productmodels.RoleSeeker, auth.TokenTypeAccess)
 	refresh := tokenFor(t, tokens, 1, productmodels.RoleSeeker, auth.TokenTypeRefresh)
 	expired := tokenFor(t, auth.NewTokenManager([]byte(testJWT), time.Nanosecond, 0), 1, productmodels.RoleSeeker, auth.TokenTypeAccess)
@@ -101,7 +100,7 @@ func TestJWTAndCSRF(t *testing.T) {
 func TestRequestValidationAndHealth(t *testing.T) {
 	tokens := auth.NewTokenManager([]byte(testJWT), 0, 0)
 	ok := false
-	h := delivery.New(usecase.Usecases{}, tokens, testSecret, func(context.Context) error {
+	h := newHTTPHandler(usecase.Usecases{}, tokens, testSecret, func(context.Context) error {
 		if !ok {
 			return errors.New("private connection details")
 		}
@@ -127,4 +126,34 @@ func TestRequestValidationAndHealth(t *testing.T) {
 	request(t, h, "PUT", admin+"/flags/1", `{"scope_id":1,"name":"x","owner_user_id":1,"description":null,"enabled":false}`, access, csrfToken, "", 422)
 	request(t, h, "PUT", admin+"/flags/1/enabled", `{"enabled":null}`, access, csrfToken, "", 422)
 	request(t, h, "PUT", admin+"/flags/1/rollout", `{"rollout_percentage":101}`, access, csrfToken, "", 422)
+}
+
+func TestReplacementValidationContract(t *testing.T) {
+	tokens := auth.NewTokenManager([]byte(testJWT), 0, 0)
+	h := newHTTPHandler(usecase.Usecases{}, tokens, testSecret, func(context.Context) error { return nil })
+	access := tokenFor(t, tokens, 1, productmodels.RoleEmployer, auth.TokenTypeAccess)
+	for _, tc := range []struct {
+		path string
+		body string
+		code int
+	}{
+		{"/configs/1", `{"scope_id":1,"name":"x","owner_user_id":1,"description":null}`, 422},
+		{"/flags/1", `{"scope_id":1,"name":"x","owner_user_id":1,"description":null,"enabled":false}`, 422},
+		{"/flags/1/rollout", `{"rollout_percentage":0,"actor_user_id":1}`, 400},
+		{"/flags/1/enabled", `{"enabled":null}`, 422},
+	} {
+		request(t, h, "PUT", admin+tc.path, tc.body, access, csrfToken, "", tc.code)
+	}
+}
+
+func TestMalformedAndRepeatedQueryFilters(t *testing.T) {
+	tokens := auth.NewTokenManager([]byte(testJWT), 0, 0)
+	h := newHTTPHandler(usecase.Usecases{}, tokens, testSecret, func(context.Context) error { return nil })
+	access := tokenFor(t, tokens, 1, productmodels.RoleEmployer, auth.TokenTypeAccess)
+	for _, path := range []string{
+		"/keys?limit=1&limit=2", "/keys?search=a&search=b", "/keys?search=%zz",
+		"/history?resource_id=1&resource_id=2", "/flags/1/evaluate?user_id=1&user_id=2",
+	} {
+		request(t, h, "GET", admin+path, "", access, "", "", 400)
+	}
 }

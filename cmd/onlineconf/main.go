@@ -18,6 +18,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	startupTimeout  = 5 * time.Second
+	headerTimeout   = 5 * time.Second
+	readTimeout     = 15 * time.Second
+	writeTimeout    = 20 * time.Second
+	idleTimeout     = 60 * time.Second
+	shutdownTimeout = 15 * time.Second
+	runtimePoolSize = 10
+)
+
 func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -33,7 +43,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	startup, cancel := context.WithTimeout(ctx, 5*time.Second)
+	startup, cancel := context.WithTimeout(ctx, startupTimeout)
 	defer cancel()
 	pool, err := openRuntimePool(startup, cfg.databaseURL)
 	if err != nil {
@@ -53,14 +63,14 @@ func run(ctx context.Context) error {
 		}
 		return users.Ping(ctx)
 	}
-	handler := delivery.New(usecase.New(repository.NewStore(pool), users),
+	handler := newHTTPHandler(usecase.New(repository.NewStore(pool), users),
 		auth.NewTokenManager([]byte(cfg.jwtSecret), 0, 0), cfg.snapshotSecret, health)
 	server := &http.Server{
 		Addr: cfg.addr, Handler: handler,
-		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      20 * time.Second,
-		IdleTimeout:       60 * time.Second,
+		ReadHeaderTimeout: headerTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
 	}
 	stopped := make(chan error, 1)
 	go func() {
@@ -74,7 +84,7 @@ func run(ctx context.Context) error {
 			return err
 		}
 	case <-ctx.Done():
-		shutdown, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		shutdown, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 		defer cancel()
 		if err := server.Shutdown(shutdown); err != nil {
 			return errors.Join(err, server.Close())
@@ -91,7 +101,7 @@ func openRuntimePool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, errors.New("invalid OnlineConf connection URL")
 	}
-	cfg.MaxConns = 10
+	cfg.MaxConns = runtimePoolSize
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, errors.New("cannot configure OnlineConf pool")
@@ -113,4 +123,8 @@ func openRuntimePool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 func checkRuntimeSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(ctx, "SELECT 1 FROM public.scope LIMIT 1")
 	return err
+}
+
+func newHTTPHandler(u usecase.Usecases, tokens *auth.TokenManager, secret string, health func(context.Context) error) http.Handler {
+	return delivery.New(delivery.Services{Scopes: u.Scopes, Configs: u.Configs, Flags: u.Flags, Overrides: u.Overrides, Admins: u.Admins, History: u.History, Keys: u.Keys, Snapshots: u.Snapshots}, tokens, secret, health)
 }

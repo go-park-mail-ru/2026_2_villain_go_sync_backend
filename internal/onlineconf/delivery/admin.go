@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/httputil"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 func (h handler) registerAdmin(add func(method, path string, status int, run endpoint)) {
@@ -55,7 +55,7 @@ func (h handler) editScope(r *http.Request, actor int64) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[scopeInput](r)
+	input, err := httputil.DecodeJSON[scopeInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -72,14 +72,17 @@ func (h handler) editScope(r *http.Request, actor int64) (any, error) {
 }
 
 func (h handler) listKeys(r *http.Request, actor int64) (any, error) {
-	page, err := pageRequest(r)
+	query, err := httputil.ScalarQuery(r, "cursor", "limit", "search", "scope_id", "type")
 	if err != nil {
 		return nil, err
 	}
-	query := r.URL.Query()
-	filter := repository.KeyFilter{Search: query.Get("search"), Page: page}
+	page, err := parsePage(query)
+	if err != nil {
+		return nil, err
+	}
+	filter := models.KeyFilter{Search: query.Get("search"), Page: page}
 	if query.Has("scope_id") {
-		id, err := positiveID(query.Get("scope_id"), "scope_id")
+		id, err := httputil.PositiveID(query.Get("scope_id"), "scope_id")
 		if err != nil {
 			return nil, err
 		}
@@ -88,7 +91,7 @@ func (h handler) listKeys(r *http.Request, actor int64) (any, error) {
 	if query.Has("type") {
 		kind := models.KeyType(query.Get("type"))
 		if kind != models.KeyTypeConfig && kind != models.KeyTypeFeatureFlag {
-			return nil, badRequest("invalid type")
+			return nil, httputil.BadRequest("invalid type")
 		}
 		filter.Type = &kind
 	}
@@ -101,7 +104,7 @@ func (h handler) editConfig(r *http.Request, actor int64) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[configInput](r)
+	input, err := httputil.DecodeJSON[configInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +129,7 @@ func (h handler) editFlag(r *http.Request, actor int64) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[flagInput](r)
+	input, err := httputil.DecodeJSON[flagInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -152,11 +155,11 @@ func (h handler) editFlag(r *http.Request, actor int64) (any, error) {
 }
 
 func (h handler) setEnabled(r *http.Request, actor int64) (any, error) {
-	id, err := pathID(r, "id")
+	id, err := httputil.PathID(r, "id")
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[enabledInput](r)
+	input, err := httputil.DecodeJSON[enabledInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -169,11 +172,11 @@ func (h handler) setEnabled(r *http.Request, actor int64) (any, error) {
 }
 
 func (h handler) setRollout(r *http.Request, actor int64) (any, error) {
-	id, err := pathID(r, "id")
+	id, err := httputil.PathID(r, "id")
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[rolloutInput](r)
+	input, err := httputil.DecodeJSON[rolloutInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -186,11 +189,11 @@ func (h handler) setRollout(r *http.Request, actor int64) (any, error) {
 }
 
 func overrideIDs(r *http.Request) (int64, int64, error) {
-	id, err := pathID(r, "id")
+	id, err := httputil.PathID(r, "id")
 	if err != nil {
 		return 0, 0, err
 	}
-	userID, err := pathID(r, "user_id")
+	userID, err := httputil.PathID(r, "user_id")
 	return id, userID, err
 }
 
@@ -199,7 +202,7 @@ func (h handler) setOverride(r *http.Request, actor int64) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[enabledInput](r)
+	input, err := httputil.DecodeJSON[enabledInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -222,26 +225,34 @@ func (h handler) deleteOverride(r *http.Request, actor int64) (any, error) {
 }
 
 func (h handler) evaluate(r *http.Request, actor int64) (any, error) {
-	id, err := pathID(r, "id")
+	id, err := httputil.PathID(r, "id")
 	if err != nil {
 		return nil, err
 	}
-	userID, err := positiveID(r.URL.Query().Get("user_id"), "user_id")
+	query, err := httputil.ScalarQuery(r, "user_id")
 	if err != nil {
 		return nil, err
 	}
-	return h.usecases.Flags.Evaluate(r.Context(), actor, id, userID)
+	userID, err := httputil.PositiveID(query.Get("user_id"), "user_id")
+	if err != nil {
+		return nil, err
+	}
+	result, err := h.usecases.Flags.Evaluate(r.Context(), actor, id, userID)
+	return evaluationDTO(result), err
 }
 
 func (h handler) listHistory(r *http.Request, actor int64) (any, error) {
-	page, err := pageRequest(r)
+	query, err := httputil.ScalarQuery(r, "cursor", "limit", "resource_type", "resource_id", "scope_name")
 	if err != nil {
 		return nil, err
 	}
-	query := r.URL.Query()
-	filter := repository.HistoryFilter{Page: page}
+	page, err := parsePage(query)
+	if err != nil {
+		return nil, err
+	}
+	filter := models.HistoryFilter{Page: page}
 	if query.Has("resource_id") {
-		id, err := positiveID(query.Get("resource_id"), "resource_id")
+		id, err := httputil.PositiveID(query.Get("resource_id"), "resource_id")
 		if err != nil {
 			return nil, err
 		}
@@ -250,7 +261,7 @@ func (h handler) listHistory(r *http.Request, actor int64) (any, error) {
 	if query.Has("scope_name") {
 		scope := query.Get("scope_name")
 		if scope == "" {
-			return nil, badRequest("scope_name is empty")
+			return nil, httputil.BadRequest("scope_name is empty")
 		}
 		filter.ScopeName = &scope
 	}
@@ -261,7 +272,7 @@ func (h handler) listHistory(r *http.Request, actor int64) (any, error) {
 			models.ResourceTypeFeatureFlagOverride, models.ResourceTypeAdmin:
 			filter.ResourceType = &kind
 		default:
-			return nil, badRequest("invalid resource_type")
+			return nil, httputil.BadRequest("invalid resource_type")
 		}
 	}
 	history, err := h.usecases.History.List(r.Context(), actor, filter)
@@ -269,7 +280,7 @@ func (h handler) listHistory(r *http.Request, actor int64) (any, error) {
 }
 
 func (h handler) grantAdmin(r *http.Request, actor int64) (any, error) {
-	input, err := decode[grantInput](r)
+	input, err := httputil.DecodeJSON[grantInput](r)
 	if err != nil {
 		return nil, err
 	}
@@ -278,11 +289,11 @@ func (h handler) grantAdmin(r *http.Request, actor int64) (any, error) {
 }
 
 func (h handler) changeRole(r *http.Request, actor int64) (any, error) {
-	userID, err := pathID(r, "user_id")
+	userID, err := httputil.PathID(r, "user_id")
 	if err != nil {
 		return nil, err
 	}
-	input, err := decode[roleInput](r)
+	input, err := httputil.DecodeJSON[roleInput](r)
 	if err != nil {
 		return nil, err
 	}

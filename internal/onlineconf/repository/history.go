@@ -12,13 +12,6 @@ type HistoryRepository struct {
 	db database
 }
 
-type HistoryFilter struct {
-	ResourceType *models.ResourceType
-	ResourceID   *int64
-	ScopeName    *string
-	Page         PageRequest
-}
-
 const historyColumns = "change_id, actor_user_id, resource_type, resource_id, scope_name, resource_name, action, old_value, new_value, created_at"
 
 func scanHistory(row rowScanner) (models.ChangeHistory, error) {
@@ -46,7 +39,7 @@ func (r HistoryRepository) Get(ctx context.Context, changeID int64) (models.Chan
 	return change, classifyError(ctx, err)
 }
 
-func (r HistoryRepository) List(ctx context.Context, filter HistoryFilter) (Page[models.ChangeHistory], error) {
+func (r HistoryRepository) List(ctx context.Context, filter models.HistoryFilter) (models.Page[models.ChangeHistory], error) {
 	return readPage(ctx, r.db, filter.Page, `SELECT `+historyColumns+` FROM public.change_history
 		WHERE ($1::BIGINT IS NULL OR change_id < $1)
 		  AND ($3::TEXT IS NULL OR resource_type = $3)

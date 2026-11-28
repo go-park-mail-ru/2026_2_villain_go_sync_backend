@@ -9,7 +9,6 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 )
 
 //go:generate mockgen -source=vacancy.go -destination=mock_repository.go -package=vacancy
@@ -37,15 +36,11 @@ type VacancyUsecase struct {
 	settings  RuntimeSettings
 }
 
-func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository, settings ...RuntimeSettings) *VacancyUsecase {
-	var runtime RuntimeSettings = runtimeconfig.Settings{}
-	if len(settings) > 0 && settings[0] != nil {
-		runtime = settings[0]
-	}
+func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository, settings RuntimeSettings) *VacancyUsecase {
 	return &VacancyUsecase{
 		vacancies: vacancies,
 		users:     users,
-		settings:  runtime,
+		settings:  settings,
 	}
 }
 

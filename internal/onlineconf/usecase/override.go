@@ -6,41 +6,40 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 )
 
 type OverrideUsecase struct {
-	store *repository.Store
+	store Store
 	users ProductUsers
 }
 
 func (u OverrideUsecase) Get(ctx context.Context, actorID, keyID, userID int64) (models.FeatureFlagOverride, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.FeatureFlagOverride, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlagOverride, error) {
 		return tx.Overrides.Get(ctx, keyID, userID)
 	})
 }
 
 func (u OverrideUsecase) ListByFlag(ctx context.Context, actorID, keyID int64,
-	page repository.PageRequest,
-) (repository.Page[models.FeatureFlagOverride], error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[models.FeatureFlagOverride], error) {
+	page models.PageRequest,
+) (models.Page[models.FeatureFlagOverride], error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.FeatureFlagOverride], error) {
 		if _, err := tx.Flags.Get(ctx, keyID); err != nil {
-			return repository.Page[models.FeatureFlagOverride]{}, err
+			return models.Page[models.FeatureFlagOverride]{}, err
 		}
 		return tx.Overrides.ListByFlag(ctx, keyID, page)
 	})
 }
 
 func (u OverrideUsecase) ListByUser(ctx context.Context, actorID, userID int64,
-	page repository.PageRequest,
-) (repository.Page[models.FeatureFlagOverride], error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[models.FeatureFlagOverride], error) {
+	page models.PageRequest,
+) (models.Page[models.FeatureFlagOverride], error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.FeatureFlagOverride], error) {
 		return tx.Overrides.ListByUser(ctx, userID, page)
 	})
 }
 
 func (u OverrideUsecase) Upsert(ctx context.Context, actorID int64, input models.FeatureFlagOverride) (models.FeatureFlagOverride, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.FeatureFlagOverride, error) {
+	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlagOverride, error) {
 		flag, err := tx.Flags.Get(ctx, input.KeyID)
 		if err != nil {
 			return models.FeatureFlagOverride{}, err
@@ -61,6 +60,11 @@ func (u OverrideUsecase) Upsert(ctx context.Context, actorID int64, input models
 				return models.FeatureFlagOverride{}, err
 			}
 		}
+		// Lock the parent before the trigger can acquire it from a child update.
+		flag, err = tx.Flags.GetForUpdate(ctx, input.KeyID)
+		if err != nil {
+			return models.FeatureFlagOverride{}, err
+		}
 		override, err := tx.Overrides.Upsert(ctx, input)
 		if err != nil {
 			return models.FeatureFlagOverride{}, err
@@ -70,8 +74,8 @@ func (u OverrideUsecase) Upsert(ctx context.Context, actorID int64, input models
 }
 
 func (u OverrideUsecase) Delete(ctx context.Context, actorID, keyID, userID int64) error {
-	return protectedAction(ctx, u.store, actorID, false, func(tx *repository.Store) error {
-		flag, err := tx.Flags.Get(ctx, keyID)
+	return protectedAction(ctx, u.store, actorID, adminAccess, func(tx Repositories) error {
+		flag, err := tx.Flags.GetForUpdate(ctx, keyID)
 		if err != nil {
 			return err
 		}

@@ -11,8 +11,8 @@ const (
 	DefaultMaxCategories       = 5
 	DefaultVacancyCreation     = true
 	DefaultApplicationsEnabled = true
-	minMaxCategories           = 1
-	maxMaxCategories           = 100
+	minCategoryLimit           = 1
+	maxCategoryLimit           = 100
 )
 
 type Source interface {
@@ -41,7 +41,7 @@ func (s Settings) view() onlineconf.Snapshot {
 
 func vacancyMaxCategories(view onlineconf.Snapshot) int {
 	limit := view.Int(VacancyScope, VacancyMaxCategoriesKey, DefaultMaxCategories)
-	if limit < minMaxCategories || limit > maxMaxCategories {
+	if limit < minCategoryLimit || limit > maxCategoryLimit {
 		return DefaultMaxCategories
 	}
 	return limit

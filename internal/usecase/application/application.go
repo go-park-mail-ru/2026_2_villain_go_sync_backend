@@ -8,7 +8,6 @@ import (
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/application"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
-	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 )
 
 //go:generate mockgen -source=application.go -destination=mock_repository.go -package=application
@@ -40,18 +39,14 @@ type ApplicationUsecase struct {
 }
 
 func NewApplicationUsecase(applications ApplicationRepository, resumes ResumeRepository, vacancies VacancyRepository,
-	users UserRepository, settings ...RuntimeSettings,
+	users UserRepository, settings RuntimeSettings,
 ) *ApplicationUsecase {
-	var runtime RuntimeSettings = runtimeconfig.Settings{}
-	if len(settings) > 0 && settings[0] != nil {
-		runtime = settings[0]
-	}
 	return &ApplicationUsecase{
 		applications: applications,
 		resumes:      resumes,
 		vacancies:    vacancies,
 		users:        users,
-		settings:     runtime,
+		settings:     settings,
 	}
 }
 
