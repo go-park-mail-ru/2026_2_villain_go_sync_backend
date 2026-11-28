@@ -9,6 +9,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
 	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 )
 
 //go:generate mockgen -source=vacancy.go -destination=mock_repository.go -package=vacancy
@@ -33,12 +34,18 @@ type UserRepository interface {
 type VacancyUsecase struct {
 	vacancies VacancyRepository
 	users     UserRepository
+	settings  RuntimeSettings
 }
 
-func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository) *VacancyUsecase {
+func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository, settings ...RuntimeSettings) *VacancyUsecase {
+	var runtime RuntimeSettings = runtimeconfig.Settings{}
+	if len(settings) > 0 && settings[0] != nil {
+		runtime = settings[0]
+	}
 	return &VacancyUsecase{
 		vacancies: vacancies,
 		users:     users,
+		settings:  runtime,
 	}
 }
 
@@ -74,6 +81,11 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		return models.Vacancy{}, err
 	}
 
+	enabled, maxCategories := u.settings.VacancyRules(input.EmployerID)
+	if !enabled {
+		return models.Vacancy{}, apperrors.ErrFeatureDisabled
+	}
+
 	if err := validateVacancyText(input.Title, input.Description); err != nil {
 		return models.Vacancy{}, err
 	}
@@ -94,7 +106,7 @@ func (u *VacancyUsecase) Create(ctx context.Context, input dto.CreateVacancyInpu
 		return models.Vacancy{}, fmt.Errorf("%w: invalid currency", apperrors.ErrInvalidInput)
 	}
 
-	if err := validateCategories(input.CategoryIDs); err != nil {
+	if err := validateCategories(input.CategoryIDs, maxCategories); err != nil {
 		return models.Vacancy{}, err
 	}
 
@@ -243,7 +255,7 @@ func (u *VacancyUsecase) Update(ctx context.Context, input dto.UpdateVacancyInpu
 	}
 
 	if input.CategoryIDs != nil {
-		if err := validateCategories(*input.CategoryIDs); err != nil {
+		if err := validateCategories(*input.CategoryIDs, u.settings.VacancyMaxCategories()); err != nil {
 			return models.Vacancy{}, err
 		}
 	}

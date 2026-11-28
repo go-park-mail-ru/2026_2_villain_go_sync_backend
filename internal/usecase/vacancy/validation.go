@@ -64,8 +64,8 @@ func validateVacancyText(title, description string) error {
 	return nil
 }
 
-func validateCategories(categoryIDs []int64) error {
-	if len(categoryIDs) > 5 {
+func validateCategories(categoryIDs []int64, limit int) error {
+	if len(categoryIDs) > limit {
 		return fmt.Errorf("%w: too many categories", apperrors.ErrInvalidInput)
 	}
 

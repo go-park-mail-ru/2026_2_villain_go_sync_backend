@@ -13,27 +13,30 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/app"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/config"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery"
 	healthDelivery "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/delivery/health"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/middleware"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/s3"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/pkg/onlineconf"
 )
 
-func New() http.Handler {
+func New(ctx context.Context) http.Handler {
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("load config: %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	startup, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	pool, err := repository.NewPostgresPool(ctx, cfg.DSN())
+	pool, err := repository.NewPostgresPool(startup, cfg.DSN())
 	if err != nil {
 		log.Fatalf("connect db: %v", err)
 	}
 
-	sdkCfg, err := awsconfig.LoadDefaultConfig(ctx, awsconfig.WithRegion(cfg.S3Region), awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")))
+	sdkCfg, err := awsconfig.LoadDefaultConfig(startup, awsconfig.WithRegion(cfg.S3Region), awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(cfg.S3AccessKey, cfg.S3SecretKey, "")))
 	if err != nil {
 		log.Fatalf("load config s3 : %v", err)
 	}
@@ -47,84 +50,102 @@ func New() http.Handler {
 
 	tokens := auth.NewTokenManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	appConfig := app.CreateConfig(pool, tokens, s3Adapter)
+	var source runtimeconfig.Source
+	if cfg.OnlineConfURL != "" {
+		client, err := onlineconf.NewClient(cfg.OnlineConfURL, cfg.OnlineConfSnapshotSecret)
+		if err != nil {
+			log.Fatalf("configure OnlineConf: %v", err)
+		}
+		source = onlineconf.StartCache(ctx, client)
+	}
+	appConfig := app.CreateConfig(pool, tokens, s3Adapter, runtimeconfig.New(source))
+	return routes(appConfig.Handlers, tokens)
+}
 
+func routes(handlers *delivery.Config, tokens *auth.TokenManager) http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/health", healthDelivery.Health)
 
-	mux.HandleFunc("POST /api/register", appConfig.Handlers.Auth.Register)
-	mux.HandleFunc("POST /api/login", appConfig.Handlers.Auth.Login)
-	mux.HandleFunc("POST /api/refresh", appConfig.Handlers.Auth.Refresh)
-	mux.HandleFunc("POST /api/logout", appConfig.Handlers.Auth.Logout)
+	mux.HandleFunc("POST /api/register", handlers.Auth.Register)
+	mux.HandleFunc("POST /api/login", handlers.Auth.Login)
+	mux.HandleFunc("POST /api/refresh", handlers.Auth.Refresh)
+	mux.HandleFunc("POST /api/logout", handlers.Auth.Logout)
 
-	mux.Handle("GET /api/me", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Auth.Me)))
+	mux.Handle("GET /api/me", middleware.Auth(tokens, http.HandlerFunc(handlers.Auth.Me)))
 
-	mux.HandleFunc("GET /api/vacancies", appConfig.Handlers.Vacancy.ListVacancies)
-	mux.HandleFunc("GET /api/vacancies/{id}", appConfig.Handlers.Vacancy.GetByID)
-	mux.Handle("POST /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.CreateVacancy)))
-	mux.Handle("GET /api/employer/vacancies", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListVacanciesByEmployer)))
-	mux.Handle("PATCH /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.UpdateVacancy)))
-	mux.Handle("DELETE /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.Delete)))
-	mux.Handle("GET /api/vacancies/{id}/applicants", middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListApplicants)))
-	mux.HandleFunc("GET /api/vacancy-categories", appConfig.Handlers.Vacancy.ListCategories)
+	runtimeConfig := middleware.Auth(tokens, http.HandlerFunc(handlers.RuntimeConfig.Get))
+	mux.HandleFunc("GET /api/runtime-config", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.Header().Add("Vary", "Cookie")
+		runtimeConfig.ServeHTTP(w, r)
+	})
+
+	mux.HandleFunc("GET /api/vacancies", handlers.Vacancy.ListVacancies)
+	mux.HandleFunc("GET /api/vacancies/{id}", handlers.Vacancy.GetByID)
+	mux.Handle("POST /api/vacancies", middleware.Auth(tokens, http.HandlerFunc(handlers.Vacancy.CreateVacancy)))
+	mux.Handle("GET /api/employer/vacancies", middleware.Auth(tokens, http.HandlerFunc(handlers.Vacancy.ListVacanciesByEmployer)))
+	mux.Handle("PATCH /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(handlers.Vacancy.UpdateVacancy)))
+	mux.Handle("DELETE /api/vacancies/{id}", middleware.Auth(tokens, http.HandlerFunc(handlers.Vacancy.Delete)))
+	mux.Handle("GET /api/vacancies/{id}/applicants", middleware.Auth(tokens, http.HandlerFunc(handlers.Vacancy.ListApplicants)))
+	mux.HandleFunc("GET /api/vacancy-categories", handlers.Vacancy.ListCategories)
 
 	mux.Handle("POST /api/resumes",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Create)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Resume.Create)))
 	mux.Handle("PUT /api/resumes/{id}",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Update)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Resume.Update)))
 	mux.Handle("DELETE /api/resumes/{id}",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.Delete)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Resume.Delete)))
 
 	mux.Handle("GET /api/resumes/{id}",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Resume.GetByID)))
-	mux.HandleFunc("GET /api/resumes", appConfig.Handlers.Resume.ListBySeekerID)
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Resume.GetByID)))
+	mux.HandleFunc("GET /api/resumes", handlers.Resume.ListBySeekerID)
 
-	mux.HandleFunc("GET /api/seekers/{id}", appConfig.Handlers.Profile.GetSeekerByID)
-	mux.HandleFunc("GET /api/seekers/{id}/avatar", appConfig.Handlers.Profile.GetSeekerAvatar)
+	mux.HandleFunc("GET /api/seekers/{id}", handlers.Profile.GetSeekerByID)
+	mux.HandleFunc("GET /api/seekers/{id}/avatar", handlers.Profile.GetSeekerAvatar)
 	mux.Handle("POST /api/profile/seeker",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.UpdateSeeker)))
 	mux.Handle("PUT /api/profile/seeker",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateSeeker)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.UpdateSeeker)))
 	mux.Handle(
 		"PUT /api/me/avatar",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UploadSeekerAvatar)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.UploadSeekerAvatar)),
 	)
 	mux.Handle(
 		"DELETE /api/me/avatar",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.DeleteSeekerAvatar)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.DeleteSeekerAvatar)),
 	)
 
-	mux.HandleFunc("GET /api/employers/{id}", appConfig.Handlers.Profile.GetPublicEmployer)
-	mux.HandleFunc("GET /api/employers/{id}/logo", appConfig.Handlers.Profile.GetEmployerLogo)
+	mux.HandleFunc("GET /api/employers/{id}", handlers.Profile.GetPublicEmployer)
+	mux.HandleFunc("GET /api/employers/{id}/logo", handlers.Profile.GetEmployerLogo)
 	mux.Handle("POST /api/profile/employer",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.UpdateEmployer)))
 	mux.Handle("PUT /api/profile/employer",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UpdateEmployer)))
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.UpdateEmployer)))
 	mux.Handle(
 		"PUT /api/me/logo",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.UploadEmployerLogo)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.UploadEmployerLogo)),
 	)
 	mux.Handle(
 		"DELETE /api/me/logo",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Profile.DeleteEmployerLogo)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Profile.DeleteEmployerLogo)),
 	)
 	mux.Handle(
 		"POST /api/vacancies/{id}/applications",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.Create)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Application.Create)),
 	)
 	mux.Handle(
 		"GET /api/employer/applications",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Vacancy.ListEmployerApplicants)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Vacancy.ListEmployerApplicants)),
 	)
 
 	mux.Handle(
 		"PATCH /api/employer/applications/{id}/status",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.UpdateStatus)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Application.UpdateStatus)),
 	)
 	mux.Handle(
 		"GET /api/seeker/applications",
-		middleware.Auth(tokens, http.HandlerFunc(appConfig.Handlers.Application.ListMine)),
+		middleware.Auth(tokens, http.HandlerFunc(handlers.Application.ListMine)),
 	)
 
 	return middleware.RequestID(

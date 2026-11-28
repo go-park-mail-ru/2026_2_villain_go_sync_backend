@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http/httptest"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +18,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/productusers"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/usecase"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/pkg/onlineconf"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -68,6 +71,12 @@ func TestPostgresHTTP(t *testing.T) {
 	rollback := errors.New("rollback HTTP fixtures")
 	err = repository.NewStore(pool).WithinTx(ctx, func(tx *repository.Store) error {
 		h := delivery.New(usecase.New(tx, users), tokens, testSecret, users.Ping)
+		snapshotServer := httptest.NewServer(h)
+		defer snapshotServer.Close()
+		snapshotClient, err := onlineconf.NewClient(snapshotServer.URL, testSecret)
+		if err != nil {
+			t.Fatal(err)
+		}
 		do := func(method, path, body, token string, status int) json.RawMessage {
 			t.Helper()
 			return request(t, h, method, admin+path, body, token, csrfToken, "", status)
@@ -162,13 +171,17 @@ func TestPostgresHTTP(t *testing.T) {
 
 		evaluate := func(wantReason string, wantEnabled, bucket bool) {
 			t.Helper()
-			result := decodeData[struct {
-				Enabled bool   `json:"enabled"`
-				Reason  string `json:"reason"`
-				Bucket  *int   `json:"bucket"`
-			}](t, asAdmin("GET", flagPath+"/evaluate?user_id=3", "", 200))
-			if result.Reason != wantReason || result.Enabled != wantEnabled || (result.Bucket != nil) != bucket {
+			result := decodeData[onlineconf.Evaluation](t, asAdmin("GET", flagPath+"/evaluate?user_id=3", "", 200))
+			if string(result.Reason) != wantReason || result.Enabled != wantEnabled || (result.Bucket != nil) != bucket {
 				t.Fatalf("evaluate result = %+v", result)
+			}
+			snapshot, err := snapshotClient.FetchSnapshot(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			productResult, ok := snapshot.Evaluate("http_renamed", "sample_flag", 3)
+			if !ok || !reflect.DeepEqual(productResult, result) {
+				t.Fatalf("product result = %+v, admin result = %+v", productResult, result)
 			}
 		}
 		asAdmin("GET", flagPath+"/evaluate?user_id=99999", "", 422)

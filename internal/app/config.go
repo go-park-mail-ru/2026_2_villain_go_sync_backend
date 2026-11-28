@@ -6,6 +6,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/repository/s3"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -15,9 +16,9 @@ type Config struct {
 	Handlers     *delivery.Config
 }
 
-func CreateConfig(pool *pgxpool.Pool, tokens *auth.TokenManager, s3Adapter *s3.Adapter) *Config {
+func CreateConfig(pool *pgxpool.Pool, tokens *auth.TokenManager, s3Adapter *s3.Adapter, settings runtimeconfig.Settings) *Config {
 	repos := repository.CreateConfig(pool, s3Adapter)
-	usecases := usecase.CreateConfig(repos, tokens)
+	usecases := usecase.CreateConfig(repos, tokens, settings)
 	handlers := delivery.CreateConfig(usecases)
 
 	return &Config{

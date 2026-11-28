@@ -40,6 +40,8 @@ func WriteAppError(w http.ResponseWriter, err error, msg string) {
 		WriteError(w, http.StatusBadRequest, msg)
 	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrNotOwner):
 		WriteError(w, http.StatusNotFound, msg)
+	case errors.Is(err, apperrors.ErrFeatureDisabled):
+		WriteError(w, http.StatusForbidden, "feature disabled")
 	case errors.Is(err, apperrors.ErrForbidden):
 		WriteError(w, http.StatusForbidden, msg)
 	case errors.Is(err, apperrors.ErrConflict):

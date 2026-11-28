@@ -9,6 +9,7 @@ var (
 	ErrEmailTaken       = errors.New("email already taken")
 	ErrNotFound         = errors.New("entity not found")
 	ErrForbidden        = errors.New("forbidden")
+	ErrFeatureDisabled  = errors.New("feature disabled")
 	ErrNotOwner         = fmt.Errorf("resource ownership: %w", ErrForbidden)
 	ErrNoContent        = errors.New("No content")
 	ErrConflict         = errors.New("conflict")

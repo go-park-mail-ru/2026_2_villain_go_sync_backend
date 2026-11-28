@@ -7,21 +7,23 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/auth"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/profile"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/resume"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/runtimeconfig"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/usecase/vacancy"
 )
 
 type Config struct {
-	Auth        *auth.AuthUsecase
-	Vacancy     *vacancy.VacancyUsecase
-	Resume      *resume.ResumeUsecase
-	Profile     *profile.ProfileUsecase
-	Application *application.ApplicationUsecase
+	Auth          *auth.AuthUsecase
+	Vacancy       *vacancy.VacancyUsecase
+	Resume        *resume.ResumeUsecase
+	Profile       *profile.ProfileUsecase
+	Application   *application.ApplicationUsecase
+	RuntimeConfig runtimeconfig.Settings
 }
 
-func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager) *Config {
+func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager, settings runtimeconfig.Settings) *Config {
 	return &Config{
 		Auth:    auth.NewAuthUsecase(repos.User, tokens),
-		Vacancy: vacancy.NewVacancyUsecase(repos.Vacancy, repos.User),
+		Vacancy: vacancy.NewVacancyUsecase(repos.Vacancy, repos.User, settings),
 		Resume:  resume.NewResumeUsecase(repos.Resume),
 		Profile: profile.NewProfileUsecase(repos.Profile, repos.S3),
 		Application: application.NewApplicationUsecase(
@@ -29,6 +31,8 @@ func CreateConfig(repos *repository.Config, tokens *tokenauth.TokenManager) *Con
 			repos.Resume,
 			repos.Vacancy,
 			repos.User,
+			settings,
 		),
+		RuntimeConfig: settings,
 	}
 }

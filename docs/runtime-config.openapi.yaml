@@ -1,0 +1,91 @@
+openapi: 3.1.0
+info:
+  title: HireNoon Runtime Config
+  version: 1.0.0
+paths:
+  /api/runtime-config:
+    get:
+      operationId: getRuntimeConfig
+      summary: Получить настройки frontend для текущего пользователя
+      description: >
+        ID пользователя берётся из access JWT. Данные обновляются на сервере каждые 15 секунд.
+        При недоступности OnlineConf сервер сохраняет последний успешно полученный снимок.
+        Если снимка или ключа ещё нет, используются значения по умолчанию.
+      security:
+        - AccessCookie: []
+      responses:
+        '200':
+          description: Настройки текущего пользователя.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Vary:
+              $ref: '#/components/headers/VaryCookie'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                additionalProperties: false
+                properties:
+                  data:
+                    $ref: '#/components/schemas/RuntimeConfig'
+        '401':
+          description: Access JWT отсутствует или недействителен.
+          headers:
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+            Vary:
+              $ref: '#/components/headers/VaryCookie'
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [error]
+                additionalProperties: false
+                properties:
+                  error:
+                    type: string
+                    example: unauthorized
+components:
+  securitySchemes:
+    AccessCookie:
+      type: apiKey
+      in: cookie
+      name: access_token
+  headers:
+    CacheControl:
+      schema:
+        type: string
+        const: private, no-store
+    VaryCookie:
+      schema:
+        type: string
+        example: Cookie
+  schemas:
+    RuntimeConfig:
+      type: object
+      required: [configs, flags]
+      additionalProperties: false
+      properties:
+        configs:
+          type: object
+          required: [vacancy.max_categories]
+          additionalProperties: false
+          properties:
+            vacancy.max_categories:
+              type: integer
+              minimum: 1
+              maximum: 100
+              default: 5
+        flags:
+          type: object
+          required: [application.applications_enabled, vacancy.creation_enabled]
+          additionalProperties: false
+          properties:
+            application.applications_enabled:
+              type: boolean
+              default: true
+            vacancy.creation_enabled:
+              type: boolean
+              default: true

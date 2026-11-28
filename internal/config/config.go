@@ -18,6 +18,9 @@ type Config struct {
 	DBPassword string
 	DBName     string
 
+	OnlineConfURL            string
+	OnlineConfSnapshotSecret string
+
 	S3Endpoint  string
 	S3Region    string
 	S3Bucket    string
@@ -105,18 +108,20 @@ func Load() (*Config, error) {
 	}
 
 	return &Config{
-		JWTSecret:       []byte(secret),
-		AccessTokenTTL:  accessTTL,
-		RefreshTokenTTL: refreshTTL,
-		DBHost:          dbHost,
-		DBPort:          dbPort,
-		DBUser:          dbUser,
-		DBPassword:      dbPassword,
-		DBName:          dbName,
-		S3Endpoint:      s3Endpoint,
-		S3Region:        s3Region,
-		S3Bucket:        s3Bucket,
-		S3AccessKey:     s3AccessKey,
-		S3SecretKey:     s3SecretKey,
+		JWTSecret:                []byte(secret),
+		AccessTokenTTL:           accessTTL,
+		RefreshTokenTTL:          refreshTTL,
+		DBHost:                   dbHost,
+		DBPort:                   dbPort,
+		DBUser:                   dbUser,
+		DBPassword:               dbPassword,
+		DBName:                   dbName,
+		OnlineConfURL:            os.Getenv("ONLINECONF_URL"),
+		OnlineConfSnapshotSecret: os.Getenv("ONLINECONF_SNAPSHOT_SECRET"),
+		S3Endpoint:               s3Endpoint,
+		S3Region:                 s3Region,
+		S3Bucket:                 s3Bucket,
+		S3AccessKey:              s3AccessKey,
+		S3SecretKey:              s3SecretKey,
 	}, nil
 }
