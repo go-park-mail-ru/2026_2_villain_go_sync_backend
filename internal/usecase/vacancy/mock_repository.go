@@ -14,6 +14,7 @@ import (
 	reflect "reflect"
 
 	pagination "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
+	vacancy "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	models "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -165,9 +166,9 @@ func (mr *MockVacancyRepositoryMockRecorder) ListCategories(ctx any) *gomock.Cal
 }
 
 // ListVacancies mocks base method.
-func (m *MockVacancyRepository) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
+func (m *MockVacancyRepository) ListVacancies(ctx context.Context, params pagination.Params, filters vacancy.ListFilters) ([]models.Vacancy, int64, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListVacancies", ctx, params)
+	ret := m.ctrl.Call(m, "ListVacancies", ctx, params, filters)
 	ret0, _ := ret[0].([]models.Vacancy)
 	ret1, _ := ret[1].(int64)
 	ret2, _ := ret[2].(error)
@@ -175,9 +176,9 @@ func (m *MockVacancyRepository) ListVacancies(ctx context.Context, params pagina
 }
 
 // ListVacancies indicates an expected call of ListVacancies.
-func (mr *MockVacancyRepositoryMockRecorder) ListVacancies(ctx, params any) *gomock.Call {
+func (mr *MockVacancyRepositoryMockRecorder) ListVacancies(ctx, params, filters any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVacancies", reflect.TypeOf((*MockVacancyRepository)(nil).ListVacancies), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListVacancies", reflect.TypeOf((*MockVacancyRepository)(nil).ListVacancies), ctx, params, filters)
 }
 
 // Update mocks base method.

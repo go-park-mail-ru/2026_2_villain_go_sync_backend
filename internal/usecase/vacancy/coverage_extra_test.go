@@ -53,7 +53,7 @@ func TestVacancyListExtra(t *testing.T) {
 					).Return(expected, int64(13), tt.repoErr)
 				}
 			} else {
-				vr.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Limit: 12}).
+				vr.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Limit: 12}, dto.ListFilters{}).
 					Return(expected, int64(13), tt.repoErr)
 			}
 
@@ -68,7 +68,7 @@ func TestVacancyListExtra(t *testing.T) {
 				}
 			} else {
 				var total int64
-				got, total, err = uc.ListVacancies(context.Background(), pagination.Params{Limit: 12})
+				got, total, err = uc.ListVacancies(context.Background(), pagination.Params{Limit: 12}, dto.ListFilters{})
 				if err == nil && total != 13 {
 					t.Errorf("total = %d, want 13", total)
 				}

@@ -39,7 +39,7 @@ func TestListVacancies_Success(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			mockUC := vacancy.NewMockVacancyUsecase(gomock.NewController(t))
-			mockUC.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Cursor: tc.cursor, Limit: tc.limit + 1}).Return(tc.items, int64(2), nil)
+			mockUC.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Cursor: tc.cursor, Limit: tc.limit + 1}, vacancydto.ListFilters{}).Return(tc.items, int64(2), nil)
 			url := "/api/vacancies" + tc.query
 			if tc.cursor != nil {
 				raw, err := json.Marshal(tc.cursor)
@@ -106,6 +106,25 @@ func TestListVacancies_InvalidPagination(t *testing.T) {
 	}
 }
 
+func TestListVacancies_Filters(t *testing.T) {
+	from, to := 100000.0, 150000.0
+	filters := vacancydto.ListFilters{
+		Query: "Go", Category: "ИТ", City: "Казань", EmployerID: 7,
+		WorkFormats: []string{"remote", "hybrid"}, EmploymentTypes: []string{"full"},
+		WorkSchedules: []string{"5_2"}, ExperienceLevels: []string{"1_3"}, SalaryFrom: &from, SalaryTo: &to,
+	}
+	mockUC := vacancy.NewMockVacancyUsecase(gomock.NewController(t))
+	mockUC.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Limit: 7}, filters).Return(nil, int64(0), nil)
+	url := "/api/vacancies?limit=6&query=+Go+&category=ИТ&city=Казань&employer_id=7" +
+		"&work_format=remote&work_format=hybrid&employment_type=full&work_schedule=5_2&experience_level=1_3&from=100000&to=150000"
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+	vacancy.NewHandler(mockUC).ListVacancies(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d: %s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestListVacancies_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -113,7 +132,7 @@ func TestListVacancies_Error(t *testing.T) {
 	mockUC := vacancy.NewMockVacancyUsecase(ctrl)
 	h := vacancy.NewHandler(mockUC)
 
-	mockUC.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Limit: 13}).Return(nil, int64(0), errors.New("db error"))
+	mockUC.EXPECT().ListVacancies(gomock.Any(), pagination.Params{Limit: 13}, vacancydto.ListFilters{}).Return(nil, int64(0), errors.New("db error"))
 
 	req := httptest.NewRequest(http.MethodGet, "/api/vacancies", nil)
 	rec := httptest.NewRecorder()

@@ -13,7 +13,7 @@ import (
 
 //go:generate mockgen -source=vacancy.go -destination=mock_repository.go -package=vacancy
 type VacancyRepository interface {
-	ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error)
+	ListVacancies(ctx context.Context, params pagination.Params, filters dto.ListFilters) ([]models.Vacancy, int64, error)
 	Create(ctx context.Context, vacancy models.Vacancy, categoryIDs []int64) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error)
@@ -44,8 +44,8 @@ func NewVacancyUsecase(vacancies VacancyRepository, users UserRepository, settin
 	}
 }
 
-func (u *VacancyUsecase) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
-	vacancies, total, err := u.vacancies.ListVacancies(ctx, params)
+func (u *VacancyUsecase) ListVacancies(ctx context.Context, params pagination.Params, filters dto.ListFilters) ([]models.Vacancy, int64, error) {
+	vacancies, total, err := u.vacancies.ListVacancies(ctx, params, filters)
 	if err != nil {
 		return nil, 0, err
 	}
