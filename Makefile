@@ -38,3 +38,24 @@ migrate-down:
 
 migrate-version:
 	$(MIGRATE) -path db/migrations -database "$(DATABASE_URL)" version
+
+.PHONY: onlineconf-db-init onlineconf-migrate-up onlineconf-migrate-down onlineconf-migrate-version onlineconf-admin-bootstrap
+
+ONLINECONF_MIGRATE_BIN ?= $(MIGRATE)
+export ONLINECONF_ADMIN_DATABASE_URL ONLINECONF_MIGRATE_DATABASE_URL ONLINECONF_PRODUCT_DATABASE_URL
+export ONLINECONF_MIGRATE_BIN ONLINECONF_OWNER_USER_ID
+
+onlineconf-db-init:
+	@bash db/onlineconf/manage.sh init
+
+onlineconf-migrate-up:
+	@bash db/onlineconf/manage.sh up
+
+onlineconf-migrate-down:
+	@bash db/onlineconf/manage.sh down
+
+onlineconf-migrate-version:
+	@bash db/onlineconf/manage.sh version
+
+onlineconf-admin-bootstrap:
+	@bash db/onlineconf/manage.sh bootstrap
