@@ -175,7 +175,7 @@ func TestFlagEvaluationOverrideHistoryAndCascade(t *testing.T) {
 			return result
 		}
 		check(200, false, onlineconf.ReasonGloballyDisabled, false)
-		_, err = u.Flags.SetEnabled(ctx, ownerID, flag.ID, true)
+		flag, err = u.Flags.SetEnabled(ctx, ownerID, flag.ID, true)
 		requireError(t, err, nil)
 		_, err = u.Flags.SetEnabled(ctx, ownerID, flag.ID, true)
 		requireError(t, err, nil)
@@ -187,16 +187,16 @@ func TestFlagEvaluationOverrideHistoryAndCascade(t *testing.T) {
 		override.Enabled = false
 		_, err = u.Overrides.Upsert(ctx, ownerID, override)
 		requireError(t, err, nil)
-		flag, err = u.Flags.SetRolloutPercentage(ctx, ownerID, flag.ID, 100)
-		requireError(t, err, nil)
+		_, err = u.Flags.SetRolloutPercentage(ctx, ownerID, flag.ID, 100)
+		requireError(t, err, apperrors.ErrInvalidInput)
 		check(200, false, onlineconf.ReasonForcedExclude, false)
 		_, err = u.Flags.SetRolloutPercentage(ctx, ownerID, flag.ID, 101)
 		requireError(t, err, apperrors.ErrInvalidInput)
 		flag.Name = "feature_renamed"
 		flag, err = u.Flags.Update(ctx, ownerID, flag)
 		requireError(t, err, nil)
-		last := check(300, true, onlineconf.ReasonRolloutIncluded, true)
-		if *first.Bucket != *last.Bucket || last.RolloutPercentage != 100 {
+		last := check(300, false, onlineconf.ReasonRolloutExcluded, true)
+		if *first.Bucket != *last.Bucket || last.RolloutPercentage != 0 {
 			t.Fatal("renaming feature flag changed its bucket")
 		}
 		item, err := u.Overrides.Get(ctx, ownerID, flag.ID, 200)
@@ -227,7 +227,7 @@ func TestFlagEvaluationOverrideHistoryAndCascade(t *testing.T) {
 
 		requireError(t, u.Flags.Delete(ctx, ownerID, flag.ID), nil)
 		changes := readHistory(t, ctx, u.History, ownerID, models.ResourceTypeFeatureFlag, flag.ID)
-		if len(changes) != 5 || changes[0].Action != models.ActionDelete || changes[4].Action != models.ActionCreate {
+		if len(changes) != 4 || changes[0].Action != models.ActionDelete || changes[3].Action != models.ActionCreate {
 			t.Fatalf("flag history has %d entries", len(changes))
 		}
 		var deletion struct {
@@ -236,7 +236,7 @@ func TestFlagEvaluationOverrideHistoryAndCascade(t *testing.T) {
 		}
 		requireError(t, json.Unmarshal(changes[0].OldValue, &deletion), nil)
 		if len(deletion.Overrides) != 105 || deletion.Overrides[104].UserID != 105 ||
-			deletion.ID != flag.ID || deletion.RolloutPercentage != 100 {
+			deletion.ID != flag.ID || deletion.RolloutPercentage != 0 {
 			t.Fatalf("flag deletion snapshot has %d overrides", len(deletion.Overrides))
 		}
 	})

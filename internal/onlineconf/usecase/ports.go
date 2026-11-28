@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
 )
@@ -20,6 +21,34 @@ type Repositories struct {
 	History   historyRepository
 	Keys      keyRepository
 	Snapshots snapshotRepository
+	Access    accessRepository
+	Groups    groupRepository
+	Rollouts  rolloutRepository
+}
+
+type accessRepository interface {
+	Effective(context.Context, int64) ([]models.Grant, error)
+	List(context.Context) ([]models.Grant, error)
+	Create(context.Context, models.Grant) (models.Grant, error)
+	Delete(context.Context, int64) error
+}
+
+type groupRepository interface {
+	List(context.Context) ([]models.Group, error)
+	Save(context.Context, models.Group) (models.Group, error)
+	Delete(context.Context, int64) error
+}
+
+type rolloutRepository interface {
+	ListPolicies(context.Context) ([]models.RolloutPolicy, error)
+	GetPolicy(context.Context, int64) (models.RolloutPolicy, error)
+	SavePolicy(context.Context, models.RolloutPolicy) (models.RolloutPolicy, error)
+	DeletePolicy(context.Context, int64) error
+	Get(context.Context, int64) (models.Rollout, error)
+	Start(context.Context, models.Rollout) (models.Rollout, error)
+	Save(context.Context, models.Rollout) (models.Rollout, error)
+	CancelActive(context.Context, int64) error
+	Ready(context.Context, time.Time) ([]int64, error)
 }
 type scopeRepository interface {
 	Create(ctx context.Context, scope models.Scope) (models.Scope, error)
@@ -65,6 +94,7 @@ type historyRepository interface {
 	List(ctx context.Context, filter models.HistoryFilter) (models.Page[models.ChangeHistory], error)
 }
 type keyRepository interface {
+	Get(ctx context.Context, keyID int64) (models.ConfigKey, error)
 	GetDetails(ctx context.Context, keyID int64) (models.KeyDetails, error)
 	List(ctx context.Context, filter models.KeyFilter) (models.Page[models.KeyDetails], error)
 }

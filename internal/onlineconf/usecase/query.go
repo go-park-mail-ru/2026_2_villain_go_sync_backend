@@ -11,13 +11,17 @@ type KeyUsecase struct {
 }
 
 func (u KeyUsecase) Get(ctx context.Context, actorID, keyID int64) (models.KeyDetails, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.KeyDetails, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.KeyDetails, error) {
+		if err := access.requireID(ctx, tx, models.ReadKey, keyID); err != nil {
+			return models.KeyDetails{}, err
+		}
 		return tx.Keys.GetDetails(ctx, keyID)
 	})
 }
 
 func (u KeyUsecase) List(ctx context.Context, actorID int64, filter models.KeyFilter) (models.Page[models.KeyDetails], error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.KeyDetails], error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.Page[models.KeyDetails], error) {
+		filter.Readable = access.readable()
 		return tx.Keys.List(ctx, filter)
 	})
 }

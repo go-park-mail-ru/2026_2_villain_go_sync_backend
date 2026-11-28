@@ -14,7 +14,10 @@ type OverrideUsecase struct {
 }
 
 func (u OverrideUsecase) Get(ctx context.Context, actorID, keyID, userID int64) (models.FeatureFlagOverride, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlagOverride, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.FeatureFlagOverride, error) {
+		if err := access.requireID(ctx, tx, models.ReadKey, keyID); err != nil {
+			return models.FeatureFlagOverride{}, err
+		}
 		return tx.Overrides.Get(ctx, keyID, userID)
 	})
 }
@@ -22,7 +25,10 @@ func (u OverrideUsecase) Get(ctx context.Context, actorID, keyID, userID int64) 
 func (u OverrideUsecase) ListByFlag(ctx context.Context, actorID, keyID int64,
 	page models.PageRequest,
 ) (models.Page[models.FeatureFlagOverride], error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.FeatureFlagOverride], error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.Page[models.FeatureFlagOverride], error) {
+		if err := access.requireID(ctx, tx, models.ReadKey, keyID); err != nil {
+			return models.Page[models.FeatureFlagOverride]{}, err
+		}
 		if _, err := tx.Flags.Get(ctx, keyID); err != nil {
 			return models.Page[models.FeatureFlagOverride]{}, err
 		}
@@ -39,7 +45,10 @@ func (u OverrideUsecase) ListByUser(ctx context.Context, actorID, userID int64,
 }
 
 func (u OverrideUsecase) Upsert(ctx context.Context, actorID int64, input models.FeatureFlagOverride) (models.FeatureFlagOverride, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.FeatureFlagOverride, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.FeatureFlagOverride, error) {
+		if err := access.requireID(ctx, tx, models.UpdateKey, input.KeyID); err != nil {
+			return models.FeatureFlagOverride{}, err
+		}
 		flag, err := tx.Flags.Get(ctx, input.KeyID)
 		if err != nil {
 			return models.FeatureFlagOverride{}, err
@@ -74,7 +83,10 @@ func (u OverrideUsecase) Upsert(ctx context.Context, actorID int64, input models
 }
 
 func (u OverrideUsecase) Delete(ctx context.Context, actorID, keyID, userID int64) error {
-	return protectedAction(ctx, u.store, actorID, adminAccess, func(tx Repositories) error {
+	return withAccessAction(ctx, u.store, actorID, func(tx Repositories, access keyAccess) error {
+		if err := access.requireID(ctx, tx, models.UpdateKey, keyID); err != nil {
+			return err
+		}
 		flag, err := tx.Flags.GetForUpdate(ctx, keyID)
 		if err != nil {
 			return err

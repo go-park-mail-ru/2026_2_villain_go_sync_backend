@@ -11,13 +11,13 @@ type ScopeUsecase struct {
 }
 
 func (u ScopeUsecase) Get(ctx context.Context, actorID, scopeID int64) (models.Scope, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Scope, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, _ keyAccess) (models.Scope, error) {
 		return tx.Scopes.Get(ctx, scopeID)
 	})
 }
 
 func (u ScopeUsecase) List(ctx context.Context, actorID int64, page models.PageRequest) (models.Page[models.Scope], error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Page[models.Scope], error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, _ keyAccess) (models.Page[models.Scope], error) {
 		return tx.Scopes.List(ctx, page)
 	})
 }

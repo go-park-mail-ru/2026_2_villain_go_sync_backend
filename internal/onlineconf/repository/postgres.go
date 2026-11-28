@@ -33,6 +33,9 @@ type Store struct {
 	History   HistoryRepository
 	Keys      KeyRepository
 	Snapshots SnapshotRepository
+	Access    AccessRepository
+	Groups    GroupRepository
+	Rollouts  RolloutRepository
 
 	conn connection
 }
@@ -57,6 +60,9 @@ func newStore(conn connection) *Store {
 		History:   HistoryRepository{db: conn.db},
 		Keys:      KeyRepository{db: conn.db},
 		Snapshots: SnapshotRepository{conn: conn},
+		Access:    AccessRepository{db: conn.db},
+		Groups:    GroupRepository{db: conn.db},
+		Rollouts:  RolloutRepository{db: conn.db},
 		conn:      conn,
 	}
 }

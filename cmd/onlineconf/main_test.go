@@ -7,6 +7,10 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/usecase"
 )
 
 func setConfig(t *testing.T, runtime, product string) {
@@ -96,5 +100,94 @@ func TestPostgresServiceStartAndShutdown(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatal("graceful shutdown timed out")
+	}
+}
+
+type workerTestUsers struct{}
+
+func (workerTestUsers) Exists(_ context.Context, userID int64) (bool, error) { return userID == 1, nil }
+
+func TestPostgresWorkerAppliesApprovedStage(t *testing.T) {
+	runtime := os.Getenv("ONLINECONF_TEST_DATABASE_URL")
+	if runtime == "" {
+		t.Skip("set the isolated, bootstrapped OnlineConf test URL")
+	}
+	ctx, cancel := context.WithTimeout(t.Context(), 8*time.Second)
+	defer cancel()
+	pool, err := openRuntimePool(ctx, runtime)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+	u := usecase.New(repository.NewStore(pool), workerTestUsers{})
+	const owner = 1
+	scope, err := u.Scopes.Create(ctx, owner, models.Scope{Name: "worker_test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := u.Scopes.Delete(ctx, owner, scope.ID); err != nil {
+			t.Error(err)
+		}
+	}()
+	flag, err := u.Flags.Create(ctx, owner, models.FeatureFlag{
+		ConfigKey: models.ConfigKey{ScopeID: scope.ID, Name: "worker_flag", OwnerUserID: owner}, Enabled: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := u.Flags.Delete(ctx, owner, flag.ID); err != nil {
+			t.Error(err)
+		}
+	}()
+	policy, err := u.Rollouts.SavePolicy(ctx, owner, models.RolloutPolicy{Name: "Worker test", Steps: []models.RolloutStep{
+		{Percentage: 10}, {Percentage: 100, WaitSeconds: 1},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := u.Rollouts.DeletePolicy(ctx, owner, policy.ID); err != nil {
+			t.Error(err)
+		}
+	}()
+	rollout, err := u.Rollouts.Start(ctx, owner, flag.ID, policy.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workerCtx, stop := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		runRollouts(workerCtx, u.Rollouts)
+	}()
+	defer func() {
+		stop()
+		<-done
+	}()
+	if _, err := u.Rollouts.Approve(ctx, owner, flag.ID, rollout.RunID, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	ticker := time.NewTicker(40 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			t.Fatal("worker did not apply the approved step")
+		case <-ticker.C:
+			got, err := u.Flags.Get(ctx, owner, flag.ID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.RolloutPercentage == 10 {
+				current, err := u.Rollouts.Get(ctx, owner, flag.ID)
+				if err != nil || current == nil || current.NextStep != 1 || current.ApprovedBy != nil {
+					t.Fatalf("next stage = %+v, %v", current, err)
+				}
+				return
+			}
+		}
 	}
 }

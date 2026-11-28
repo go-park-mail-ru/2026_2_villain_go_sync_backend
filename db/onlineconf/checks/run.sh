@@ -106,6 +106,8 @@ make onlineconf-db-init
 make onlineconf-migrate-up
 make onlineconf-migrate-version
 make onlineconf-migrate-down
+[[ $(psql_checked "$owner_url" -Atc "SELECT to_regclass('public.flag_rollout') IS NULL") == t ]]
+make onlineconf-migrate-down
 [[ $(psql_checked "$owner_url" -Atc "SELECT to_regclass('public.config_key') IS NULL") == t ]]
 make onlineconf-migrate-up
 make onlineconf-migrate-version
@@ -188,7 +190,8 @@ echo 'Last-owner protection verified with concurrent deletion and demotion'
 if [[ ${ONLINECONF_CHECK_USECASE:-0} == 1 ]]; then
     ONLINECONF_TEST_DATABASE_URL="$runtime_url" go test -count=1 -cover ./internal/onlineconf/usecase
 fi
-expect_failure 'refusing to roll back OnlineConf with non-seed data' make onlineconf-migrate-down
+expect_failure 'refusing to roll back OnlineConf with non-seed data' \
+    psql_checked "$ONLINECONF_MIGRATE_DATABASE_URL" -f db/onlineconf/migrations/000001_onlineconf.down.sql
 [[ $(psql_checked "$runtime_url" -Atc "SELECT count(*) FROM public.change_history WHERE resource_type = 'admin'") == 1 ]]
 [[ $(psql_checked "$ONLINECONF_PRODUCT_DATABASE_URL" -Atc 'SELECT count(*) FROM public.app_user') == 1 ]]
 echo 'Owner bootstrap, reinitialization and rollback protection verified'

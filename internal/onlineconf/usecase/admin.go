@@ -12,8 +12,9 @@ type AdminUsecase struct {
 }
 
 func (u AdminUsecase) CheckAccess(ctx context.Context, actorID int64) (models.Admin, error) {
-	admin, err := u.store.Repositories().Admins.Get(ctx, actorID)
-	return checkAccess(admin, err, false)
+	return withAccess(ctx, u.store, actorID, func(_ Repositories, access keyAccess) (models.Admin, error) {
+		return access.admin, nil
+	})
 }
 
 func (u AdminUsecase) List(ctx context.Context, actorID int64, page models.PageRequest) (models.Page[models.Admin], error) {

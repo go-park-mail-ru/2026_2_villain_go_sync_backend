@@ -12,13 +12,19 @@ type ConfigUsecase struct {
 }
 
 func (u ConfigUsecase) Get(ctx context.Context, actorID, keyID int64) (models.Config, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Config, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.Config, error) {
+		if err := access.requireID(ctx, tx, models.ReadKey, keyID); err != nil {
+			return models.Config{}, err
+		}
 		return tx.Configs.Get(ctx, keyID)
 	})
 }
 
 func (u ConfigUsecase) Create(ctx context.Context, actorID int64, input models.Config) (models.Config, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Config, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.Config, error) {
+		if err := access.require(models.CreateKey, models.ConfigKey{ScopeID: input.ScopeID, Type: models.KeyTypeConfig}); err != nil {
+			return models.Config{}, err
+		}
 		if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
 			return models.Config{}, err
 		}
@@ -31,9 +37,15 @@ func (u ConfigUsecase) Create(ctx context.Context, actorID int64, input models.C
 }
 
 func (u ConfigUsecase) Update(ctx context.Context, actorID int64, input models.Config) (models.Config, error) {
-	return protected(ctx, u.store, actorID, adminAccess, func(tx Repositories) (models.Config, error) {
+	return withAccess(ctx, u.store, actorID, func(tx Repositories, access keyAccess) (models.Config, error) {
+		if err := access.requireID(ctx, tx, models.UpdateKey, input.ID); err != nil {
+			return models.Config{}, err
+		}
 		before, err := tx.Configs.Get(ctx, input.ID)
 		if err != nil {
+			return models.Config{}, err
+		}
+		if err := access.requireMove(before.ConfigKey, input.ScopeID); err != nil {
 			return models.Config{}, err
 		}
 		if input.OwnerUserID != before.OwnerUserID {
@@ -59,7 +71,10 @@ func (u ConfigUsecase) Update(ctx context.Context, actorID int64, input models.C
 }
 
 func (u ConfigUsecase) Delete(ctx context.Context, actorID, keyID int64) error {
-	return protectedAction(ctx, u.store, actorID, adminAccess, func(tx Repositories) error {
+	return withAccessAction(ctx, u.store, actorID, func(tx Repositories, access keyAccess) error {
+		if err := access.requireID(ctx, tx, models.DeleteKey, keyID); err != nil {
+			return err
+		}
 		before, err := tx.Configs.Get(ctx, keyID)
 		if err != nil {
 			return err

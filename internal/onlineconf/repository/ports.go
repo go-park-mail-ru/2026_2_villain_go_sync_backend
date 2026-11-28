@@ -7,7 +7,11 @@ import (
 )
 
 func (s *Store) Repositories() usecase.Repositories {
-	return usecase.Repositories{Scopes: s.Scopes, Configs: s.Configs, Flags: s.Flags, Overrides: s.Overrides, Admins: s.Admins, History: s.History, Keys: s.Keys, Snapshots: s.Snapshots}
+	return usecase.Repositories{
+		Scopes: s.Scopes, Configs: s.Configs, Flags: s.Flags, Overrides: s.Overrides,
+		Admins: s.Admins, History: s.History, Keys: s.Keys, Snapshots: s.Snapshots,
+		Access: s.Access, Groups: s.Groups, Rollouts: s.Rollouts,
+	}
 }
 func (s *Store) WithinTransaction(ctx context.Context, fn func(usecase.Repositories) error) error {
 	return s.WithinTx(ctx, func(tx *Store) error { return fn(tx.Repositories()) })
