@@ -7,6 +7,9 @@ info:
     определяется в OnlineConf по ID из access JWT.
 security:
 - AccessCookie: []
+externalDocs:
+  description: Регламенты раскатки, группы и права
+  url: ./onlineconf-advanced.md
 paths:
   /api/onlineconf/admin/me:
     get:
@@ -493,6 +496,7 @@ paths:
     post:
       operationId: createFlag
       summary: Создать feature flag
+      description: Начальный процент раскатки равен нулю.
       security:
       - AccessCookie: []
         CsrfCookie: []
@@ -577,7 +581,7 @@ paths:
       operationId: replaceFlag
       summary: Заменить feature flag
       description: Полная замена изменяемых полей. Укажите все обязательные поля. Чтобы очистить описание, передайте
-        null.
+        null. Повышение процента применяется по подтверждённому регламенту.
       security:
       - AccessCookie: []
         CsrfCookie: []
@@ -710,7 +714,7 @@ paths:
   /api/onlineconf/admin/flags/{id}/rollout:
     put:
       operationId: setFlagRollout
-      summary: Установить процент раскатки
+      summary: Снизить процент раскатки вручную
       security:
       - AccessCookie: []
         CsrfCookie: []
@@ -1849,6 +1853,7 @@ components:
           enum:
           - owner
           - admin
+          - member
         granted_by:
           type:
           - integer

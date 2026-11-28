@@ -50,6 +50,8 @@ func TestUnauthorizedOperationStopsBeforeResourceLookup(t *testing.T) {
 
 	pool.ExpectBeginTx(pgx.TxOptions{IsoLevel: pgx.RepeatableRead})
 	pool.ExpectQuery("FROM public.admin WHERE user_id = .* FOR SHARE").WithArgs(int64(88)).WillReturnError(pgx.ErrNoRows)
+	pool.ExpectQuery("FROM public.access_grant").WithArgs(int64(88)).
+		WillReturnRows(pgxmock.NewRows([]string{"grant_id", "user_id", "group_id", "scope_id", "key_type", "key_id", "action"}))
 	pool.ExpectRollback()
 	pool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 	_, err = usecase.New(repository.NewStore(pool), fixtureUsers{}).Configs.Get(t.Context(), 88, 42)

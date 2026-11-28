@@ -8,10 +8,17 @@ const (
 )
 
 type KeyFilter struct {
-	ScopeID *int64
-	Type    *KeyType
-	Search  string
-	Page    PageRequest
+	ScopeID  *int64
+	Type     *KeyType
+	Search   string
+	Page     PageRequest
+	Readable *ReadableKeys
+}
+
+type ReadableKeys struct {
+	IDs          []int64
+	ConfigScopes []int64
+	FlagScopes   []int64
 }
 
 type KeyDetails struct {

@@ -54,14 +54,21 @@ func (r KeyRepository) List(ctx context.Context, filter models.KeyFilter) (model
 	if filter.Type != nil && *filter.Type != models.KeyTypeConfig && *filter.Type != models.KeyTypeFeatureFlag {
 		return models.Page[models.KeyDetails]{}, apperrors.ValidationError("invalid key type")
 	}
-	return readPage(ctx, r.db, filter.Page, keyDetailsQuery+`
+	query := keyDetailsQuery + `
 		WHERE ($1::BIGINT IS NULL OR k.key_id > $1)
 		  AND ($3::BIGINT IS NULL OR k.scope_id = $3)
 		  AND ($4::TEXT IS NULL OR k.type = $4)
 		  AND strpos(CASE WHEN strpos($5::TEXT, '.') > 0 THEN s.name || '.' || k.name ELSE k.name END,
-		             lower($5::TEXT COLLATE "C")) > 0
-		ORDER BY k.key_id LIMIT $2`, scanKeyDetails, func(key models.KeyDetails) int64 { return key.ID },
-		filter.ScopeID, filter.Type, filter.Search)
+		             lower($5::TEXT COLLATE "C")) > 0`
+	args := []any{filter.ScopeID, filter.Type, filter.Search}
+	if filter.Readable != nil {
+		query += ` AND (k.key_id = ANY($6::BIGINT[])
+			OR (k.type = 'config' AND k.scope_id = ANY($7::BIGINT[]))
+			OR (k.type = 'feature_flag' AND k.scope_id = ANY($8::BIGINT[])))`
+		args = append(args, filter.Readable.IDs, filter.Readable.ConfigScopes, filter.Readable.FlagScopes)
+	}
+	return readPage(ctx, r.db, filter.Page, query+" ORDER BY k.key_id LIMIT $2",
+		scanKeyDetails, func(key models.KeyDetails) int64 { return key.ID }, args...)
 }
 
 func createKey(ctx context.Context, db database, key models.ConfigKey, kind models.KeyType) (int64, error) {

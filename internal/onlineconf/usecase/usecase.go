@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"time"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
@@ -18,6 +19,8 @@ type Usecases struct {
 	Admins    AdminUsecase
 	History   HistoryUsecase
 	Snapshots SnapshotUsecase
+	Access    AccessUsecase
+	Rollouts  RolloutUsecase
 }
 
 func New(store Store, users ProductUsers) Usecases {
@@ -25,6 +28,7 @@ func New(store Store, users ProductUsers) Usecases {
 		Scopes: ScopeUsecase{store}, Configs: ConfigUsecase{store: store, users: users}, Flags: FeatureFlagUsecase{store: store, users: users},
 		Overrides: OverrideUsecase{store: store, users: users}, Keys: KeyUsecase{store}, Admins: AdminUsecase{store: store, users: users},
 		History: HistoryUsecase{store}, Snapshots: SnapshotUsecase{store},
+		Access: AccessUsecase{store: store, users: users}, Rollouts: RolloutUsecase{store: store, now: time.Now},
 	}
 }
 

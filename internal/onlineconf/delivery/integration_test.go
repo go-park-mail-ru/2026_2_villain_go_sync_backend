@@ -16,6 +16,7 @@ import (
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/auth"
 	productmodels "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/delivery"
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/productusers"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/repository"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/usecase"
@@ -71,7 +72,8 @@ func TestPostgresHTTP(t *testing.T) {
 	ordinary := tokenFor(t, tokens, 3, productmodels.RoleEmployer, auth.TokenTypeAccess)
 	rollback := errors.New("rollback HTTP fixtures")
 	err = repository.NewStore(pool).WithinTx(ctx, func(tx *repository.Store) error {
-		h := newHTTPHandler(usecase.New(tx, users), tokens, testSecret, users.Ping)
+		u := usecase.New(tx, users)
+		h := newHTTPHandler(u, tokens, testSecret, users.Ping)
 		snapshotServer := httptest.NewServer(h)
 		defer snapshotServer.Close()
 		snapshotClient, err := onlineconf.NewClient(snapshotServer.URL, testSecret)
@@ -192,12 +194,13 @@ func TestPostgresHTTP(t *testing.T) {
 		asAdmin("PUT", flagPath+"/enabled", `{"enabled":true}`, 200)
 		evaluate("forced_include", true, false)
 		asAdmin("PUT", flagPath+"/overrides/3", `{"enabled":false}`, 200)
-		asAdmin("PUT", flagPath+"/rollout", `{"rollout_percentage":100}`, 200)
+		asAdmin("PUT", flagPath+"/rollout", `{"rollout_percentage":100}`, 422)
 		evaluate("forced_exclude", false, false)
 		assertPage(flagPath+"/overrides", "enabled", "false")
 		assertPage("/users/3/overrides", "user_id", "3")
 		asAdmin("DELETE", flagPath+"/overrides/3", "", 204)
-		evaluate("rollout_included", true, true)
+		evaluate("rollout_excluded", false, true)
+		verifyAdvancedHTTP(t, u, do, owner, adminUser, ordinary, scope.ID, flag.ID, config.ID)
 		asAdmin("PUT", flagPath, fmt.Sprintf(
 			`{"name":"sample_flag","scope_id":%d,"owner_user_id":3,"description":null,"enabled":false,"rollout_percentage":0}`, scope.ID), 200)
 		evaluate("globally_disabled", false, false)
@@ -237,6 +240,126 @@ func TestPostgresHTTP(t *testing.T) {
 	}
 }
 
+func verifyAdvancedHTTP(t *testing.T, u usecase.Usecases,
+	do func(string, string, string, string, int) json.RawMessage, owner, admin, member string,
+	scopeID, flagID, configID int64,
+) {
+	t.Helper()
+	flagPath := fmt.Sprintf("/flags/%d", flagID)
+	rolloutPath := flagPath + "/rollout"
+	configPath := fmt.Sprintf("/configs/%d", configID)
+	group := decodeData[models.Group](t, do("POST", "/groups", `{"name":"Reviewers","member_ids":[3]}`, owner, 201))
+	groupPath := fmt.Sprintf("/groups/%d", group.ID)
+	do("GET", "/grants", "", admin, 403)
+	do("GET", "/me", "", member, 403)
+
+	do("POST", "/grants", fmt.Sprintf(`{"group_id":%d,"scope_id":%d,"key_type":"feature_flag","action":"read"}`, group.ID, scopeID), owner, 201)
+	me := decodeData[map[string]any](t, do("GET", "/me", "", member, 200))
+	if me["role"] != "member" {
+		t.Fatalf("delegated actor = %+v", me)
+	}
+	keys := decodeData[struct {
+		Items []struct{ ID int64 }
+	}](t, do("GET", "/keys?limit=1", "", member, 200))
+	if len(keys.Items) != 1 || keys.Items[0].ID != flagID {
+		t.Fatalf("delegated catalog = %+v", keys)
+	}
+	scopes := decodeData[struct {
+		Items []struct{ ID int64 }
+	}](t, do("GET", "/scopes?limit=1", "", member, 200))
+	if len(scopes.Items) != 1 || scopes.Items[0].ID != scopeID {
+		t.Fatalf("delegated scope catalog = %+v", scopes)
+	}
+	do("GET", "/scopes/1", "", member, 403)
+	do("GET", fmt.Sprintf("/scopes/%d", scopeID), "", member, 200)
+	do("GET", configPath, "", member, 403)
+	do("GET", fmt.Sprintf("/keys/%d", configID), "", member, 403)
+	do("GET", "/history", "", member, 403)
+	do("PUT", flagPath+"/enabled", `{"enabled":false}`, member, 403)
+	do("POST", "/grants", fmt.Sprintf(`{"user_id":3,"key_id":%d,"action":"read"}`, configID), owner, 201)
+	do("GET", configPath, "", member, 200)
+	do("DELETE", configPath, "", member, 403)
+	do("POST", "/grants", fmt.Sprintf(`{"group_id":%d,"scope_id":%d,"key_type":"config","action":"create"}`, group.ID, scopeID), owner, 201)
+	created := decodeData[struct{ ID int64 }](t, do("POST", "/configs",
+		fmt.Sprintf(`{"name":"delegated","scope_id":%d,"owner_user_id":3,"value":5}`, scopeID), member, 201))
+	createdPath := fmt.Sprintf("/configs/%d", created.ID)
+	do("GET", createdPath, "", member, 403)
+	do("POST", "/grants", fmt.Sprintf(`{"group_id":%d,"key_id":%d,"action":"update"}`, group.ID, created.ID), owner, 201)
+	configBody := fmt.Sprintf(`{"name":"delegated","scope_id":%d,"owner_user_id":3,"description":null,"value":10}`, scopeID)
+	do("PUT", createdPath, configBody, member, 200)
+	do("PUT", createdPath, `{"name":"delegated","scope_id":1,"owner_user_id":3,"description":null,"value":10}`, member, 403)
+	do("POST", "/grants", fmt.Sprintf(`{"user_id":3,"key_id":%d,"action":"delete"}`, created.ID), owner, 201)
+	do("DELETE", createdPath, "", member, 204)
+
+	do("POST", "/rollout-policies", `{"name":"Invalid","steps":[{"percentage":100,"wait_seconds":0}]}`, admin, 422)
+	do("POST", "/rollout-policies", `{"name":"Invalid","steps":[{"percentage":25,"wait_seconds":0},{"percentage":100,"wait_seconds":0}]}`, admin, 422)
+	policy := decodeData[models.RolloutPolicy](t, do("POST", "/rollout-policies",
+		`{"name":"Validated policy","steps":[{"percentage":25,"wait_seconds":0},{"percentage":100,"wait_seconds":1}]}`, admin, 201))
+	startBody := fmt.Sprintf(`{"policy_id":%d}`, policy.ID)
+	do("POST", "/flags", fmt.Sprintf(`{"name":"skip","scope_id":%d,"owner_user_id":3,"enabled":true,"rollout_percentage":100}`, scopeID), admin, 422)
+	do("PUT", flagPath, fmt.Sprintf(`{"name":"sample_flag","scope_id":%d,"owner_user_id":3,"description":null,"enabled":true,"rollout_percentage":100}`, scopeID), admin, 422)
+	run := decodeData[models.Rollout](t, do("POST", rolloutPath, startBody, admin, 201))
+	do("POST", rolloutPath, startBody, admin, 409)
+	do("GET", rolloutPath, "", member, 200)
+	confirmation := func(step int) string { return fmt.Sprintf(`{"run_id":%d,"step":%d}`, run.RunID, step) }
+	do("POST", rolloutPath+"/approve", confirmation(0), member, 403)
+	do("POST", "/grants", fmt.Sprintf(`{"group_id":%d,"key_id":%d,"action":"approve"}`, group.ID, flagID), owner, 201)
+
+	process := func(want int16) {
+		t.Helper()
+		if err := u.Rollouts.ProcessReady(t.Context()); err != nil {
+			t.Fatal(err)
+		}
+		flag := decodeData[struct {
+			Percentage int16 `json:"rollout_percentage"`
+		}](t, do("GET", flagPath, "", admin, 200))
+		if flag.Percentage != want {
+			t.Fatalf("flag rollout percentage = %d, want %d", flag.Percentage, want)
+		}
+	}
+	process(0)
+	do("POST", rolloutPath+"/approve", confirmation(0), member, 200)
+	process(25)
+	do("PATCH", flagPath, fmt.Sprintf(`{"name":"sample_flag","scope_id":%d,"owner_user_id":3,"description":null,"enabled":true}`, scopeID), admin, 200)
+	do("POST", rolloutPath+"/approve", confirmation(0), member, 409)
+	second := decodeData[models.Rollout](t, do("POST", rolloutPath+"/approve", confirmation(1), member, 200))
+	process(25)
+	do("PUT", groupPath, `{"name":"Reviewers","member_ids":[]}`, owner, 422)
+	savedGroup := decodeData[models.Group](t, do("PUT", groupPath,
+		fmt.Sprintf(`{"name":"Reviewers","member_ids":[],"revision":%d}`, group.Revision), owner, 200))
+	if savedGroup.Revision != group.Revision+1 {
+		t.Fatalf("group update revision = %d, previous = %d", savedGroup.Revision, group.Revision)
+	}
+	do("PUT", groupPath, fmt.Sprintf(`{"name":"Reviewers","member_ids":[3],"revision":%d}`, group.Revision), owner, 409)
+	do("GET", flagPath, "", member, 403)
+	do("GET", configPath, "", member, 200)
+	do("GET", fmt.Sprintf("/scopes/%d", scopeID), "", member, 200)
+	time.Sleep(time.Until(*second.DueAt) + 20*time.Millisecond)
+	process(25)
+	revoked := decodeData[models.Rollout](t, do("GET", rolloutPath, "", admin, 200))
+	if revoked.ApprovedBy != nil {
+		t.Fatal("scheduler retained revoked approval")
+	}
+	do("POST", rolloutPath+"/approve", confirmation(1), admin, 200)
+	process(100)
+	complete := decodeData[models.Rollout](t, do("GET", rolloutPath, "", admin, 200))
+	if complete.Status != models.RolloutCompleted || complete.NextStep != 2 {
+		t.Fatalf("completed rollout = %+v", complete)
+	}
+	do("PUT", flagPath+"/enabled", `{"enabled":false}`, admin, 200)
+	do("PUT", flagPath+"/enabled", `{"enabled":true}`, admin, 200)
+	process(0)
+	restarted := decodeData[models.Rollout](t, do("POST", rolloutPath, startBody, admin, 201))
+	do("POST", rolloutPath+"/approve", confirmation(0), admin, 409)
+	do("POST", rolloutPath+"/cancel", fmt.Sprintf(`{"run_id":%d}`, restarted.RunID), admin, 200)
+	process(0)
+	do("DELETE", groupPath, "", owner, 204)
+}
+
 func newHTTPHandler(u usecase.Usecases, tokens *auth.TokenManager, secret string, health func(context.Context) error) http.Handler {
-	return delivery.New(delivery.Services{Scopes: u.Scopes, Configs: u.Configs, Flags: u.Flags, Overrides: u.Overrides, Admins: u.Admins, History: u.History, Keys: u.Keys, Snapshots: u.Snapshots}, tokens, secret, health)
+	return delivery.New(delivery.Services{
+		Scopes: u.Scopes, Configs: u.Configs, Flags: u.Flags, Overrides: u.Overrides,
+		Admins: u.Admins, History: u.History, Keys: u.Keys, Snapshots: u.Snapshots,
+		Access: u.Access, Rollouts: u.Rollouts,
+	}, tokens, secret, health)
 }

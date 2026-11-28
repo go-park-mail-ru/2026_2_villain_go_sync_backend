@@ -28,6 +28,7 @@ func (h handler) registerAdmin(add func(method, path string, status int, run end
 	add("POST", "/flags", 201, h.editFlag)
 	add("GET", "/flags/{id}", 200, byID("id", u.Flags.Get, flagView))
 	add("PUT", "/flags/{id}", 200, h.editFlag)
+	add("PATCH", "/flags/{id}", 200, h.editFlag)
 	add("DELETE", "/flags/{id}", 204, remove("id", u.Flags.Delete))
 	add("PUT", "/flags/{id}/enabled", 200, h.setEnabled)
 	add("PUT", "/flags/{id}/rollout", 200, h.setRollout)
@@ -43,6 +44,8 @@ func (h handler) registerAdmin(add func(method, path string, status int, run end
 	add("POST", "/admins", 201, h.grantAdmin)
 	add("PUT", "/admins/{user_id}", 200, h.changeRole)
 	add("DELETE", "/admins/{user_id}", 204, remove("user_id", u.Admins.Revoke))
+
+	h.registerAdvanced(add)
 }
 
 func (h handler) me(r *http.Request, actor int64) (any, error) {
@@ -140,6 +143,13 @@ func (h handler) editFlag(r *http.Request, actor int64) (any, error) {
 	enabled, err := input.enabledInput.value(id != 0)
 	if err != nil {
 		return nil, err
+	}
+	if r.Method == http.MethodPatch {
+		if input.RolloutPercentage.Present {
+			return nil, apperrors.ValidationError("percentage changes require the rollout endpoint")
+		}
+		flag, err := h.usecases.Flags.UpdateMetadata(r.Context(), actor, models.FeatureFlag{ConfigKey: key, Enabled: enabled})
+		return flagView(flag), err
 	}
 	rollout, err := input.rolloutInput.value(id != 0)
 	if err != nil {

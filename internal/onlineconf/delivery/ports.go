@@ -16,6 +16,28 @@ type Services struct {
 	History   historyService
 	Keys      keyService
 	Snapshots snapshotService
+	Access    accessService
+	Rollouts  rolloutService
+}
+
+type accessService interface {
+	Current(context.Context, int64) (models.Access, error)
+	ListGrants(context.Context, int64) ([]models.Grant, error)
+	Grant(context.Context, int64, models.Grant) (models.Grant, error)
+	Revoke(context.Context, int64, int64) error
+	ListGroups(context.Context, int64) ([]models.Group, error)
+	SaveGroup(context.Context, int64, models.Group) (models.Group, error)
+	DeleteGroup(context.Context, int64, int64) error
+}
+
+type rolloutService interface {
+	ListPolicies(context.Context, int64) ([]models.RolloutPolicy, error)
+	SavePolicy(context.Context, int64, models.RolloutPolicy) (models.RolloutPolicy, error)
+	DeletePolicy(context.Context, int64, int64) error
+	Get(context.Context, int64, int64) (*models.Rollout, error)
+	Start(context.Context, int64, int64, int64) (models.Rollout, error)
+	Approve(context.Context, int64, int64, int64, int) (models.Rollout, error)
+	Cancel(context.Context, int64, int64, int64) (models.Rollout, error)
 }
 type scopeService interface {
 	Get(ctx context.Context, actorID, scopeID int64) (models.Scope, error)
@@ -34,6 +56,7 @@ type featureFlagService interface {
 	Get(ctx context.Context, actorID, keyID int64) (models.FeatureFlag, error)
 	Create(ctx context.Context, actorID int64, input models.FeatureFlag) (models.FeatureFlag, error)
 	Update(ctx context.Context, actorID int64, input models.FeatureFlag) (models.FeatureFlag, error)
+	UpdateMetadata(ctx context.Context, actorID int64, input models.FeatureFlag) (models.FeatureFlag, error)
 	SetEnabled(ctx context.Context, actorID, keyID int64, enabled bool) (models.FeatureFlag, error)
 	SetRolloutPercentage(ctx context.Context, actorID, keyID int64, percentage int16) (models.FeatureFlag, error)
 	Delete(ctx context.Context, actorID, keyID int64) error

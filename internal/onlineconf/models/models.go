@@ -15,8 +15,9 @@ const (
 type AdminRole string
 
 const (
-	AdminRoleOwner AdminRole = "owner"
-	AdminRoleAdmin AdminRole = "admin"
+	AdminRoleOwner  AdminRole = "owner"
+	AdminRoleAdmin  AdminRole = "admin"
+	AdminRoleMember AdminRole = "member"
 )
 
 type ResourceType string
