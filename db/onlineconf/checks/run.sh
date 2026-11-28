@@ -112,6 +112,10 @@ make onlineconf-migrate-version
 psql_checked "$runtime_url" -f db/onlineconf/checks/schema.sql
 echo 'Schema and runtime permissions verified'
 
+if [[ ${ONLINECONF_CHECK_REPOSITORY:-0} == 1 ]]; then
+    ONLINECONF_TEST_DATABASE_URL="$runtime_url" go test -count=1 -cover ./internal/onlineconf/repository
+fi
+
 expect_failure 'delete config_key rows' psql_checked "$ONLINECONF_MIGRATE_DATABASE_URL" -c 'TRUNCATE public.config'
 expect_failure 'must use onlineconf_migrator' env ONLINECONF_MIGRATE_DATABASE_URL="$ONLINECONF_PRODUCT_DATABASE_URL" make onlineconf-migrate-up
 
@@ -180,7 +184,11 @@ wait "$writer"
 writer=
 [[ $(psql_checked "$runtime_url" -Atc "SELECT count(*) FROM public.admin WHERE role = 'owner'") == 1 ]]
 echo 'Last-owner protection verified with concurrent deletion and demotion'
+
+if [[ ${ONLINECONF_CHECK_USECASE:-0} == 1 ]]; then
+    ONLINECONF_TEST_DATABASE_URL="$runtime_url" go test -count=1 -cover ./internal/onlineconf/usecase
+fi
 expect_failure 'refusing to roll back OnlineConf with non-seed data' make onlineconf-migrate-down
-[[ $(psql_checked "$runtime_url" -Atc 'SELECT count(*) FROM public.change_history') == 1 ]]
+[[ $(psql_checked "$runtime_url" -Atc "SELECT count(*) FROM public.change_history WHERE resource_type = 'admin'") == 1 ]]
 [[ $(psql_checked "$ONLINECONF_PRODUCT_DATABASE_URL" -Atc 'SELECT count(*) FROM public.app_user') == 1 ]]
 echo 'Owner bootstrap, reinitialization and rollback protection verified'
