@@ -64,6 +64,30 @@ services:
       postgres:
         condition: service_healthy
 
+  onlineconf:
+    profiles: ["onlineconf"]
+    build:
+      context: .
+      args:
+        SERVICE: onlineconf
+    ports:
+      - "127.0.0.1:${ONLINECONF_PORT:-8081}:8081"
+    environment:
+      ONLINECONF_ADDR: ":8081"
+      ONLINECONF_DATABASE_URL: ${ONLINECONF_DATABASE_URL:-}
+      ONLINECONF_PRODUCT_READER_DATABASE_URL: ${ONLINECONF_PRODUCT_READER_DATABASE_URL:-}
+      ONLINECONF_SNAPSHOT_SECRET: ${ONLINECONF_SNAPSHOT_SECRET:-}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    stop_grace_period: 20s
+
 volumes:
   postgres_data:
   minio_data:

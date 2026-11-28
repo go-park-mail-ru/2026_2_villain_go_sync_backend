@@ -11,14 +11,14 @@ type KeyUsecase struct {
 	store *repository.Store
 }
 
-func (u KeyUsecase) Get(ctx context.Context, actorID, keyID int64) (models.ConfigKey, error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.ConfigKey, error) {
-		return tx.Keys.Get(ctx, keyID)
+func (u KeyUsecase) Get(ctx context.Context, actorID, keyID int64) (repository.KeyDetails, error) {
+	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.KeyDetails, error) {
+		return tx.Keys.GetDetails(ctx, keyID)
 	})
 }
 
-func (u KeyUsecase) List(ctx context.Context, actorID int64, filter repository.KeyFilter) (repository.Page[models.ConfigKey], error) {
-	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[models.ConfigKey], error) {
+func (u KeyUsecase) List(ctx context.Context, actorID int64, filter repository.KeyFilter) (repository.Page[repository.KeyDetails], error) {
+	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[repository.KeyDetails], error) {
 		return tx.Keys.List(ctx, filter)
 	})
 }

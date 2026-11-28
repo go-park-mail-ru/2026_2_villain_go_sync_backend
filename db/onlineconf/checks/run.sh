@@ -192,3 +192,20 @@ expect_failure 'refusing to roll back OnlineConf with non-seed data' make online
 [[ $(psql_checked "$runtime_url" -Atc "SELECT count(*) FROM public.change_history WHERE resource_type = 'admin'") == 1 ]]
 [[ $(psql_checked "$ONLINECONF_PRODUCT_DATABASE_URL" -Atc 'SELECT count(*) FROM public.app_user') == 1 ]]
 echo 'Owner bootstrap, reinitialization and rollback protection verified'
+
+if [[ ${ONLINECONF_CHECK_HTTP:-0} == 1 ]]; then
+    export product_reader_password
+    product_reader_password=$(openssl rand -hex 24)
+    printf '127.0.0.1:%s:product_test:onlineconf_product_reader:%s\n' "$port" "$product_reader_password" >> "$PGPASSFILE"
+    psql_checked "$ONLINECONF_PRODUCT_DATABASE_URL" <<'SQL'
+\getenv password product_reader_password
+CREATE ROLE onlineconf_product_reader LOGIN PASSWORD :'password';
+GRANT SELECT (user_id) ON public.app_user TO onlineconf_product_reader;
+INSERT INTO public.app_user (email, password_hash, role)
+VALUES ('admin@example.test', 'unused', 'employer'), ('ordinary@example.test', 'unused', 'employer');
+SQL
+    unset product_reader_password
+    ONLINECONF_TEST_DATABASE_URL="$runtime_url" \
+    ONLINECONF_TEST_PRODUCT_READER_DATABASE_URL="postgresql://onlineconf_product_reader@$address/product_test?sslmode=disable" \
+        go test -count=1 -cover ./internal/onlineconf/delivery ./cmd/onlineconf
+fi

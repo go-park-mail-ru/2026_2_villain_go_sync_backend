@@ -12,6 +12,7 @@ import (
 
 type FeatureFlagUsecase struct {
 	store *repository.Store
+	users ProductUsers
 }
 
 func (u FeatureFlagUsecase) Get(ctx context.Context, actorID, keyID int64) (models.FeatureFlag, error) {
@@ -22,6 +23,9 @@ func (u FeatureFlagUsecase) Get(ctx context.Context, actorID, keyID int64) (mode
 
 func (u FeatureFlagUsecase) Create(ctx context.Context, actorID int64, input models.FeatureFlag) (models.FeatureFlag, error) {
 	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.FeatureFlag, error) {
+		if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
+			return models.FeatureFlag{}, err
+		}
 		flag, err := tx.Flags.Create(ctx, input)
 		if err != nil {
 			return models.FeatureFlag{}, err
@@ -57,6 +61,11 @@ func (u FeatureFlagUsecase) update(ctx context.Context, actorID, keyID int64,
 			return models.FeatureFlag{}, err
 		}
 		input := apply(before)
+		if input.OwnerUserID != before.OwnerUserID {
+			if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
+				return models.FeatureFlag{}, err
+			}
+		}
 		if sameKey(before.ConfigKey, input.ConfigKey) && (input.Type == "" || input.Type == before.Type) &&
 			before.Enabled == input.Enabled && before.RolloutPercentage == input.RolloutPercentage {
 			return before, nil
@@ -97,6 +106,9 @@ func (u FeatureFlagUsecase) Evaluate(ctx context.Context, actorID, keyID, userID
 		}
 		flag, err := tx.Flags.Get(ctx, keyID)
 		if err != nil {
+			return onlineconf.Evaluation{}, err
+		}
+		if err := requireUser(ctx, u.users, userID); err != nil {
 			return onlineconf.Evaluation{}, err
 		}
 		var enabledOverride *bool

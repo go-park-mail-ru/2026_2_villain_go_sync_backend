@@ -9,6 +9,7 @@ import (
 
 type AdminUsecase struct {
 	store *repository.Store
+	users ProductUsers
 }
 
 func (u AdminUsecase) CheckAccess(ctx context.Context, actorID int64) (models.Admin, error) {
@@ -24,6 +25,9 @@ func (u AdminUsecase) List(ctx context.Context, actorID int64, page repository.P
 
 func (u AdminUsecase) Grant(ctx context.Context, actorID, userID int64, role models.AdminRole) (models.Admin, error) {
 	return protected(ctx, u.store, actorID, true, func(tx *repository.Store) (models.Admin, error) {
+		if err := requireUser(ctx, u.users, userID); err != nil {
+			return models.Admin{}, err
+		}
 		admin, err := tx.Admins.Create(ctx, models.Admin{UserID: userID, Role: role, GrantedBy: &actorID})
 		if err != nil {
 			return models.Admin{}, err

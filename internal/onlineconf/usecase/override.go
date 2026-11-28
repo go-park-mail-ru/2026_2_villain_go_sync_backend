@@ -11,6 +11,7 @@ import (
 
 type OverrideUsecase struct {
 	store *repository.Store
+	users ProductUsers
 }
 
 func (u OverrideUsecase) Get(ctx context.Context, actorID, keyID, userID int64) (models.FeatureFlagOverride, error) {
@@ -23,6 +24,9 @@ func (u OverrideUsecase) ListByFlag(ctx context.Context, actorID, keyID int64,
 	page repository.PageRequest,
 ) (repository.Page[models.FeatureFlagOverride], error) {
 	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (repository.Page[models.FeatureFlagOverride], error) {
+		if _, err := tx.Flags.Get(ctx, keyID); err != nil {
+			return repository.Page[models.FeatureFlagOverride]{}, err
+		}
 		return tx.Overrides.ListByFlag(ctx, keyID, page)
 	})
 }
@@ -51,6 +55,11 @@ func (u OverrideUsecase) Upsert(ctx context.Context, actorID int64, input models
 			before = old
 		case !errors.Is(err, apperrors.ErrNotFound):
 			return models.FeatureFlagOverride{}, err
+		}
+		if before == nil {
+			if err := requireUser(ctx, u.users, input.UserID); err != nil {
+				return models.FeatureFlagOverride{}, err
+			}
 		}
 		override, err := tx.Overrides.Upsert(ctx, input)
 		if err != nil {

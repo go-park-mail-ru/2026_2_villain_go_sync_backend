@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
+	"net"
+	"strings"
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/jackc/pgx/v5"
@@ -71,13 +74,16 @@ func (c connection) withinTx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return classifyError(ctx, pgx.BeginTxFunc(ctx, c.pool, pgx.TxOptions{IsoLevel: pgx.RepeatableRead}, fn))
 }
 
-var ErrRetryable = errors.New("retryable database transaction")
+var (
+	ErrRetryable   = errors.New("retryable database transaction")
+	ErrUnavailable = errors.New("database unavailable")
+)
 
 func classifyError(ctx context.Context, err error) error {
 	if err == nil {
 		return nil
 	}
-	for _, known := range []error{apperrors.ErrNotFound, apperrors.ErrConflict, apperrors.ErrInvalidInput, ErrRetryable} {
+	for _, known := range []error{apperrors.ErrNotFound, apperrors.ErrConflict, apperrors.ErrInvalidInput, ErrRetryable, ErrUnavailable} {
 		if errors.Is(err, known) {
 			return err
 		}
@@ -87,7 +93,12 @@ func classifyError(ctx context.Context, err error) error {
 	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
+		if strings.HasPrefix(pgErr.Code, "08") {
+			return fmt.Errorf("%w: %w", ErrUnavailable, err)
+		}
 		switch pgErr.Code {
+		case "57P01", "57P02", "57P03", "53300":
+			return fmt.Errorf("%w: %w", ErrUnavailable, err)
 		case "23505", "23503", "23P01":
 			return fmt.Errorf("%w: %w", apperrors.ErrConflict, err)
 		case "23502", "23514", "22001", "22003", "22P02", "22P05":
@@ -99,6 +110,12 @@ func classifyError(ctx context.Context, err error) error {
 				return fmt.Errorf("%w: %w", ctx.Err(), err)
 			}
 		}
+	}
+	var connectErr *pgconn.ConnectError
+	var networkErr net.Error
+	if pgconn.Timeout(err) || errors.As(err, &connectErr) || errors.As(err, &networkErr) ||
+		errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("%w: %w", ErrUnavailable, err)
 	}
 	return err
 }

@@ -59,3 +59,8 @@ onlineconf-migrate-version:
 
 onlineconf-admin-bootstrap:
 	@bash db/onlineconf/manage.sh bootstrap
+
+.PHONY: onlineconf-run
+
+onlineconf-run:
+	go run ./cmd/onlineconf

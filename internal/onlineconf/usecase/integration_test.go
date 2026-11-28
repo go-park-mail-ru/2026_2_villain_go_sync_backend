@@ -54,7 +54,7 @@ func withFixture(t *testing.T, fn func(context.Context, *repository.Store, useca
 	ctx, store, _ := openTestStore(t)
 	rollback := fmt.Errorf("rollback fixture")
 	err := store.WithinTx(ctx, func(tx *repository.Store) error {
-		fn(ctx, tx, usecase.New(tx))
+		fn(ctx, tx, usecase.New(tx, fixtureUsers{}))
 		return rollback
 	})
 	requireError(t, err, rollback)
@@ -290,7 +290,7 @@ func TestAdminPermissionAndLastOwner(t *testing.T) {
 
 func TestConcurrentScopeAuditUsesActualPreviousVersion(t *testing.T) {
 	ctx, store, pool := openTestStore(t)
-	u := usecase.New(store)
+	u := usecase.New(store, fixtureUsers{})
 	scope, err := u.Scopes.Create(ctx, ownerID, models.Scope{Name: "concurrent_usecase"})
 	requireError(t, err, nil)
 	t.Cleanup(func() {
@@ -308,7 +308,7 @@ func TestConcurrentScopeAuditUsesActualPreviousVersion(t *testing.T) {
 	writerDone := make(chan error, 1)
 	go func() {
 		writerDone <- store.WithinTx(ctx, func(tx *repository.Store) error {
-			if _, err := usecase.New(tx).Scopes.Update(ctx, ownerID, first); err != nil {
+			if _, err := usecase.New(tx, fixtureUsers{}).Scopes.Update(ctx, ownerID, first); err != nil {
 				return err
 			}
 			close(ready)

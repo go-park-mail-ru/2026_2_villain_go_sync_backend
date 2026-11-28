@@ -39,59 +39,59 @@ const (
 
 type Scope struct {
 	ID          int64
-	Name        string
-	Description *string
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	Name        string    `json:"name"`
+	Description *string   `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type ConfigKey struct {
 	ID          int64
 	ScopeID     int64
-	ScopeName   string
-	Name        string
-	Description *string
-	Type        KeyType
+	ScopeName   string  `json:"scope_name"`
+	Name        string  `json:"name"`
+	Description *string `json:"description"`
+	Type        KeyType `json:"type"`
 	OwnerUserID int64
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Config struct {
 	ConfigKey
-	Value json.RawMessage
+	Value json.RawMessage `json:"value"`
 }
 
 type FeatureFlag struct {
 	ConfigKey
-	Enabled           bool
+	Enabled           bool `json:"enabled"`
 	RolloutPercentage int16
 }
 
 type FeatureFlagOverride struct {
 	KeyID     int64
 	UserID    int64
-	Enabled   bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Enabled   bool      `json:"enabled"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Admin struct {
 	UserID    int64
-	Role      AdminRole
+	Role      AdminRole `json:"role"`
 	GrantedBy *int64
-	CreatedAt time.Time
+	CreatedAt time.Time `json:"created_at"`
 }
 
 type ChangeHistory struct {
 	ID           int64
 	ActorUserID  int64
-	ResourceType ResourceType
+	ResourceType ResourceType `json:"resource_type"`
 	ResourceID   int64
-	ScopeName    *string
-	ResourceName string
-	Action       Action
-	OldValue     json.RawMessage
-	NewValue     json.RawMessage
-	CreatedAt    time.Time
+	ScopeName    *string         `json:"scope_name"`
+	ResourceName string          `json:"resource_name"`
+	Action       Action          `json:"action"`
+	OldValue     json.RawMessage `json:"old_value"`
+	NewValue     json.RawMessage `json:"new_value"`
+	CreatedAt    time.Time       `json:"created_at"`
 }

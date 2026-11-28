@@ -1,6 +1,7 @@
 package usecase_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func TestScopeRollsBackWhenHistoryWriteFails(t *testing.T) {
 	pool.ExpectRollback()
 	pool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
 
-	got, err := usecase.New(repository.NewStore(pool)).Scopes.Create(t.Context(), actor, models.Scope{Name: "scope"})
+	got, err := usecase.New(repository.NewStore(pool), fixtureUsers{}).Scopes.Create(t.Context(), actor, models.Scope{Name: "scope"})
 	requireError(t, err, historyErr)
 	if got.ID != 0 {
 		t.Fatalf("Create returned uncommitted scope: %+v", got)
@@ -51,7 +52,7 @@ func TestUnauthorizedOperationStopsBeforeResourceLookup(t *testing.T) {
 	pool.ExpectQuery("FROM public.admin WHERE user_id = .* FOR SHARE").WithArgs(int64(88)).WillReturnError(pgx.ErrNoRows)
 	pool.ExpectRollback()
 	pool.ExpectRollback().WillReturnError(pgx.ErrTxClosed)
-	_, err = usecase.New(repository.NewStore(pool)).Configs.Get(t.Context(), 88, 42)
+	_, err = usecase.New(repository.NewStore(pool), fixtureUsers{}).Configs.Get(t.Context(), 88, 42)
 	requireError(t, err, apperrors.ErrForbidden)
 	requireError(t, pool.ExpectationsWereMet(), nil)
 }
@@ -62,3 +63,7 @@ func requireError(t *testing.T, got, want error) {
 		t.Fatalf("error = %v, want %v", got, want)
 	}
 }
+
+type fixtureUsers struct{}
+
+func (fixtureUsers) Exists(context.Context, int64) (bool, error) { return true, nil }

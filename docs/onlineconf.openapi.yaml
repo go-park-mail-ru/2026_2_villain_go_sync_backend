@@ -1,0 +1,2072 @@
+openapi: 3.1.0
+info:
+  title: HireNoon OnlineConf
+  version: 1.0.0
+  description: Административный API OnlineConf и внутренний снимок. Успешные ответы с телом содержат data, ошибки
+    содержат error. PUT для scope, конфигураций и флагов заменяет изменяемые поля полностью. Административная роль
+    определяется в OnlineConf по ID из access JWT.
+security:
+- AccessCookie: []
+paths:
+  /api/onlineconf/admin/me:
+    get:
+      operationId: getCurrentAdmin
+      summary: Получить текущего администратора
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Admin'
+                required:
+                - data
+                additionalProperties: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/scopes:
+    get:
+      operationId: listScopes
+      summary: Получить список scope
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ScopePage'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    post:
+      operationId: createScope
+      summary: Создать scope
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScopeCreate'
+      responses:
+        '201':
+          description: Ресурс создан.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Scope'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/scopes/{id}:
+    get:
+      operationId: getScope
+      summary: Получить scope
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Scope'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    put:
+      operationId: replaceScope
+      summary: Заменить scope
+      description: Полная замена изменяемых полей. Укажите все обязательные поля. Чтобы очистить описание, передайте
+        null.
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScopeReplace'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Scope'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: deleteScope
+      summary: Удалить пустой scope
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Ресурс удалён.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/keys:
+    get:
+      operationId: listKeys
+      summary: Получить ключи со значениями или настройками
+      description: Сортировка по возрастанию ID ключа.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/Search'
+      - $ref: '#/components/parameters/ScopeID'
+      - $ref: '#/components/parameters/KeyType'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/KeyPage'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/keys/{id}:
+    get:
+      operationId: getKey
+      summary: Получить ключ со значением или настройками
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Key'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/configs:
+    post:
+      operationId: createConfig
+      summary: Создать конфигурацию
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigCreate'
+      responses:
+        '201':
+          description: Ресурс создан.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Config'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/configs/{id}:
+    get:
+      operationId: getConfig
+      summary: Получить конфигурацию
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Config'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    put:
+      operationId: replaceConfig
+      summary: Заменить конфигурацию
+      description: Полная замена изменяемых полей. Укажите все обязательные поля. Чтобы очистить описание, передайте
+        null.
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfigReplace'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Config'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: deleteConfig
+      summary: Удалить конфигурацию
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Ресурс удалён.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags:
+    post:
+      operationId: createFlag
+      summary: Создать feature flag
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagCreate'
+      responses:
+        '201':
+          description: Ресурс создан.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FeatureFlag'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags/{id}:
+    get:
+      operationId: getFlag
+      summary: Получить feature flag
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FeatureFlag'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    put:
+      operationId: replaceFlag
+      summary: Заменить feature flag
+      description: Полная замена изменяемых полей. Укажите все обязательные поля. Чтобы очистить описание, передайте
+        null.
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagReplace'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FeatureFlag'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: deleteFlag
+      summary: Удалить feature flag и его исключения
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '204':
+          description: Ресурс удалён.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags/{id}/enabled:
+    put:
+      operationId: setFlagEnabled
+      summary: Установить глобальное состояние флага
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FeatureFlag'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags/{id}/rollout:
+    put:
+      operationId: setFlagRollout
+      summary: Установить процент раскатки
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RolloutInput'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/FeatureFlag'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags/{id}/overrides:
+    get:
+      operationId: listFlagOverrides
+      summary: Получить исключения флага
+      description: Сортировка по возрастанию user_id. Для флага без исключений возвращается пустой список.
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OverridePage'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags/{id}/overrides/{user_id}:
+    put:
+      operationId: upsertOverride
+      summary: Установить персональное включение или исключение
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/UserID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Override'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: deleteOverride
+      summary: Удалить персональное правило
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/UserID'
+      responses:
+        '204':
+          description: Ресурс удалён.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/users/{user_id}/overrides:
+    get:
+      operationId: listUserOverrides
+      summary: Получить исключения пользователя
+      description: Сортировка по возрастанию key_id.
+      parameters:
+      - $ref: '#/components/parameters/UserID'
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OverridePage'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/flags/{id}/evaluate:
+    get:
+      operationId: evaluateFlag
+      summary: Вычислить состояние флага для пользователя
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      - $ref: '#/components/parameters/EvaluationUser'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Evaluation'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/history:
+    get:
+      operationId: listHistory
+      summary: Получить историю изменений
+      description: Сортировка по убыванию ID изменения.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/ResourceType'
+      - $ref: '#/components/parameters/ResourceID'
+      - $ref: '#/components/parameters/ScopeName'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ChangeHistoryPage'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/history/{id}:
+    get:
+      operationId: getHistory
+      summary: Получить запись истории
+      parameters:
+      - $ref: '#/components/parameters/ID'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/ChangeHistory'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/admins:
+    get:
+      operationId: listAdmins
+      summary: Получить список администраторов
+      description: Требуется роль owner.
+      parameters:
+      - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/Cursor'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AdminPage'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    post:
+      operationId: grantAdmin
+      summary: Назначить администратора
+      description: Требуется роль owner.
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminGrant'
+      responses:
+        '201':
+          description: Ресурс создан.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Admin'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /api/onlineconf/admin/admins/{user_id}:
+    put:
+      operationId: replaceAdminRole
+      summary: Изменить роль администратора
+      description: Требуется роль owner.
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/UserID'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminRoleInput'
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Admin'
+                required:
+                - data
+                additionalProperties: false
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+    delete:
+      operationId: revokeAdmin
+      summary: Отозвать административные права
+      description: Требуется роль owner.
+      security:
+      - AccessCookie: []
+        CsrfCookie: []
+        CsrfHeader: []
+      parameters:
+      - $ref: '#/components/parameters/UserID'
+      responses:
+        '204':
+          description: Ресурс удалён.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /internal/onlineconf/snapshot:
+    get:
+      operationId: getRuntimeSnapshot
+      summary: Получить полный runtime-снимок
+      description: Полный согласованный снимок без пагинации. Доступен по отдельному межсервисному секрету.
+      security:
+      - SnapshotBearer: []
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Snapshot'
+                required:
+                - data
+                additionalProperties: false
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/Unavailable'
+  /health:
+    get:
+      operationId: getHealth
+      summary: Проверить готовность сервиса
+      description: Проверяет OnlineConf PostgreSQL и подключение для чтения продуктовых пользователей.
+      security: []
+      responses:
+        '200':
+          description: Успешный ответ.
+          headers:
+            X-Request-ID:
+              description: Идентификатор запроса.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Health'
+                required:
+                - data
+                additionalProperties: false
+        '503':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    AccessCookie:
+      type: apiKey
+      in: cookie
+      name: access_token
+      description: Подписанный access JWT продуктовой авторизации.
+    CsrfCookie:
+      type: apiKey
+      in: cookie
+      name: csrf_token
+    CsrfHeader:
+      type: apiKey
+      in: header
+      name: X-CSRF-Token
+      description: Значение должно совпадать с cookie csrf_token.
+    SnapshotBearer:
+      type: http
+      scheme: bearer
+      description: Отдельный межсервисный секрет ONLINECONF_SNAPSHOT_SECRET.
+  parameters:
+    ID:
+      name: id
+      in: path
+      description: Идентификатор ресурса.
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    UserID:
+      name: user_id
+      in: path
+      description: Идентификатор продуктового пользователя.
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    Limit:
+      name: limit
+      in: query
+      description: Размер страницы.
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    Cursor:
+      name: cursor
+      in: query
+      description: Передайте next_cursor предыдущей страницы с теми же фильтрами.
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ScopeID:
+      name: scope_id
+      in: query
+      description: Фильтр по идентификатору scope.
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    KeyType:
+      name: type
+      in: query
+      description: Фильтр по типу ключа.
+      required: false
+      schema:
+        type: string
+        enum:
+        - config
+        - feature_flag
+    Search:
+      name: search
+      in: query
+      description: Поиск по части имени без учёта регистра. Строка с точкой сравнивается с полным именем scope.key.
+      required: false
+      schema:
+        type: string
+    ResourceID:
+      name: resource_id
+      in: query
+      description: Фильтр по идентификатору ресурса.
+      required: false
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+    ResourceType:
+      name: resource_type
+      in: query
+      description: Фильтр по типу ресурса.
+      required: false
+      schema:
+        type: string
+        enum:
+        - scope
+        - config
+        - feature_flag
+        - feature_flag_override
+        - admin
+    ScopeName:
+      name: scope_name
+      in: query
+      description: Фильтр по имени scope в записи истории.
+      required: false
+      schema:
+        type: string
+        minLength: 1
+    EvaluationUser:
+      name: user_id
+      in: query
+      description: Идентификатор существующего продуктового пользователя.
+      required: true
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+  responses:
+    BadRequest:
+      description: Некорректные параметры или JSON запроса.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Авторизация отсутствует или не прошла проверку.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: Недостаточно прав или не прошла проверка CSRF.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Ресурс не найден.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Conflict:
+      description: Конфликт данных или конкурентное изменение. Операцию можно повторить после чтения актуального
+        состояния.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Запрос не прошёл валидацию. Возможные причины включают отсутствующее поле, неизвестного продуктового
+        пользователя или попытку убрать последнего владельца.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    InternalError:
+      description: Внутренняя ошибка.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unavailable:
+      description: Необходимая зависимость недоступна.
+      headers:
+        X-Request-ID:
+          description: Идентификатор запроса.
+          schema:
+            type: string
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Scope:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - name
+      - description
+      - created_at
+      - updated_at
+      additionalProperties: false
+    ScopeCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+      required:
+      - name
+      additionalProperties: false
+    ScopeReplace:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+      required:
+      - name
+      - description
+      additionalProperties: false
+    Key:
+      oneOf:
+      - $ref: '#/components/schemas/Config'
+      - $ref: '#/components/schemas/FeatureFlag'
+    Config:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        scope_id:
+          type: integer
+          format: int64
+          minimum: 1
+        scope_name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        full_name:
+          type: string
+          example: frontend.banner
+        description:
+          type:
+          - string
+          - 'null'
+        type:
+          type: string
+          const: config
+        owner_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        value:
+          description: Любое JSON-значение, включая null.
+      required:
+      - id
+      - scope_id
+      - scope_name
+      - name
+      - full_name
+      - description
+      - type
+      - owner_user_id
+      - created_at
+      - updated_at
+      - value
+      additionalProperties: false
+    ConfigCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+        scope_id:
+          type: integer
+          format: int64
+          minimum: 1
+        owner_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        value:
+          description: Любое JSON-значение, включая null.
+      required:
+      - scope_id
+      - owner_user_id
+      - name
+      - value
+      additionalProperties: false
+    ConfigReplace:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+        scope_id:
+          type: integer
+          format: int64
+          minimum: 1
+        owner_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        value:
+          description: Любое JSON-значение, включая null.
+      required:
+      - scope_id
+      - owner_user_id
+      - name
+      - description
+      - value
+      additionalProperties: false
+    FeatureFlag:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        scope_id:
+          type: integer
+          format: int64
+          minimum: 1
+        scope_name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        full_name:
+          type: string
+          example: frontend.banner
+        description:
+          type:
+          - string
+          - 'null'
+        type:
+          type: string
+          const: feature_flag
+        owner_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        enabled:
+          type: boolean
+        rollout_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+      - id
+      - scope_id
+      - scope_name
+      - name
+      - full_name
+      - description
+      - type
+      - owner_user_id
+      - created_at
+      - updated_at
+      - enabled
+      - rollout_percentage
+      additionalProperties: false
+    FlagCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+        scope_id:
+          type: integer
+          format: int64
+          minimum: 1
+        owner_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        enabled:
+          type: boolean
+          default: false
+        rollout_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+          default: 0
+      required:
+      - scope_id
+      - owner_user_id
+      - name
+      additionalProperties: false
+    FlagReplace:
+      type: object
+      properties:
+        name:
+          type: string
+          pattern: ^[a-z][a-z0-9_]*$
+        description:
+          type:
+          - string
+          - 'null'
+        scope_id:
+          type: integer
+          format: int64
+          minimum: 1
+        owner_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        enabled:
+          type: boolean
+        rollout_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+      - scope_id
+      - owner_user_id
+      - name
+      - description
+      - enabled
+      - rollout_percentage
+      additionalProperties: false
+    EnabledInput:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+      required:
+      - enabled
+      additionalProperties: false
+    RolloutInput:
+      type: object
+      properties:
+        rollout_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required:
+      - rollout_percentage
+      additionalProperties: false
+    Override:
+      type: object
+      properties:
+        key_id:
+          type: integer
+          format: int64
+          minimum: 1
+        user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        enabled:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+      - key_id
+      - user_id
+      - enabled
+      - created_at
+      - updated_at
+      additionalProperties: false
+    Evaluation:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        rollout_percentage:
+          type: integer
+          minimum: 0
+          maximum: 100
+        reason:
+          type: string
+          enum:
+          - globally_disabled
+          - forced_include
+          - forced_exclude
+          - rollout_included
+          - rollout_excluded
+        bucket:
+          type: integer
+          minimum: 0
+          maximum: 99
+          description: Присутствует только для решения по процентной раскатке.
+      required:
+      - enabled
+      - rollout_percentage
+      - reason
+      additionalProperties: false
+    Admin:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        role:
+          type: string
+          enum:
+          - owner
+          - admin
+        granted_by:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 1
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - user_id
+      - role
+      - granted_by
+      - created_at
+      additionalProperties: false
+    AdminGrant:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        role:
+          type: string
+          enum:
+          - owner
+          - admin
+      required:
+      - user_id
+      - role
+      additionalProperties: false
+    AdminRoleInput:
+      type: object
+      properties:
+        role:
+          type: string
+          enum:
+          - owner
+          - admin
+      required:
+      - role
+      additionalProperties: false
+    ChangeHistory:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+          minimum: 1
+        actor_user_id:
+          type: integer
+          format: int64
+          minimum: 1
+        resource_type:
+          type: string
+          enum:
+          - scope
+          - config
+          - feature_flag
+          - feature_flag_override
+          - admin
+        resource_id:
+          type: integer
+          format: int64
+          minimum: 1
+        scope_name:
+          type:
+          - string
+          - 'null'
+        resource_name:
+          type: string
+        action:
+          type: string
+          enum:
+          - create
+          - update
+          - delete
+        old_value:
+          description: Снимок до изменения. Отсутствует при создании.
+        new_value:
+          description: Снимок после изменения. Отсутствует при удалении.
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - id
+      - actor_user_id
+      - resource_type
+      - resource_id
+      - scope_name
+      - resource_name
+      - action
+      - created_at
+      additionalProperties: false
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+      - error
+      additionalProperties: false
+    Health:
+      type: object
+      properties:
+        status:
+          type: string
+          const: ok
+      required:
+      - status
+      additionalProperties: false
+    ScopePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Scope'
+        next_cursor:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 1
+          description: Курсор следующей страницы или null.
+      required:
+      - items
+      - next_cursor
+      additionalProperties: false
+    KeyPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Key'
+        next_cursor:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 1
+          description: Курсор следующей страницы или null.
+      required:
+      - items
+      - next_cursor
+      additionalProperties: false
+    OverridePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Override'
+        next_cursor:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 1
+          description: Курсор следующей страницы или null.
+      required:
+      - items
+      - next_cursor
+      additionalProperties: false
+    ChangeHistoryPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChangeHistory'
+        next_cursor:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 1
+          description: Курсор следующей страницы или null.
+      required:
+      - items
+      - next_cursor
+      additionalProperties: false
+    AdminPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Admin'
+        next_cursor:
+          type:
+          - integer
+          - 'null'
+          format: int64
+          minimum: 1
+          description: Курсор следующей страницы или null.
+      required:
+      - items
+      - next_cursor
+      additionalProperties: false
+    Snapshot:
+      type: object
+      properties:
+        configs:
+          type: array
+          items:
+            $ref: '#/components/schemas/Config'
+        flags:
+          type: array
+          items:
+            $ref: '#/components/schemas/FeatureFlag'
+        overrides:
+          type: array
+          items:
+            $ref: '#/components/schemas/Override'
+      required:
+      - configs
+      - flags
+      - overrides
+      additionalProperties: false

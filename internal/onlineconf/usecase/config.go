@@ -9,6 +9,7 @@ import (
 
 type ConfigUsecase struct {
 	store *repository.Store
+	users ProductUsers
 }
 
 func (u ConfigUsecase) Get(ctx context.Context, actorID, keyID int64) (models.Config, error) {
@@ -19,6 +20,9 @@ func (u ConfigUsecase) Get(ctx context.Context, actorID, keyID int64) (models.Co
 
 func (u ConfigUsecase) Create(ctx context.Context, actorID int64, input models.Config) (models.Config, error) {
 	return protected(ctx, u.store, actorID, false, func(tx *repository.Store) (models.Config, error) {
+		if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
+			return models.Config{}, err
+		}
 		config, err := tx.Configs.Create(ctx, input)
 		if err != nil {
 			return models.Config{}, err
@@ -32,6 +36,11 @@ func (u ConfigUsecase) Update(ctx context.Context, actorID int64, input models.C
 		before, err := tx.Configs.Get(ctx, input.ID)
 		if err != nil {
 			return models.Config{}, err
+		}
+		if input.OwnerUserID != before.OwnerUserID {
+			if err := requireUser(ctx, u.users, input.OwnerUserID); err != nil {
+				return models.Config{}, err
+			}
 		}
 		if sameKey(before.ConfigKey, input.ConfigKey) && (input.Type == "" || input.Type == before.Type) {
 			equal, err := tx.Configs.ValueEquals(ctx, before.ID, input.Value)

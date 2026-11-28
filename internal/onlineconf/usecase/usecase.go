@@ -22,10 +22,10 @@ type Usecases struct {
 	Snapshots SnapshotUsecase
 }
 
-func New(store *repository.Store) Usecases {
+func New(store *repository.Store, users ProductUsers) Usecases {
 	return Usecases{
-		Scopes: ScopeUsecase{store}, Configs: ConfigUsecase{store}, Flags: FeatureFlagUsecase{store},
-		Overrides: OverrideUsecase{store}, Keys: KeyUsecase{store}, Admins: AdminUsecase{store},
+		Scopes: ScopeUsecase{store}, Configs: ConfigUsecase{store: store, users: users}, Flags: FeatureFlagUsecase{store: store, users: users},
+		Overrides: OverrideUsecase{store: store, users: users}, Keys: KeyUsecase{store}, Admins: AdminUsecase{store: store, users: users},
 		History: HistoryUsecase{store}, Snapshots: SnapshotUsecase{store},
 	}
 }
