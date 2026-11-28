@@ -264,6 +264,14 @@ func verifyAdvancedHTTP(t *testing.T, u usecase.Usecases,
 	if len(keys.Items) != 1 || keys.Items[0].ID != flagID {
 		t.Fatalf("delegated catalog = %+v", keys)
 	}
+	scopes := decodeData[struct {
+		Items []struct{ ID int64 }
+	}](t, do("GET", "/scopes?limit=1", "", member, 200))
+	if len(scopes.Items) != 1 || scopes.Items[0].ID != scopeID {
+		t.Fatalf("delegated scope catalog = %+v", scopes)
+	}
+	do("GET", "/scopes/1", "", member, 403)
+	do("GET", fmt.Sprintf("/scopes/%d", scopeID), "", member, 200)
 	do("GET", configPath, "", member, 403)
 	do("GET", fmt.Sprintf("/keys/%d", configID), "", member, 403)
 	do("GET", "/history", "", member, 403)
@@ -316,9 +324,16 @@ func verifyAdvancedHTTP(t *testing.T, u usecase.Usecases,
 	do("POST", rolloutPath+"/approve", confirmation(0), member, 409)
 	second := decodeData[models.Rollout](t, do("POST", rolloutPath+"/approve", confirmation(1), member, 200))
 	process(25)
-	do("PUT", groupPath, `{"name":"Reviewers","member_ids":[]}`, owner, 200)
+	do("PUT", groupPath, `{"name":"Reviewers","member_ids":[]}`, owner, 422)
+	savedGroup := decodeData[models.Group](t, do("PUT", groupPath,
+		fmt.Sprintf(`{"name":"Reviewers","member_ids":[],"revision":%d}`, group.Revision), owner, 200))
+	if savedGroup.Revision != group.Revision+1 {
+		t.Fatalf("group update revision = %d, previous = %d", savedGroup.Revision, group.Revision)
+	}
+	do("PUT", groupPath, fmt.Sprintf(`{"name":"Reviewers","member_ids":[3],"revision":%d}`, group.Revision), owner, 409)
 	do("GET", flagPath, "", member, 403)
 	do("GET", configPath, "", member, 200)
+	do("GET", fmt.Sprintf("/scopes/%d", scopeID), "", member, 200)
 	time.Sleep(time.Until(*second.DueAt) + 20*time.Millisecond)
 	process(25)
 	revoked := decodeData[models.Rollout](t, do("GET", rolloutPath, "", admin, 200))

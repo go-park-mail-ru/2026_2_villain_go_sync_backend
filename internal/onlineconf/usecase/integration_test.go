@@ -434,6 +434,90 @@ func TestMutualAdminDemotionChecksActorAfterLock(t *testing.T) {
 	requireError(t, <-competing, apperrors.ErrForbidden)
 }
 
+func TestWorkerDiscardsApprovalRevokedWhileWaitingForFlag(t *testing.T) {
+	ctx, store, pool := openTestStore(t)
+	u := usecase.New(store, fixtureUsers{})
+	scope, err := store.Scopes.GetByName(ctx, "auth")
+	requireError(t, err, nil)
+	flag, err := u.Flags.Create(ctx, ownerID, models.FeatureFlag{
+		ConfigKey: models.ConfigKey{ScopeID: scope.ID, Name: "approval_revocation_test", OwnerUserID: ownerID},
+		Enabled:   true,
+	})
+	requireError(t, err, nil)
+	t.Cleanup(func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		requireError(t, u.Flags.Delete(cleanup, ownerID, flag.ID), nil)
+	})
+	policy, err := u.Rollouts.SavePolicy(ctx, ownerID, models.RolloutPolicy{
+		Name: "Approval revocation test", Steps: []models.RolloutStep{{Percentage: 10}, {Percentage: 100, WaitSeconds: 1}},
+	})
+	requireError(t, err, nil)
+	t.Cleanup(func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		requireError(t, u.Rollouts.DeletePolicy(cleanup, ownerID, policy.ID), nil)
+	})
+
+	for _, inherited := range []bool{false, true} {
+		t.Run(fmt.Sprintf("inherited_%t", inherited), func(t *testing.T) {
+			approver := int64(204)
+			input := models.Grant{KeyID: &flag.ID, UserID: &approver, Action: models.ApproveRollout}
+			var group models.Group
+			if inherited {
+				group, err = u.Access.SaveGroup(ctx, ownerID, models.Group{
+					Name: "Revocable approval", MemberIDs: []int64{approver},
+				})
+				requireError(t, err, nil)
+				t.Cleanup(func() { requireError(t, u.Access.DeleteGroup(ctx, ownerID, group.ID), nil) })
+				input.UserID, input.GroupID = nil, &group.ID
+			}
+			grant, err := u.Access.Grant(ctx, ownerID, input)
+			requireError(t, err, nil)
+			run, err := u.Rollouts.Start(ctx, ownerID, flag.ID, policy.ID)
+			requireError(t, err, nil)
+			t.Cleanup(func() {
+				_, err := u.Rollouts.Cancel(ctx, ownerID, flag.ID, run.RunID)
+				requireError(t, err, nil)
+				_, err = u.Flags.SetRolloutPercentage(ctx, ownerID, flag.ID, 0)
+				requireError(t, err, nil)
+			})
+			_, err = u.Rollouts.Approve(ctx, approver, flag.ID, run.RunID, 0)
+			requireError(t, err, nil)
+
+			competing := make(chan error, 1)
+			err = store.WithinTx(ctx, func(tx *repository.Store) error {
+				if _, err := tx.Flags.GetForUpdate(ctx, flag.ID); err != nil {
+					return err
+				}
+				go func() { competing <- u.Rollouts.ProcessReady(ctx) }()
+				if err := waitForBlockedStatement(ctx, pool, "%FOR NO KEY UPDATE OF k", competing); err != nil {
+					return err
+				}
+				if !inherited {
+					return u.Access.Revoke(ctx, ownerID, grant.ID)
+				}
+				group.MemberIDs = []int64{}
+				_, err := u.Access.SaveGroup(ctx, ownerID, group)
+				return err
+			})
+			requireError(t, err, nil)
+			requireError(t, <-competing, nil)
+			requireError(t, u.Rollouts.ProcessReady(ctx), nil)
+			got, err := u.Flags.Get(ctx, ownerID, flag.ID)
+			requireError(t, err, nil)
+			if got.RolloutPercentage != 0 {
+				t.Fatalf("worker applied revoked approval: rollout = %d%%", got.RolloutPercentage)
+			}
+			plan, err := u.Rollouts.Get(ctx, ownerID, flag.ID)
+			requireError(t, err, nil)
+			if plan == nil || plan.ApprovedBy != nil {
+				t.Fatalf("revoked approval remained queued: %+v", plan)
+			}
+		})
+	}
+}
+
 func waitForBlockedStatement(ctx context.Context, pool *pgxpool.Pool, statement string, result <-chan error) error {
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()

@@ -118,6 +118,17 @@ func (a keyAccess) readable() *models.ReadableKeys {
 	return keys
 }
 
+func (a keyAccess) scopeTargets() (scopeIDs, keyIDs []int64) {
+	for _, grant := range a.Grants {
+		if grant.ScopeID != nil {
+			scopeIDs = append(scopeIDs, *grant.ScopeID)
+		} else {
+			keyIDs = append(keyIDs, *grant.KeyID)
+		}
+	}
+	return scopeIDs, keyIDs
+}
+
 type AccessUsecase struct {
 	store Store
 	users ProductUsers
@@ -205,6 +216,9 @@ func (u AccessUsecase) SaveGroup(ctx context.Context, actorID int64, group model
 		group.Name = strings.TrimSpace(group.Name)
 		if group.Name == "" || utf8.RuneCountInString(group.Name) > 100 || group.MemberIDs == nil {
 			return models.Group{}, apperrors.ValidationError("group name and member list are required")
+		}
+		if group.ID != 0 && group.Revision <= 0 {
+			return models.Group{}, apperrors.ValidationError("group revision is required on update")
 		}
 		seen := make(map[int64]struct{}, len(group.MemberIDs))
 		for _, userID := range group.MemberIDs {

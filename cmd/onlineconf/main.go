@@ -136,7 +136,7 @@ func checkRuntimeSchema(ctx context.Context, pool *pgxpool.Pool) error {
 	_, err := pool.Exec(ctx, `
 		SELECT 1 FROM public.scope WHERE false
 		UNION ALL SELECT 1 FROM public.access_grant WHERE false
-		UNION ALL SELECT 1 FROM public.user_group WHERE false
+		UNION ALL SELECT 1 FROM public.user_group WHERE false AND revision > 0
 		UNION ALL SELECT 1 FROM public.group_member WHERE false
 		UNION ALL SELECT 1 FROM public.rollout_policy WHERE false
 		UNION ALL SELECT 1 FROM public.flag_rollout WHERE false`)

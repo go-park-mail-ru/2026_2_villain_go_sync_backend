@@ -2,7 +2,9 @@ package repository
 
 import (
 	"context"
+	"errors"
 
+	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/onlineconf/models"
 )
 
@@ -23,9 +25,15 @@ func (r AccessRepository) List(ctx context.Context) ([]models.Grant, error) {
 }
 
 func (r AccessRepository) Effective(ctx context.Context, userID int64) ([]models.Grant, error) {
+	// A repeatable-read transaction may have opened its snapshot before a revocation.
+	// Lock both sources of authorization so stale grants trigger a serialization retry.
 	return r.grants(ctx, `
-		WHERE user_id = $1 OR group_id IN (SELECT group_id FROM public.group_member WHERE user_id = $1)
-		ORDER BY grant_id`, userID)
+		WHERE user_id = $1 OR EXISTS (
+			SELECT FROM public.group_member m
+			WHERE m.user_id = $1 AND m.group_id = access_grant.group_id
+			FOR SHARE OF m
+		)
+		ORDER BY grant_id FOR SHARE`, userID)
 }
 
 func (r AccessRepository) grants(ctx context.Context, clause string, args ...any) ([]models.Grant, error) {
@@ -62,13 +70,13 @@ type GroupRepository struct {
 }
 
 const groupDetails = `
-	SELECT g.group_id, g.name, ARRAY(SELECT m.user_id FROM public.group_member m
+	SELECT g.group_id, g.name, g.revision, ARRAY(SELECT m.user_id FROM public.group_member m
 		WHERE m.group_id = g.group_id ORDER BY m.user_id)
 	FROM public.user_group g`
 
 func scanGroup(row rowScanner) (models.Group, error) {
 	var group models.Group
-	err := row.Scan(&group.ID, &group.Name, &group.MemberIDs)
+	err := row.Scan(&group.ID, &group.Name, &group.Revision, &group.MemberIDs)
 	return group, err
 }
 
@@ -95,8 +103,16 @@ func (r GroupRepository) Save(ctx context.Context, group models.Group) (models.G
 		if err != nil {
 			return models.Group{}, classifyError(ctx, err)
 		}
-	} else if err := execOne(ctx, r.db, "UPDATE public.user_group SET name = $2 WHERE group_id = $1", group.ID, group.Name); err != nil {
-		return models.Group{}, err
+	} else {
+		err := execOne(ctx, r.db, `
+			UPDATE public.user_group SET name = $2, revision = revision + 1
+			WHERE group_id = $1 AND revision = $3`, group.ID, group.Name, group.Revision)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return models.Group{}, apperrors.ErrConflict
+		}
+		if err != nil {
+			return models.Group{}, err
+		}
 	}
 	if _, err := r.db.Exec(ctx, "DELETE FROM public.group_member WHERE group_id = $1 AND NOT (user_id = ANY($2::BIGINT[]))", group.ID, group.MemberIDs); err != nil {
 		return models.Group{}, classifyError(ctx, err)

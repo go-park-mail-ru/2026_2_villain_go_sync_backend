@@ -54,6 +54,8 @@ type scopeRepository interface {
 	Create(ctx context.Context, scope models.Scope) (models.Scope, error)
 	Get(ctx context.Context, scopeID int64) (models.Scope, error)
 	List(ctx context.Context, page models.PageRequest) (models.Page[models.Scope], error)
+	ListVisible(ctx context.Context, page models.PageRequest, scopeIDs, keyIDs []int64) (models.Page[models.Scope], error)
+	CanSee(ctx context.Context, scopeID int64, scopeIDs, keyIDs []int64) (bool, error)
 	Update(ctx context.Context, scope models.Scope) (models.Scope, error)
 	Delete(ctx context.Context, scopeID int64) error
 }

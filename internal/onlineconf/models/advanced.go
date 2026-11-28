@@ -30,6 +30,7 @@ type Access struct {
 type Group struct {
 	ID        int64   `json:"id"`
 	Name      string  `json:"name"`
+	Revision  int64   `json:"revision"`
 	MemberIDs []int64 `json:"member_ids"`
 }
 

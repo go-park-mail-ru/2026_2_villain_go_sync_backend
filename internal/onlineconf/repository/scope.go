@@ -41,6 +41,29 @@ func (r ScopeRepository) List(ctx context.Context, page models.PageRequest) (mod
 		func(scope models.Scope) int64 { return scope.ID })
 }
 
+const visibleScopeCondition = `(scope_id = ANY($3::BIGINT[]) OR EXISTS (
+	SELECT FROM public.config_key k WHERE k.scope_id = scope.scope_id AND k.key_id = ANY($4::BIGINT[])
+))`
+
+func (r ScopeRepository) ListVisible(ctx context.Context, page models.PageRequest, scopeIDs, keyIDs []int64) (models.Page[models.Scope], error) {
+	return readPage(ctx, r.db, page, `SELECT `+scopeColumns+` FROM public.scope
+		WHERE ($1::BIGINT IS NULL OR scope_id > $1) AND `+visibleScopeCondition+` ORDER BY scope_id LIMIT $2`,
+		scanScope, func(scope models.Scope) int64 { return scope.ID }, scopeIDs, keyIDs)
+}
+
+func (r ScopeRepository) CanSee(ctx context.Context, scopeID int64, scopeIDs, keyIDs []int64) (bool, error) {
+	for _, id := range scopeIDs {
+		if id == scopeID {
+			return true, nil
+		}
+	}
+	var visible bool
+	err := r.db.QueryRow(ctx, `SELECT EXISTS (
+		SELECT FROM public.config_key WHERE scope_id = $1 AND key_id = ANY($2::BIGINT[])
+	)`, scopeID, keyIDs).Scan(&visible)
+	return visible, classifyError(ctx, err)
+}
+
 func (r ScopeRepository) Update(ctx context.Context, scope models.Scope) (models.Scope, error) {
 	result, err := scanScope(r.db.QueryRow(ctx, `
 		UPDATE public.scope SET name = $2, description = $3 WHERE scope_id = $1 RETURNING `+scopeColumns,

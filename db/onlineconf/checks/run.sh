@@ -106,6 +106,8 @@ make onlineconf-db-init
 make onlineconf-migrate-up
 make onlineconf-migrate-version
 make onlineconf-migrate-down
+[[ $(psql_checked "$owner_url" -Atc "SELECT to_regclass('public.user_group') IS NOT NULL") == t ]]
+make onlineconf-migrate-down
 [[ $(psql_checked "$owner_url" -Atc "SELECT to_regclass('public.flag_rollout') IS NULL") == t ]]
 make onlineconf-migrate-down
 [[ $(psql_checked "$owner_url" -Atc "SELECT to_regclass('public.config_key') IS NULL") == t ]]
