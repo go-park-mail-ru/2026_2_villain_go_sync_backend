@@ -17,7 +17,7 @@ import (
 
 //go:generate mockgen -source=handler.go -destination=mock_handler.go -package=vacancy
 type VacancyUsecase interface {
-	ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error)
+	ListVacancies(ctx context.Context, params pagination.Params, filters dto.ListFilters) ([]models.Vacancy, int64, error)
 	Create(ctx context.Context, input dto.CreateVacancyInput) (models.Vacancy, error)
 	GetByID(ctx context.Context, id int64) (models.Vacancy, error)
 	ListByEmployer(ctx context.Context, employerID int64, params pagination.Params) ([]models.Vacancy, int64, error)
@@ -42,7 +42,12 @@ func (h *Handler) ListVacancies(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vacancies, total, err := h.vacancy.ListVacancies(r.Context(), params.WithLookahead())
+	filters, err := readListFilters(r.URL.Query())
+	if err != nil {
+		httputil.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	vacancies, total, err := h.vacancy.ListVacancies(r.Context(), params.WithLookahead(), filters)
 	if err != nil {
 		httputil.WriteError(w, http.StatusInternalServerError, "internal error")
 		return

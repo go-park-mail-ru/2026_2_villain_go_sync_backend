@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/apperrors"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/pagination"
+	dto "github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/dto/vacancy"
 	"github.com/go-park-mail-ru/2026_2_villain_go_sync_backend/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -116,6 +117,16 @@ const selectVacancyCategoriesQuery = `SELECT ` + vacancyCategoriesArray + `
     FROM vacancy v
     WHERE v.vacancy_id = $1`
 
+const latestVacancyFrom = `
+    FROM vacancy v
+    JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
+    JOIN employer_profile ep ON ep.user_id = v.employer_id
+    WHERE vh.version = (
+        SELECT MAX(version)
+        FROM vacancy_history
+        WHERE vacancy_id = v.vacancy_id
+    )`
+
 const vacancySelectQuery = `
     SELECT
         v.vacancy_id,
@@ -142,16 +153,7 @@ const vacancySelectQuery = `
         vh.work_hours,
         vh.city,
         vh.office_address,
-        ` + vacancyCategoriesArray + ` AS categories
-    FROM vacancy v
-    JOIN vacancy_history vh ON v.vacancy_id = vh.vacancy_id
-    JOIN employer_profile ep ON ep.user_id = v.employer_id
-    WHERE vh.version = (
-        SELECT MAX(version)
-        FROM vacancy_history
-        WHERE vacancy_id = v.vacancy_id
-    )
-`
+        ` + vacancyCategoriesArray + ` AS categories` + latestVacancyFrom
 
 func scanVacancy(row pgx.Row) (models.Vacancy, error) {
 	var vacancy models.Vacancy
@@ -263,21 +265,41 @@ func (r *PostgresRepository) Create(ctx context.Context, vacancy models.Vacancy,
 	return vacancy, nil
 }
 
-func (r *PostgresRepository) ListVacancies(ctx context.Context, params pagination.Params) ([]models.Vacancy, int64, error) {
-	const firstPageQuery = vacancySelectQuery + `
-		ORDER BY v.created_at ASC, v.vacancy_id ASC
-		LIMIT $1`
-	const nextPageQuery = vacancySelectQuery + `
-		AND (v.created_at, v.vacancy_id) > ($1, $2)
-		ORDER BY v.created_at ASC, v.vacancy_id ASC
-		LIMIT $3`
-
-	query := firstPageQuery
-	args := []any{params.Limit}
+func (r *PostgresRepository) ListVacancies(ctx context.Context, params pagination.Params, filters dto.ListFilters) ([]models.Vacancy, int64, error) {
+	// Search the visible text of fields stored by the HTML sanitizer.
+	const decodeTextStart = "replace(replace(replace(replace(replace("
+	const decodeTextEnd = `, '&#34;', chr(34)), '&#39;', chr(39)), '&lt;', '<'), '&gt;', '>'), '&amp;', '&')`
+	const cityText = decodeTextStart + `vh.city` + decodeTextEnd
+	const searchText = decodeTextStart + `concat_ws(' ', vh.title, COALESCE(vh.description, ''),
+		COALESCE(ep.company_name, ''), COALESCE(array_to_string(` + vacancyCategoriesArray + `, ' '), ''),
+		COALESCE(vh.city, ''))` + decodeTextEnd
+	const filterQuery = `
+		AND ($1::text = '' OR strpos(lower(` + searchText + ` COLLATE "pg_c_utf8"), lower($1 COLLATE "pg_c_utf8")) > 0)
+		AND ($2::text = '' OR EXISTS (
+			SELECT 1 FROM vacancy_category vc JOIN category c USING (category_id)
+			WHERE vc.vacancy_id = v.vacancy_id AND lower(c.name COLLATE "pg_c_utf8") = lower($2 COLLATE "pg_c_utf8")
+		))
+		AND ($3::text = '' OR strpos(lower(` + cityText + ` COLLATE "pg_c_utf8"), lower($3 COLLATE "pg_c_utf8")) > 0)
+		AND ($4::bigint = 0 OR v.employer_id = $4)
+		AND ($5::text[] IS NULL OR vh.work_format = ANY($5))
+		AND ($6::text[] IS NULL OR vh.employment_type = ANY($6))
+		AND ($7::text[] IS NULL OR vh.work_schedule = ANY($7))
+		AND ($8::text[] IS NULL OR vh.experience_level = ANY($8))
+		AND (($9::double precision IS NULL AND $10::double precision IS NULL) OR (
+			vh.currency = 'RUB' AND (vh.salary_from IS NOT NULL OR vh.salary_to IS NOT NULL)
+			AND ($9 IS NULL OR vh.salary_to IS NULL OR vh.salary_to >= $9)
+			AND ($10 IS NULL OR vh.salary_from IS NULL OR vh.salary_from <= $10)
+		))`
+	filterArgs := []any{filters.Query, filters.Category, filters.City, filters.EmployerID,
+		filters.WorkFormats, filters.EmploymentTypes, filters.WorkSchedules, filters.ExperienceLevels,
+		filters.SalaryFrom, filters.SalaryTo}
+	query := vacancySelectQuery + filterQuery
+	args := append(filterArgs, params.Limit)
 	if params.Cursor != nil {
-		query = nextPageQuery
-		args = []any{params.Cursor.CreatedAt, params.Cursor.ID, params.Limit}
+		query += "\nAND (v.created_at, v.vacancy_id) > ($12, $13)"
+		args = append(args, params.Cursor.CreatedAt, params.Cursor.ID)
 	}
+	query += "\nORDER BY v.created_at ASC, v.vacancy_id ASC LIMIT $11"
 
 	var vacancies []models.Vacancy
 	var total int64
@@ -285,7 +307,7 @@ func (r *PostgresRepository) ListVacancies(ctx context.Context, params paginatio
 		IsoLevel:   pgx.RepeatableRead,
 		AccessMode: pgx.ReadOnly,
 	}, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, vacancyCountQuery).Scan(&total); err != nil {
+		if err := tx.QueryRow(ctx, "SELECT COUNT(*)"+latestVacancyFrom+filterQuery, filterArgs...).Scan(&total); err != nil {
 			return err
 		}
 
